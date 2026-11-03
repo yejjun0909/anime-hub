@@ -1574,6 +1574,81 @@ function searchVariants(query) {
 return { fuzzyFilter, fuzzyMatch, levenshtein, normalizeForSearch, searchVariants, similarity };
 })();
 const { fuzzyFilter, fuzzyMatch, levenshtein, normalizeForSearch, searchVariants, similarity } = __ns_data_fuzzy_search_js;
+// ===== data/namu-search.js =====
+const __ns_data_namu_search_js = (function() {
+// 나무위키 조회 모듈 (v4.9+) — 실제 한국어 소스 우선, 미등록 시 폴백
+//
+// 참고: 나무위키는 MediaWiki가 아닌 자체 엔진(the seed)을 사용하고, 공개 읽기 API가
+// 제한적입니다. 현재는 best-effort 방식으로 조회를 시도하고 실패 시 빈 배열을 반환합니다.
+// AI 번역(Google/Gemini) 대신 실제 한국어 소스(나무위키)를 우선 사용하기 위한 모듈입니다.
+
+const ENDPOINTS = [
+  'https://wiki-api.namu.la/api',
+  'https://namu.wiki/api',
+];
+
+async function fetchJson(url) {
+  const response = await fetch(url, { headers: { Accept: 'application/json, text/plain, */*' } });
+  if (!response.ok) return null;
+  const text = await response.text();
+  try { return JSON.parse(text); } catch (error) { return null; }
+}
+
+function extractResults(data) {
+  if (!data || typeof data !== 'object') return [];
+  const direct = data?.query?.search?.results;
+  const nested = data?.data?.query?.search?.results;
+  const flat = data?.results;
+  const list = Array.isArray(direct) ? direct : Array.isArray(nested) ? nested : Array.isArray(flat) ? flat : [];
+  const found = [];
+  for (const row of list) {
+    const title = row?.title || row?.name || row?.fullTitle || '';
+    if (!title || typeof title !== 'string') continue;
+    found.push({
+      title,
+      originTitle: row?.originTitle || row?.originalTitle || '',
+      overview: String(row?.snippet || row?.description || ''),
+    });
+  }
+  return found;
+}
+
+async function searchNamuWiki(query, options = {}) {
+  const value = String(query || '').trim();
+  if (!value || value.length < 2) return [];
+  const maxResults = Number(options?.maxResults || 5) || 5;
+  const results = [];
+  const seen = new Set();
+  for (const base of ENDPOINTS) {
+    if (results.length >= maxResults) break;
+    const url = `${base}?action=query&list=search&srsearch=${encodeURIComponent(value)}&srlimit=5&format=json`;
+    try {
+      const data = await fetchJson(url);
+      const found = extractResults(data);
+      for (const item of found) {
+        const key = `${item.originTitle || ''}|${item.title}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({ ...item, source: '나무위키', url: options?.baseUrl || `https://namu.wiki/wiki/${encodeURIComponent(item.title)}` });
+        if (results.length >= maxResults) break;
+      }
+    } catch (error) { /* best-effort */ }
+  }
+  return results;
+}
+
+async function lookupNamuTitle(media, options = {}) {
+  const candidates = [media?.title?.native, media?.title?.romaji, media?.title?.english].filter(Boolean);
+  for (const candidate of candidates) {
+    const found = await searchNamuWiki(candidate, options);
+    if (found.length) return found[0];
+  }
+  return null;
+}
+
+return { lookupNamuTitle, searchNamuWiki };
+})();
+const { lookupNamuTitle, searchNamuWiki } = __ns_data_namu_search_js;
 // ===== korean-titles-db (inlined) =====
 setKoreanTitlesDb({
   "version": 1,
@@ -3337,6 +3412,7 @@ setKoreanTitlesDb({
 
 
 
+
 const APP_VERSION = '4.6.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
@@ -3730,19 +3806,16 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // Machine translation prefetch (experimental, opt-in)
-    if(isMachineTranslationEnabled()&&!curatedKoreanOverride(media)&&!getUserKorean(media)){
+    // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+    if(!curatedKoreanOverride(media)&&!getUserKorean(media)){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
-      if(nativeTitle&&!getCachedMachineTranslation(nativeTitle,'ja','ko'))await machineTranslateTitle(media);
-      const desc=String(media?.description||'').trim();
-      if(desc.length>=20&&!getCachedMachineTranslation(desc.slice(0,1000),'ja','ko'))await machineTranslateOverview(media);
-    }
-    // Gemini AI translation prefetch (better quality, requires API key)
-    if(hasGeminiKey()&&!curatedKoreanOverride(media)&&!getUserKorean(media)){
-      const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
-      if(nativeTitle&&!getCachedGeminiTranslation(nativeTitle,'ja','ko'))await geminiTranslateTitle(media);
-      const desc=String(media?.description||'').trim();
-      if(desc.length>=20&&!getCachedGeminiTranslation(desc.slice(0,1000),'ja','ko'))await geminiTranslateOverview(media);
+      if(nativeTitle&&String(nativeTitle).trim().length>1){
+        const result=await searchNamuWiki(nativeTitle);
+        if(result?.length){
+          const best=result[0];
+          writeKoreanMetadata(media,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
+        }
+      }
     }
     if(state.currentModal?.media?.id!==media.id)return;
     refresh();
@@ -3857,8 +3930,6 @@ function koreanTitleInfo(media){
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.title)return {title:tmdb.title,source:tmdbKoreanSourceLabel(tmdb.titleCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
-  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.title?.native||media?.title?.romaji||media?.title?.english,'ja','ko');if(mt?.text)return {title:mt.text,source:mt.source,url:'',kind:'machine'};}
-  if(hasGeminiKey()){const gt=getCachedGeminiTranslation(media?.title?.native||media?.title?.romaji||media?.title?.english,'ja','ko');if(gt?.text)return {title:gt.text,source:gt.source,url:'',kind:'gemini'};}
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
@@ -3867,8 +3938,6 @@ function koreanDescriptionInfo(media){
   const db=lookupKoreanTitle(media);if(db?.overview)return {overview:db.overview,source:db.source,url:db.url,kind:db.kind};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.overview&&isMostlyKorean(tmdb.overview))return {overview:tmdb.overview,source:tmdbKoreanSourceLabel(tmdb.overviewCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
-  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.description?.slice(0,1000),'ja','ko');if(mt?.text)return {overview:mt.text,source:mt.source,url:'',kind:'machine'};}
-  if(hasGeminiKey()){const gt=getCachedGeminiTranslation(media?.description?.slice(0,1000),'ja','ko');if(gt?.text)return {overview:gt.text,source:gt.source,url:'',kind:'gemini'};}
   return null;
 }
 function localizedTitle(media){return koreanTitleInfo(media).title;}
@@ -4013,19 +4082,19 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
-  // Machine translation prefetch (experimental, opt-in)
-  if(isMachineTranslationEnabled()){
-    const mtPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanAlias(m)&&!cachedKoreanMetadata(m)).slice(0,maxItems);
-    for(const m of mtPending){
-      machineTranslateTitle(m).then(result=>{
-        if(result?.title&&root.isConnected){
-          const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
-          const titleNode=card?.querySelector('.card-title,.schedule-name');
-          if(titleNode)titleNode.textContent=result.title;
-        }
-      }).catch(()=>{});
-      machineTranslateOverview(m).then(()=>{}).catch(()=>{});
-    }
+  // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+  const namuPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
+  for(const m of namuPending){
+    try{
+      const result=await searchNamuWiki(m?.title?.native||m?.title?.romaji||m?.title?.english);
+      if(result?.length){
+        const best=result[0];
+        writeKoreanMetadata(m,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
+        const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
+        const titleNode=card?.querySelector('.card-title,.schedule-name');
+        if(titleNode)titleNode.textContent=best.title;
+      }
+    }catch(error){}
   }
   if(!root.isConnected)return;
   for(const media of unique){

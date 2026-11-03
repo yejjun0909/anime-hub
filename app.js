@@ -7,6 +7,7 @@ import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-kore
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { machineTranslateTitle, machineTranslateOverview, isMachineTranslationEnabled, setMachineTranslationEnabled, getCachedMachineTranslation } from './data/machine-translate.js';
 import { geminiTranslateTitle, geminiTranslateOverview, hasGeminiKey, setGeminiKey, getCachedGeminiTranslation } from './data/gemini-translate.js';
+import { searchNamuWiki } from './data/namu-search.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
@@ -406,19 +407,16 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // Machine translation prefetch (experimental, opt-in)
-    if(isMachineTranslationEnabled()&&!curatedKoreanOverride(media)&&!getUserKorean(media)){
+    // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+    if(!curatedKoreanOverride(media)&&!getUserKorean(media)){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
-      if(nativeTitle&&!getCachedMachineTranslation(nativeTitle,'ja','ko'))await machineTranslateTitle(media);
-      const desc=String(media?.description||'').trim();
-      if(desc.length>=20&&!getCachedMachineTranslation(desc.slice(0,1000),'ja','ko'))await machineTranslateOverview(media);
-    }
-    // Gemini AI translation prefetch (better quality, requires API key)
-    if(hasGeminiKey()&&!curatedKoreanOverride(media)&&!getUserKorean(media)){
-      const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
-      if(nativeTitle&&!getCachedGeminiTranslation(nativeTitle,'ja','ko'))await geminiTranslateTitle(media);
-      const desc=String(media?.description||'').trim();
-      if(desc.length>=20&&!getCachedGeminiTranslation(desc.slice(0,1000),'ja','ko'))await geminiTranslateOverview(media);
+      if(nativeTitle&&String(nativeTitle).trim().length>1){
+        const result=await searchNamuWiki(nativeTitle);
+        if(result?.length){
+          const best=result[0];
+          writeKoreanMetadata(media,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
+        }
+      }
     }
     if(state.currentModal?.media?.id!==media.id)return;
     refresh();
@@ -533,8 +531,6 @@ function koreanTitleInfo(media){
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.title)return {title:tmdb.title,source:tmdbKoreanSourceLabel(tmdb.titleCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
-  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.title?.native||media?.title?.romaji||media?.title?.english,'ja','ko');if(mt?.text)return {title:mt.text,source:mt.source,url:'',kind:'machine'};}
-  if(hasGeminiKey()){const gt=getCachedGeminiTranslation(media?.title?.native||media?.title?.romaji||media?.title?.english,'ja','ko');if(gt?.text)return {title:gt.text,source:gt.source,url:'',kind:'gemini'};}
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
@@ -543,8 +539,6 @@ function koreanDescriptionInfo(media){
   const db=lookupKoreanTitle(media);if(db?.overview)return {overview:db.overview,source:db.source,url:db.url,kind:db.kind};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.overview&&isMostlyKorean(tmdb.overview))return {overview:tmdb.overview,source:tmdbKoreanSourceLabel(tmdb.overviewCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
-  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.description?.slice(0,1000),'ja','ko');if(mt?.text)return {overview:mt.text,source:mt.source,url:'',kind:'machine'};}
-  if(hasGeminiKey()){const gt=getCachedGeminiTranslation(media?.description?.slice(0,1000),'ja','ko');if(gt?.text)return {overview:gt.text,source:gt.source,url:'',kind:'gemini'};}
   return null;
 }
 function localizedTitle(media){return koreanTitleInfo(media).title;}
@@ -689,19 +683,19 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
-  // Machine translation prefetch (experimental, opt-in)
-  if(isMachineTranslationEnabled()){
-    const mtPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanAlias(m)&&!cachedKoreanMetadata(m)).slice(0,maxItems);
-    for(const m of mtPending){
-      machineTranslateTitle(m).then(result=>{
-        if(result?.title&&root.isConnected){
-          const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
-          const titleNode=card?.querySelector('.card-title,.schedule-name');
-          if(titleNode)titleNode.textContent=result.title;
-        }
-      }).catch(()=>{});
-      machineTranslateOverview(m).then(()=>{}).catch(()=>{});
-    }
+  // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+  const namuPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
+  for(const m of namuPending){
+    try{
+      const result=await searchNamuWiki(m?.title?.native||m?.title?.romaji||m?.title?.english);
+      if(result?.length){
+        const best=result[0];
+        writeKoreanMetadata(m,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
+        const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
+        const titleNode=card?.querySelector('.card-title,.schedule-name');
+        if(titleNode)titleNode.textContent=best.title;
+      }
+    }catch(error){}
   }
   if(!root.isConnected)return;
   for(const media of unique){
