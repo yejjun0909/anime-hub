@@ -1,0 +1,10 @@
+{
+  "app": "OTHER APP",
+  "version": "1.0.0",
+  "exportedAt": "2026-11-03T10:00:00.000Z",
+  "watchlist": [
+    { "media_id": null, "status": "UNKNOWN", "score": 400 }
+  ],
+  "collections": "not-an-array",
+  "savedSearches": [{}]
+}

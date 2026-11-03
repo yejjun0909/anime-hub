@@ -1,0 +1,15 @@
+{
+  "name": "anime-hub",
+  "version": "4.6.0",
+  "private": true,
+  "type": "module",
+  "description": "ANIME HUB — 애니메이션 정보·일정·시청 관리 정적 웹앱",
+  "scripts": {
+    "check": "node --check app.js && node --check sw.js && node --check data/korean-match.js",
+    "test": "node --test tests/",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

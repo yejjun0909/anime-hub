@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — 추천 평가 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    #summary { padding: 12px 16px; border-radius: 8px; background: #1c2030; font-weight: 700; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    ul { font-size: 13px; }
+    li.fail { color: #ff8f8f; }
+  </style>
+</head>
+<body>
+  <h1>추천 평가 테스트</h1>
+  <div id="summary">실행 중…</div>
+  <ul id="rows"></ul>
+  <script type="module">
+    import { precisionAtK, recallAtK, ndcgAtK, coverage, intraListDiversity, evaluateRecommendation, coldStartStrategy } from '../data/recommend-eval.js';
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+    let total = 0;
+    function check(name, condition) { total += 1; const li = document.createElement('li'); if (!condition) { li.className = 'fail'; failures.push(name); } li.textContent = (condition ? '통과' : '실패') + ' — ' + name; rows.appendChild(li); }
+    try {
+      check('precision@k', precisionAtK([1,2,3,4], new Set([1,3,5]), 4) === 0.5);
+      check('recall@k', Math.abs(recallAtK([1,2,3], new Set([1,3,5]), 3) - 2/3) < 1e-9);
+      check('ndcg@k 완벽', ndcgAtK([1,2], new Set([1,2]), 2) === 1);
+      check('coverage', coverage([[1,2],[3]], 10) === 0.3);
+      check('diversity 같음 0', intraListDiversity([{genres:['Action']},{genres:['Action']}], 2) === 0);
+      check('diversity 다름 1', intraListDiversity([{genres:['Action']},{genres:['Comedy']}], 2) === 1);
+      const ev = evaluateRecommendation({ recommended: [1,2,3], relevant: new Set([1,3]), catalogSize: 10, items: [{genres:['Action']},{genres:['Comedy']},{genres:['Drama']}], k: 3 });
+      check('eval precision>0', ev.precision > 0 && ev.diversity > 0);
+      check('coldStart null', coldStartStrategy(null) === 'popular-quality');
+      check('coldStart personalized', coldStartStrategy({ hasTaste: true, genre: new Map([['A',1],['B',1],['C',1]]) }) === 'personalized');
+      summary.className = failures.length ? 'fail' : 'pass';
+      summary.textContent = failures.length ? `실패 ${failures.length}건 / 전체 ${total}건` : `통과 ${total}건 / 전체 ${total}건`;
+      window.__REC_EVAL_RESULT__ = { total, failed: failures.length, failures };
+      document.title = failures.length ? `FAIL ${failures.length}/${total}` : `PASS ${total}/${total}`;
+    } catch (e) {
+      summary.className = 'fail';
+      summary.textContent = `실행 오류: ${e.message}`;
+      window.__REC_EVAL_RESULT__ = { total, failed: 1, failures: [e.message] };
+      document.title = 'ERROR';
+    }
+  </script>
+</body>
+</html>

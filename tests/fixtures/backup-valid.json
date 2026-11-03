@@ -1,0 +1,28 @@
+{
+  "app": "ANIME HUB",
+  "version": "4.6.0",
+  "exportedAt": "2026-11-03T10:00:00.000Z",
+  "watchlist": [
+    {
+      "media_id": 101922,
+      "status": "CURRENT",
+      "score": 80,
+      "note": "복원 리허설",
+      "media_snapshot": { "id": 101922, "title": { "userPreferred": "Demon Slayer" } },
+      "updated_at": "2026-11-03T10:00:00.000Z"
+    }
+  ],
+  "collections": [
+    {
+      "id": "c-fixture",
+      "name": "리허설 컬렉션",
+      "mediaIds": [101922],
+      "items": [],
+      "createdAt": "2026-11-03T10:02:00.000Z",
+      "updatedAt": "2026-11-03T10:02:00.000Z"
+    }
+  ],
+  "savedSearches": [
+    { "id": "s-fixture", "name": "액션", "query": "액션" }
+  ]
+}

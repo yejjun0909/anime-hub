@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — 방영 일정 모듈 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    #summary { padding: 12px 16px; border-radius: 8px; background: #1c2030; font-weight: 700; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    ul { font-size: 13px; }
+    li.fail { color: #ff8f8f; }
+  </style>
+</head>
+<body>
+  <h1>방영 일정 모듈 테스트</h1>
+  <div id="summary">실행 중…</div>
+  <ul id="rows"></ul>
+  <script type="module">
+    import { mergeAiringRows, filterAiringWindow } from '../data/schedule-merge.js';
+    import { readAiringCache, writeAiringCache, isFreshAiringCache, clearAiringCache } from '../data/schedule-cache.js';
+
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+    let total = 0;
+
+    function check(name, condition, detail = '') {
+      total += 1;
+      const li = document.createElement('li');
+      if (!condition) { li.className = 'fail'; failures.push(name + (detail ? ` (${detail})` : '')); }
+      li.textContent = (condition ? '통과' : '실패') + ' — ' + name + (detail ? ` [${detail}]` : '');
+      rows.appendChild(li);
+    }
+
+    try {
+      // merge
+      const empty = mergeAiringRows([]);
+      check('merge: 빈 배열', Array.isArray(empty) && empty.length === 0);
+      const rows1 = [
+        { airingAt: 100, episode: 2, media: { id: 1, title: { userPreferred: 'A' } } },
+        { airingAt: 200, episode: 3, media: { id: 1, title: { userPreferred: 'A' } } }
+      ];
+      const m1 = mergeAiringRows(rows1);
+      check('merge: 가까운 회차만 남음', m1.length === 1 && m1[0].nextAiringEpisode.episode === 2);
+      const rows2 = [
+        { airingAt: 300, episode: 1, media: { id: 2, title: { userPreferred: 'B' } } },
+        { airingAt: 100, episode: 1, media: { id: 1, title: { userPreferred: 'A' } } }
+      ];
+      const m2 = mergeAiringRows(rows2);
+      check('merge: 오름차순 정렬', m2.map((x) => x.id).join(',') === '1,2');
+      check('merge: media 없는 행 건너뜀', mergeAiringRows([{ airingAt: 1, media: null }]).length === 0);
+      check('filter: 범위 밖 제외', filterAiringWindow(
+        [{ id: 1, nextAiringEpisode: { airingAt: 50 } }, { id: 2, nextAiringEpisode: { airingAt: 150 } }, { id: 3, nextAiringEpisode: { airingAt: 250 } }],
+        100, 200
+      ).map((x) => x.id).join(',') === '2');
+
+      // cache
+      const storage = { _s: new Map(), getItem(k){return this._s.has(k)?this._s.get(k):null;}, setItem(k,v){this._s.set(k,String(v));}, removeItem(k){this._s.delete(k);} };
+      check('cache: write/read', (() => { writeAiringCache([{ id: 1 }], 'src', storage, 1000); const c = readAiringCache(storage); return c && c.savedAt === 1000 && c.items.length === 1; })());
+      check('cache: 손상 JSON null', (() => { const s = { _s: new Map(), getItem(k){return '{bad';}, setItem(){}, removeItem(){} }; return readAiringCache(s) === null; })());
+      check('cache: isFresh true', isFreshAiringCache({ savedAt: 1000, items: [] }, 1500, 1000) === true);
+      check('cache: isFresh false', isFreshAiringCache({ savedAt: 1000, items: [] }, 2500, 1000) === false);
+      check('cache: clear', (() => { const s = { _s: new Map(), getItem(k){return this._s.has(k)?this._s.get(k):null;}, setItem(k,v){this._s.set(k,String(v));}, removeItem(k){this._s.delete(k);} }; writeAiringCache([{ id: 1 }], 'x', s, 1); clearAiringCache(s); return readAiringCache(s) === null; })());
+      check('cache: storage 없음 안전', readAiringCache(null) === null && writeAiringCache([{ id: 1 }], 'x', null) === false);
+
+      summary.className = failures.length ? 'fail' : 'pass';
+      summary.textContent = failures.length ? `실패 ${failures.length}건 / 전체 ${total}건` : `통과 ${total}건 / 전체 ${total}건`;
+      window.__SCHEDULE_RESULT__ = { total, failed: failures.length, failures };
+      document.title = failures.length ? `FAIL ${failures.length}/${total}` : `PASS ${total}/${total}`;
+    } catch (error) {
+      summary.className = 'fail';
+      summary.textContent = `실행 오류: ${error.message}`;
+      window.__SCHEDULE_RESULT__ = { total, failed: 1, failures: [error.message] };
+      document.title = 'ERROR';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+[
+  {
+    "name": "AniList ID 직접 매칭",
+    "why": "가장 일반적인 경로. id가 카탈로그의 anilistId와 같으면 바로 연결.",
+    "media": { "id": 16498 },
+    "expectWorkId": "attack-on-titan"
+  },
+  {
+    "name": "문자열 AniList ID",
+    "why": "API·localStorage에서 숫자가 문자열로 들어와도 같은 작품이어야 함.",
+    "media": { "id": "101922" },
+    "expectWorkId": "demon-slayer"
+  },
+  {
+    "name": "공백이 섞인 AniList ID",
+    "why": "저장 경로에 따라 공백이 붙어도 매칭 유지.",
+    "media": { "id": "  101922  " },
+    "expectWorkId": "demon-slayer"
+  },
+  {
+    "name": "보관함 media_id 문자열",
+    "why": "Supabase 보관함 행은 media_id를 사용하므로 같은 결과여야 함.",
+    "media": { "media_id": "101922" },
+    "expectWorkId": "demon-slayer"
+  },
+  {
+    "name": "idMal 숫자",
+    "why": "AniList 응답의 idMal로 한국어 자료를 찾는 경로.",
+    "media": { "id": 900001, "idMal": 40748 },
+    "expectWorkId": "jujutsu-kaisen"
+  },
+  {
+    "name": "mal_id (Jikan 스타일)",
+    "why": "Jikan 응답은 mal_id 키를 사용.",
+    "media": { "id": 900002, "mal_id": 52991 },
+    "expectWorkId": "frieren"
+  },
+  {
+    "name": "mal: 접두사 ID",
+    "why": "Jikan 전용 보관함 항목은 mal:<id> 형태로 저장됨.",
+    "media": { "id": "mal:38000" },
+    "expectWorkId": "demon-slayer"
+  },
+  {
+    "name": "대문자 MAL: 접두사",
+    "why": "접두사 대소문자가 달라도 같은 작품.",
+    "media": { "id": "MAL:52034" },
+    "expectWorkId": "oshi-no-ko"
+  },
+  {
+    "name": "workId 직접 매칭",
+    "why": "v4.8 canonical work 마이그레이션 대비. workId만 있어도 연결.",
+    "media": { "workId": "one-piece" },
+    "expectWorkId": "one-piece"
+  },
+  {
+    "name": "AniList ID 우선",
+    "why": "id와 idMal이 충돌하면 AniList ID를 신뢰. MAL 값으로 다른 작품을 붙이지 않음.",
+    "media": { "id": 16498, "idMal": 99999 },
+    "expectWorkId": "attack-on-titan"
+  },
+  {
+    "name": "귀멸의 칼날 시즌2 (유곽편)",
+    "why": "시즌 2에 시즌 1 제목·소개를 자동 복사하면 안 됨.",
+    "media": { "id": 142329, "idMal": 47778 },
+    "expectWorkId": null
+  },
+  {
+    "name": "귀멸의 칼날 극장판 무한열차",
+    "why": "극장판은 TV 시리즈와 다른 작품 단위.",
+    "media": { "id": 112151, "idMal": 40456 },
+    "expectWorkId": null
+  },
+  {
+    "name": "주술회전 0 극장판",
+    "why": "극장판에 TV 시리즈 소개를 붙이지 않음.",
+    "media": { "id": 113418, "idMal": 48561 },
+    "expectWorkId": null
+  },
+  {
+    "name": "진격의 거인 Final Season",
+    "why": "시즌 구분이 다른 작품에 1기 소개를 붙이지 않음.",
+    "media": { "id": 110277, "idMal": 40028 },
+    "expectWorkId": null
+  },
+  {
+    "name": "나의 히어로 아카데미아 2기",
+    "why": "2기에 1기 소개를 붙이지 않음.",
+    "media": { "id": 21856, "idMal": 33486 },
+    "expectWorkId": null
+  },
+  {
+    "name": "스파이 패밀리 2기",
+    "why": "2기에 1기 소개를 붙이지 않음.",
+    "media": { "id": 158927, "idMal": 53887 },
+    "expectWorkId": null
+  },
+  {
+    "name": "하이큐!! 2기",
+    "why": "2기에 1기 소개를 붙이지 않음.",
+    "media": { "id": 20992, "idMal": 28891 },
+    "expectWorkId": null
+  },
+  {
+    "name": "나루토 질풍전",
+    "why": "후속 시리즈를 원작 TV와 자동 연결하지 않음.",
+    "media": { "id": 1735, "idMal": 1735 },
+    "expectWorkId": null
+  },
+  {
+    "name": "제목만 같은 경우",
+    "why": "제목 유사도만으로 연결 금지. 연도·형식·ID 확인 전에는 매칭하지 않음.",
+    "media": { "id": 900003, "title": { "userPreferred": "귀멸의 칼날" }, "synonyms": ["Demon Slayer"] },
+    "expectWorkId": null
+  },
+  {
+    "name": "숫자 id를 MAL ID로 추측하지 않음",
+    "why": "38000은 MAL ID이지만 id 필드에 있으면 AniList ID로 취급. 추측 매칭 금지.",
+    "media": { "id": 38000 },
+    "expectWorkId": null
+  },
+  {
+    "name": "id 없는 객체",
+    "why": "매칭 근거가 없으면 null. 예외를 던지지 않음.",
+    "media": {},
+    "expectWorkId": null
+  },
+  {
+    "name": "null 입력",
+    "why": "방어 코드. 렌더링 중 null이 들어와도 안전.",
+    "media": null,
+    "expectWorkId": null
+  },
+  {
+    "name": "malId 0",
+    "why": "0은 유효한 MAL ID가 아님. 잘못된 값으로 다른 작품을 붙이지 않음.",
+    "media": { "id": 900004, "idMal": 0 },
+    "expectWorkId": null
+  },
+  {
+    "name": "나의 히어로 아카데미아 1기",
+    "why": "시즌 1 원작 레코드의 양수 매칭 기준.",
+    "media": { "id": 21459 },
+    "expectWorkId": "my-hero-academia"
+  },
+  {
+    "name": "체인소 맨 (MAL 경로)",
+    "why": "AniList ID 없이 MAL ID만 있는 경로도 커버.",
+    "media": { "id": 900005, "idMal": 44511 },
+    "expectWorkId": "chainsaw-man"
+  },
+  {
+    "name": "나루토 1기",
+    "why": "질풍전과 구분되는 원작 TV 레코드의 양수 매칭 기준.",
+    "media": { "id": 20 },
+    "expectWorkId": "naruto"
+  },
+  {
+    "name": "스파이 패밀리 1기 (MAL 경로)",
+    "why": "시즌 2와 구분되는 1기 레코드의 양수 매칭 기준.",
+    "media": { "id": 900006, "idMal": 50265 },
+    "expectWorkId": "spy-family"
+  },
+  {
+    "name": "하이큐!! 1기",
+    "why": "2기와 구분되는 1기 레코드의 양수 매칭 기준.",
+    "media": { "id": 20464 },
+    "expectWorkId": "haikyuu"
+  },
+  {
+    "name": "원펀맨 (MAL 경로)",
+    "why": "MAL ID만 있는 경로도 커버.",
+    "media": { "id": 900007, "mal_id": 30276 },
+    "expectWorkId": "one-punch-man"
+  },
+  {
+    "name": "블루 록 1기",
+    "why": "시즌 2와 구분되는 1기 레코드의 양수 매칭 기준.",
+    "media": { "id": 137822 },
+    "expectWorkId": "blue-lock"
+  }
+]

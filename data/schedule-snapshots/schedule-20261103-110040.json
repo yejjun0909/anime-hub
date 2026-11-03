@@ -1,0 +1,1199 @@
+{
+  "collectedAt": "2026-11-03T11:00:40.420024+00:00",
+  "windowDays": 7,
+  "sources": {
+    "anilist": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": true,
+            "total": 5000
+          },
+          "airingSchedules": [
+            {
+              "id": 417800,
+              "airingAt": 1793708760,
+              "timeUntilAiring": 5118,
+              "episode": 5,
+              "media": {
+                "id": 206949,
+                "idMal": 63382,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 25,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Kyouran Reijou Nia Liston",
+                  "romaji": "Kyouran Reijou Nia Liston",
+                  "native": "凶乱令嬢ニア・リストン"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793708760
+                }
+              }
+            },
+            {
+              "id": 420420,
+              "airingAt": 1793710800,
+              "timeUntilAiring": 7158,
+              "episode": 5,
+              "media": {
+                "id": 209502,
+                "idMal": 63754,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Shiotaiou no Satou-san ga Ore ni dake Amai",
+                  "romaji": "Shiotaiou no Satou-san ga Ore ni dake Amai",
+                  "native": "塩対応の佐藤さんが俺にだけ甘い"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793710800
+                }
+              }
+            },
+            {
+              "id": 418481,
+              "airingAt": 1793714400,
+              "timeUntilAiring": 10758,
+              "episode": 5,
+              "media": {
+                "id": 200294,
+                "idMal": 62696,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Choujun! Choujou Senpai",
+                  "romaji": "Choujun! Choujou Senpai",
+                  "native": "超巡！超条先輩"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793714400
+                }
+              }
+            },
+            {
+              "id": 418976,
+              "airingAt": 1793714400,
+              "timeUntilAiring": 10758,
+              "episode": 5,
+              "media": {
+                "id": 187990,
+                "idMal": 63818,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Battle Spirits [Re] Zekkai no Kuu",
+                  "romaji": "Battle Spirits [Re] Zekkai no Kuu",
+                  "native": "Battle Spirits [Re] 絶界の空"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793714400
+                }
+              }
+            },
+            {
+              "id": 422541,
+              "airingAt": 1793714400,
+              "timeUntilAiring": 10758,
+              "episode": 4,
+              "media": {
+                "id": 198727,
+                "idMal": 62484,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 11,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Chitose-kun wa Ramune Bin no Naka Part 2",
+                  "romaji": "Chitose-kun wa Ramune Bin no Naka Part 2",
+                  "native": "千歳くんはラムネ瓶のなか 2クール"
+                },
+                "nextAiringEpisode": {
+                  "episode": 4,
+                  "airingAt": 1793714400
+                }
+              }
+            },
+            {
+              "id": 422444,
+              "airingAt": 1793716200,
+              "timeUntilAiring": 12558,
+              "episode": 5,
+              "media": {
+                "id": 187316,
+                "idMal": 61140,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 23,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Gensou Suikoden",
+                  "romaji": "Gensou Suikoden",
+                  "native": "幻想水滸伝"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793716200
+                }
+              }
+            },
+            {
+              "id": 420256,
+              "airingAt": 1793718000,
+              "timeUntilAiring": 14358,
+              "episode": 5,
+              "media": {
+                "id": 207329,
+                "idMal": 63431,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Tsuihou Sareta Cheat Fuyo Majutsushi wa Kimama na Second Life wo Ouka Suru.: Ore wa Buki dake ja Naku, Arayuru Mono ni \"Kyouka Point\" wo Fuyo Dekiru shi, Ore no Ishi de Itsudemo Kouka wo Kaijo Dekiru kedo, Nokotta Hitotachi Daijoubu?",
+                  "romaji": "Tsuihou Sareta Cheat Fuyo Majutsushi wa Kimama na Second Life wo Ouka Suru.: Ore wa Buki dake ja Naku, Arayuru Mono ni \"Kyouka Point\" wo Fuyo Dekiru shi, Ore no Ishi de Itsudemo Kouka wo Kaijo Dekiru kedo, Nokotta Hitotachi Daijoubu?",
+                  "native": "追放されたチート付与魔術師は気ままなセカンドライフを謳歌する。　～俺は武器だけじゃなく、あらゆるものに『強化ポイント』を付与できるし、俺の意思でいつでも効果を解除できるけど、残った人たち大丈夫？～"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793718000
+                }
+              }
+            },
+            {
+              "id": 418953,
+              "airingAt": 1793723700,
+              "timeUntilAiring": 20058,
+              "episode": 18,
+              "media": {
+                "id": 207809,
+                "idMal": 63489,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 24,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "Sora wa Akai Kawa no Hotori",
+                  "romaji": "Sora wa Akai Kawa no Hotori",
+                  "native": "天は赤い河のほとり"
+                },
+                "nextAiringEpisode": {
+                  "episode": 18,
+                  "airingAt": 1793723700
+                }
+              }
+            },
+            {
+              "id": 419637,
+              "airingAt": 1793724300,
+              "timeUntilAiring": 20658,
+              "episode": 4,
+              "media": {
+                "id": 179876,
+                "idMal": 59415,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 11,
+                "duration": null,
+                "title": {
+                  "userPreferred": "DARK MACHINE: The Animation",
+                  "romaji": "DARK MACHINE: The Animation",
+                  "native": "DARK MACHINE -The Animation-"
+                },
+                "nextAiringEpisode": {
+                  "episode": 4,
+                  "airingAt": 1793724300
+                }
+              }
+            },
+            {
+              "id": 416123,
+              "airingAt": 1793746800,
+              "timeUntilAiring": 43158,
+              "episode": 44,
+              "media": {
+                "id": 204656,
+                "idMal": 63151,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 1,
+                "title": {
+                  "userPreferred": "mofusand",
+                  "romaji": "mofusand",
+                  "native": "mofusand"
+                },
+                "nextAiringEpisode": {
+                  "episode": 44,
+                  "airingAt": 1793746800
+                }
+              }
+            },
+            {
+              "id": 417917,
+              "airingAt": 1793757600,
+              "timeUntilAiring": 53958,
+              "episode": 18,
+              "media": {
+                "id": 199409,
+                "idMal": 62248,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": 46,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Yi Nian Yongheng 4",
+                  "romaji": "Yi Nian Yongheng 4",
+                  "native": "一念永恒 第四季"
+                },
+                "nextAiringEpisode": {
+                  "episode": 18,
+                  "airingAt": 1793757600
+                }
+              }
+            },
+            {
+              "id": 421468,
+              "airingAt": 1793757600,
+              "timeUntilAiring": 53958,
+              "episode": 8,
+              "media": {
+                "id": 214974,
+                "idMal": 62218,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": 59,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Da Xia Shou Mu Ren",
+                  "romaji": "Da Xia Shou Mu Ren",
+                  "native": "大夏守墓人"
+                },
+                "nextAiringEpisode": {
+                  "episode": 8,
+                  "airingAt": 1793757600
+                }
+              }
+            },
+            {
+              "id": 422059,
+              "airingAt": 1793795400,
+              "timeUntilAiring": 91758,
+              "episode": 5,
+              "media": {
+                "id": 152677,
+                "idMal": 52480,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 13,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Tantei wa mou, Shindeiru. Season 2",
+                  "romaji": "Tantei wa mou, Shindeiru. Season 2",
+                  "native": "探偵はもう、死んでいる。Season2"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793795400
+                }
+              }
+            },
+            {
+              "id": 420790,
+              "airingAt": 1793796840,
+              "timeUntilAiring": 93198,
+              "episode": 3,
+              "media": {
+                "id": 217282,
+                "idMal": null,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 5,
+                "title": {
+                  "userPreferred": "GelPiyo 2",
+                  "romaji": "GelPiyo 2",
+                  "native": "ゲルぴよ 2"
+                },
+                "nextAiringEpisode": {
+                  "episode": 3,
+                  "airingAt": 1793796840
+                }
+              }
+            },
+            {
+              "id": 420156,
+              "airingAt": 1793797200,
+              "timeUntilAiring": 93558,
+              "episode": 5,
+              "media": {
+                "id": 211778,
+                "idMal": 64084,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Sekai Saikyou no Majo, Hajimemashita",
+                  "romaji": "Sekai Saikyou no Majo, Hajimemashita",
+                  "native": "世界最強の魔女、始めました"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793797200
+                }
+              }
+            },
+            {
+              "id": 422252,
+              "airingAt": 1793797200,
+              "timeUntilAiring": 93558,
+              "episode": 5,
+              "media": {
+                "id": 176314,
+                "idMal": 58518,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Sasaki to Pii-chan Season 2",
+                  "romaji": "Sasaki to Pii-chan Season 2",
+                  "native": "佐々木とピーちゃん シーズン２"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793797200
+                }
+              }
+            },
+            {
+              "id": 417274,
+              "airingAt": 1793803560,
+              "timeUntilAiring": 99918,
+              "episode": 5,
+              "media": {
+                "id": 178868,
+                "idMal": 59204,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Magic Knight Rayearth (2026)",
+                  "romaji": "Magic Knight Rayearth (2026)",
+                  "native": "魔法騎士レイアース (2026)"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793803560
+                }
+              }
+            },
+            {
+              "id": 419603,
+              "airingAt": 1793804400,
+              "timeUntilAiring": 100758,
+              "episode": 6,
+              "media": {
+                "id": 199068,
+                "idMal": 62534,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Shin Tennis no Ouji-sama: U-17 WORLD CUP Kesshou Member Ketteisen",
+                  "romaji": "Shin Tennis no Ouji-sama: U-17 WORLD CUP Kesshou Member Ketteisen",
+                  "native": "新テニスの王子様 U-17 WORLD CUP 決勝メンバー決定戦"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793804400
+                }
+              }
+            },
+            {
+              "id": 421453,
+              "airingAt": 1793804400,
+              "timeUntilAiring": 100758,
+              "episode": 4,
+              "media": {
+                "id": 168085,
+                "idMal": 60598,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Dali Si Rizhi 3",
+                  "romaji": "Dali Si Rizhi 3",
+                  "native": "大理寺日志 第3季"
+                },
+                "nextAiringEpisode": {
+                  "episode": 4,
+                  "airingAt": 1793804400
+                }
+              }
+            },
+            {
+              "id": 418798,
+              "airingAt": 1793806200,
+              "timeUntilAiring": 102558,
+              "episode": 6,
+              "media": {
+                "id": 159042,
+                "idMal": 53913,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "Tensei Shitara Ken Deshita 2nd Season",
+                  "romaji": "Tensei Shitara Ken Deshita 2nd Season",
+                  "native": "転生したら剣でした 第2期"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793806200
+                }
+              }
+            },
+            {
+              "id": 419816,
+              "airingAt": 1793806200,
+              "timeUntilAiring": 102558,
+              "episode": 5,
+              "media": {
+                "id": 213068,
+                "idMal": 64344,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Juuоu Mujin Dandivine",
+                  "romaji": "Juuоu Mujin Dandivine",
+                  "native": "獣王武神ダンデヴァイン"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793806200
+                }
+              }
+            },
+            {
+              "id": 420120,
+              "airingAt": 1793807100,
+              "timeUntilAiring": 103458,
+              "episode": 5,
+              "media": {
+                "id": 172192,
+                "idMal": 57612,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Kikansha no Mahou wa Tokubetsu desu 2nd Season",
+                  "romaji": "Kikansha no Mahou wa Tokubetsu desu 2nd Season",
+                  "native": "帰還者の魔法は特別です 第2期"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793807100
+                }
+              }
+            },
+            {
+              "id": 421767,
+              "airingAt": 1793871000,
+              "timeUntilAiring": 167358,
+              "episode": 6,
+              "media": {
+                "id": 217624,
+                "idMal": 65095,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 1,
+                "title": {
+                  "userPreferred": "PetitCure: Precure Fairies Season 4",
+                  "romaji": "PetitCure: Precure Fairies Season 4",
+                  "native": "ぷちきゅあ～Precure Fairies～ シーズン4"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793871000
+                }
+              }
+            },
+            {
+              "id": 423043,
+              "airingAt": 1793873940,
+              "timeUntilAiring": 170298,
+              "episode": 6,
+              "media": {
+                "id": 218942,
+                "idMal": null,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 12,
+                "title": {
+                  "userPreferred": "Sylvanian Families: Freya no Colorful Everyday",
+                  "romaji": "Sylvanian Families: Freya no Colorful Everyday",
+                  "native": "シルバニアファミリー フレアのカラフル・エブリデイ"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793873940
+                }
+              }
+            },
+            {
+              "id": 419085,
+              "airingAt": 1793881800,
+              "timeUntilAiring": 178158,
+              "episode": 6,
+              "media": {
+                "id": 206401,
+                "idMal": 63337,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "FX Senshi Kurumi-chan",
+                  "romaji": "FX Senshi Kurumi-chan",
+                  "native": "FX戦士くるみちゃん"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793881800
+                }
+              }
+            },
+            {
+              "id": 422410,
+              "airingAt": 1793889000,
+              "timeUntilAiring": 185358,
+              "episode": 5,
+              "media": {
+                "id": 188034,
+                "idMal": 61227,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Girls und Panzer: Motto Love Love Sakusen desu!",
+                  "romaji": "Girls und Panzer: Motto Love Love Sakusen desu!",
+                  "native": "ガールズ＆パンツァー もっとらぶらぶ作戦です！"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793889000
+                }
+              }
+            },
+            {
+              "id": 421728,
+              "airingAt": 1793890560,
+              "timeUntilAiring": 186918,
+              "episode": 6,
+              "media": {
+                "id": 213805,
+                "idMal": 64534,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 25,
+                "title": {
+                  "userPreferred": "Koori no Jouheki 2nd Season",
+                  "romaji": "Koori no Jouheki 2nd Season",
+                  "native": "氷の城壁 第2期"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793890560
+                }
+              }
+            },
+            {
+              "id": 417294,
+              "airingAt": 1793890800,
+              "timeUntilAiring": 187158,
+              "episode": 1,
+              "media": {
+                "id": 178972,
+                "idMal": 59217,
+                "format": "MOVIE",
+                "status": "NOT_YET_RELEASED",
+                "episodes": 3,
+                "duration": null,
+                "title": {
+                  "userPreferred": "GROTESQQQUE",
+                  "romaji": "GROTESQQQUE",
+                  "native": "GROTESQQQUE-グロテスク-"
+                },
+                "nextAiringEpisode": {
+                  "episode": 1,
+                  "airingAt": 1793890800
+                }
+              }
+            },
+            {
+              "id": 418964,
+              "airingAt": 1793890800,
+              "timeUntilAiring": 187158,
+              "episode": 5,
+              "media": {
+                "id": 199594,
+                "idMal": 62615,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Tetsuryou! meet with Tetsudou Musume",
+                  "romaji": "Tetsuryou! meet with Tetsudou Musume",
+                  "native": "てつりょー！meet with 鉄道むすめ"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793890800
+                }
+              }
+            },
+            {
+              "id": 419736,
+              "airingAt": 1793890800,
+              "timeUntilAiring": 187158,
+              "episode": 10,
+              "media": {
+                "id": 214593,
+                "idMal": null,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 1,
+                "title": {
+                  "userPreferred": "Yuusanchi! from Yuuhachi",
+                  "romaji": "Yuusanchi! from Yuuhachi",
+                  "native": "ゆうさんち！from 遊ハち"
+                },
+                "nextAiringEpisode": {
+                  "episode": 10,
+                  "airingAt": 1793890800
+                }
+              }
+            },
+            {
+              "id": 421806,
+              "airingAt": 1793890800,
+              "timeUntilAiring": 187158,
+              "episode": 6,
+              "media": {
+                "id": 212144,
+                "idMal": 64180,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 13,
+                "title": {
+                  "userPreferred": "Kizu darake Seijo yori Houfuku wo Komete Season2",
+                  "romaji": "Kizu darake Seijo yori Houfuku wo Komete Season2",
+                  "native": "傷だらけ聖女より報復をこめて Season2"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793890800
+                }
+              }
+            },
+            {
+              "id": 417004,
+              "airingAt": 1793892360,
+              "timeUntilAiring": 188718,
+              "episode": 19,
+              "media": {
+                "id": 180136,
+                "idMal": 59741,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 26,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Tsuihou Sareta Tensei Juukishi wa Game Chishiki de Musou Suru",
+                  "romaji": "Tsuihou Sareta Tensei Juukishi wa Game Chishiki de Musou Suru",
+                  "native": "追放された転生重騎士はゲーム知識で無双する"
+                },
+                "nextAiringEpisode": {
+                  "episode": 19,
+                  "airingAt": 1793892360
+                }
+              }
+            },
+            {
+              "id": 418824,
+              "airingAt": 1793896080,
+              "timeUntilAiring": 192438,
+              "episode": 5,
+              "media": {
+                "id": 212503,
+                "idMal": 64254,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Hyouken no Majutsushi ga Sekai wo Suberu II",
+                  "romaji": "Hyouken no Majutsushi ga Sekai wo Suberu II",
+                  "native": "冰剣の魔術師が世界を統べるⅡ"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793896080
+                }
+              }
+            },
+            {
+              "id": 421794,
+              "airingAt": 1793926200,
+              "timeUntilAiring": 222558,
+              "episode": 6,
+              "media": {
+                "id": 217577,
+                "idMal": 65007,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Mazenchu",
+                  "romaji": "Mazenchu",
+                  "native": "マゼンチュ"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793926200
+                }
+              }
+            },
+            {
+              "id": 421825,
+              "airingAt": 1793930400,
+              "timeUntilAiring": 226758,
+              "episode": 1,
+              "media": {
+                "id": 203275,
+                "idMal": 63045,
+                "format": "TV",
+                "status": "NOT_YET_RELEASED",
+                "episodes": null,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Demons' Crest",
+                  "romaji": "Demons' Crest",
+                  "native": "デモンズ・クレスト"
+                },
+                "nextAiringEpisode": {
+                  "episode": 1,
+                  "airingAt": 1793930400
+                }
+              }
+            },
+            {
+              "id": 421373,
+              "airingAt": 1793937600,
+              "timeUntilAiring": 233958,
+              "episode": 2,
+              "media": {
+                "id": 206244,
+                "idMal": null,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": 6,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Luo Xiaohei Zhan Ji: Xue Qian Pian",
+                  "romaji": "Luo Xiaohei Zhan Ji: Xue Qian Pian",
+                  "native": "罗小黑战记 学前篇"
+                },
+                "nextAiringEpisode": {
+                  "episode": 2,
+                  "airingAt": 1793937600
+                }
+              }
+            },
+            {
+              "id": 420970,
+              "airingAt": 1793952000,
+              "timeUntilAiring": 248358,
+              "episode": 7,
+              "media": {
+                "id": 210482,
+                "idMal": 61469,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": 11,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "JoJo no Kimyou na Bouken: Steel Ball Run - 2nd & 3rd STAGE",
+                  "romaji": "JoJo no Kimyou na Bouken: Steel Ball Run - 2nd & 3rd STAGE",
+                  "native": "ジョジョの奇妙な冒険 スティール・ボール・ラン 2nd＆3rd STAGE"
+                },
+                "nextAiringEpisode": {
+                  "episode": 7,
+                  "airingAt": 1793952000
+                }
+              }
+            },
+            {
+              "id": 420233,
+              "airingAt": 1793958000,
+              "timeUntilAiring": 254358,
+              "episode": 6,
+              "media": {
+                "id": 194207,
+                "idMal": 62039,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 9,
+                "title": {
+                  "userPreferred": "Pan Dorobou",
+                  "romaji": "Pan Dorobou",
+                  "native": "パンどろぼう"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793958000
+                }
+              }
+            },
+            {
+              "id": 421008,
+              "airingAt": 1793958900,
+              "timeUntilAiring": 255258,
+              "episode": 156,
+              "media": {
+                "id": 158871,
+                "idMal": 53876,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Pocket Monsters (2023)",
+                  "romaji": "Pocket Monsters (2023)",
+                  "native": "ポケットモンスター (2023)"
+                },
+                "nextAiringEpisode": {
+                  "episode": 156,
+                  "airingAt": 1793958900
+                }
+              }
+            },
+            {
+              "id": 422661,
+              "airingAt": 1793959200,
+              "timeUntilAiring": 255558,
+              "episode": 87,
+              "media": {
+                "id": 146004,
+                "idMal": 51768,
+                "format": "ONA",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 1,
+                "title": {
+                  "userPreferred": "Girigiri Warukunai Watame",
+                  "romaji": "Girigiri Warukunai Watame",
+                  "native": "ギリギリわるくないわため"
+                },
+                "nextAiringEpisode": {
+                  "episode": 87,
+                  "airingAt": 1793959200
+                }
+              }
+            },
+            {
+              "id": 423103,
+              "airingAt": 1793959200,
+              "timeUntilAiring": 255558,
+              "episode": 139,
+              "media": {
+                "id": 165159,
+                "idMal": 56566,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 22,
+                "title": {
+                  "userPreferred": "BEYBLADE X",
+                  "romaji": "BEYBLADE X",
+                  "native": "BEYBLADE X"
+                },
+                "nextAiringEpisode": {
+                  "episode": 139,
+                  "airingAt": 1793959200
+                }
+              }
+            },
+            {
+              "id": 420193,
+              "airingAt": 1793967960,
+              "timeUntilAiring": 264318,
+              "episode": 6,
+              "media": {
+                "id": 216895,
+                "idMal": 65009,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "Aoki Denshou: Welsh & Shedar",
+                  "romaji": "Aoki Denshou: Welsh & Shedar",
+                  "native": "蒼き伝承 ウェルシュ&シェーダー"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793967960
+                }
+              }
+            },
+            {
+              "id": 419706,
+              "airingAt": 1793971800,
+              "timeUntilAiring": 268158,
+              "episode": 5,
+              "media": {
+                "id": 186742,
+                "idMal": 61014,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "Toaru Anbu no ITEM",
+                  "romaji": "Toaru Anbu no ITEM",
+                  "native": "とある暗部の少女共棲"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793971800
+                }
+              }
+            },
+            {
+              "id": 418786,
+              "airingAt": 1793973600,
+              "timeUntilAiring": 269958,
+              "episode": 6,
+              "media": {
+                "id": 195516,
+                "idMal": 61987,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Kusuriya no Hitorigoto 3rd Season",
+                  "romaji": "Kusuriya no Hitorigoto 3rd Season",
+                  "native": "薬屋のひとりごと 第3期"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793973600
+                }
+              }
+            },
+            {
+              "id": 418469,
+              "airingAt": 1793975400,
+              "timeUntilAiring": 271758,
+              "episode": 5,
+              "media": {
+                "id": 205909,
+                "idMal": 63293,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 23,
+                "title": {
+                  "userPreferred": "Hotaru no Yomeiri",
+                  "romaji": "Hotaru no Yomeiri",
+                  "native": "ホタルの嫁入り"
+                },
+                "nextAiringEpisode": {
+                  "episode": 5,
+                  "airingAt": 1793975400
+                }
+              }
+            },
+            {
+              "id": 422240,
+              "airingAt": 1793975400,
+              "timeUntilAiring": 271758,
+              "episode": 6,
+              "media": {
+                "id": 204650,
+                "idMal": 63181,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Tougen Anki: Nikko・Kegon no Taki-hen",
+                  "romaji": "Tougen Anki: Nikko・Kegon no Taki-hen",
+                  "native": "桃源暗鬼 日光・華厳の滝編"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793975400
+                }
+              }
+            },
+            {
+              "id": 421093,
+              "airingAt": 1793977200,
+              "timeUntilAiring": 273558,
+              "episode": 18,
+              "media": {
+                "id": 203490,
+                "idMal": 63061,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 24,
+                "duration": 24,
+                "title": {
+                  "userPreferred": "Uchi no Otouto-domo ga Sumimasen",
+                  "romaji": "Uchi no Otouto-domo ga Sumimasen",
+                  "native": "うちの弟どもがすみません"
+                },
+                "nextAiringEpisode": {
+                  "episode": 18,
+                  "airingAt": 1793977200
+                }
+              }
+            },
+            {
+              "id": 418626,
+              "airingAt": 1793983980,
+              "timeUntilAiring": 280338,
+              "episode": 6,
+              "media": {
+                "id": 178083,
+                "idMal": 59088,
+                "format": "TV",
+                "status": "RELEASING",
+                "episodes": 13,
+                "duration": null,
+                "title": {
+                  "userPreferred": "Tokyo Revengers: Santen Sensou-hen",
+                  "romaji": "Tokyo Revengers: Santen Sensou-hen",
+                  "native": "東京リベンジャーズ 三天戦争編"
+                },
+                "nextAiringEpisode": {
+                  "episode": 6,
+                  "airingAt": 1793983980
+                }
+              }
+            },
+            {
+              "id": 419760,
+              "airingAt": 1794006000,
+              "timeUntilAiring": 302358,
+              "episode": 10,
+              "media": {
+                "id": 214703,
+                "idMal": 64718,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 2,
+                "title": {
+                  "userPreferred": "Ghost Meets Gal!",
+                  "romaji": "Ghost Meets Gal!",
+                  "native": "ごーすと・みーつ・ぎゃる！"
+                },
+                "nextAiringEpisode": {
+                  "episode": 10,
+                  "airingAt": 1794006000
+                }
+              }
+            },
+            {
+              "id": 420280,
+              "airingAt": 1794007800,
+              "timeUntilAiring": 304158,
+              "episode": 19,
+              "media": {
+                "id": 212308,
+                "idMal": 64210,
+                "format": "TV_SHORT",
+                "status": "RELEASING",
+                "episodes": null,
+                "duration": 2,
+                "title": {
+                  "userPreferred": "Pan no Akachan (TV)",
+                  "romaji": "Pan no Akachan (TV)",
+                  "native": "パンの赤ちゃん"
+                },
+                "nextAiringEpisode": {
+                  "episode": 19,
+                  "airingAt": 1794007800
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "jikan": {
+      "error": "URLError: <urlopen error [WinError 10060] 연결된 구성원으로부터 응답이 없어 연결하지 못했거나, 호스트로부터 응답이 없어 연결이 끊어졌습니다>"
+    }
+  },
+  "summary": {
+    "anilist": {
+      "rows": 50,
+      "hasNextPage": true,
+      "totalReported": 5000,
+      "distinctMedia": 50,
+      "formats": {
+        "TV": 32,
+        "ONA": 9,
+        "TV_SHORT": 8,
+        "MOVIE": 1
+      },
+      "statuses": {
+        "RELEASING": 48,
+        "NOT_YET_RELEASED": 2
+      },
+      "missingEpisode": 0,
+      "specialEpisodeZero": 0,
+      "missingDuration": 15,
+      "missingMalId": 4,
+      "medianGapMinutes": 54.5,
+      "delaySignalFields": {
+        "media.nextAiringEpisode": "현재 회차만 제공, 지연 이력 없음",
+        "media.status": "RELEASING/FINISHED만 제공, 결방 사유 없음",
+        "airingSchedule.episode": "0 또는 누락으로 특별편 추정 가능"
+      }
+    }
+  }
+}

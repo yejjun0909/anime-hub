@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — ID 매칭 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    h1 { font-size: 20px; }
+    #summary { font-size: 16px; font-weight: 700; padding: 12px 16px; border-radius: 8px; background: #1c2030; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+    th, td { border-bottom: 1px solid #2a3044; padding: 8px; text-align: left; vertical-align: top; }
+    tr.fail td { background: #3a1c22; }
+    code { color: #9fc4ff; }
+  </style>
+</head>
+<body>
+  <h1>한국어 카탈로그 ID 매칭 테스트</h1>
+  <p>실제 앱이 사용하는 <code>data/korean-match.js</code> 모듈로 실행합니다.</p>
+  <div id="summary">실행 중…</div>
+  <table>
+    <thead><tr><th>#</th><th>케이스</th><th>기대</th><th>실제</th><th>결과</th><th>이유</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script type="module">
+    import { findKoreanCatalogRecord, KOREAN_CATALOG } from '../data/korean-match.js';
+
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+
+    function addRow(index, name, expected, actual, passed, why, detail = '') {
+      const tr = document.createElement('tr');
+      if (!passed) tr.className = 'fail';
+      tr.innerHTML = `<td>${index}</td><td>${name}</td><td><code>${expected ?? 'null'}</code></td>` +
+        `<td><code>${actual ?? 'null'}</code></td><td>${passed ? '통과' : '실패'}${detail ? `<br><small>${detail}</small>` : ''}</td><td>${why}</td>`;
+      rows.appendChild(tr);
+      if (!passed) failures.push({ name, expected, actual, why, detail });
+    }
+
+    try {
+      const response = await fetch('./korean-id-cases.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`테스트 케이스 로드 실패: HTTP ${response.status}`);
+      const cases = await response.json();
+
+      let index = 0;
+      for (const testCase of cases) {
+        index += 1;
+        const record = findKoreanCatalogRecord(testCase.media);
+        const actual = record?.workId ?? null;
+        const passed = actual === testCase.expectWorkId;
+        addRow(index, testCase.name, testCase.expectWorkId, actual, passed, testCase.why);
+      }
+
+      // 표시용 레코드 형태 검사
+      const display = findKoreanCatalogRecord({ id: 16498 });
+      const shapeOk = display && ['title', 'overview', 'source', 'url'].every((key) => typeof display[key] === 'string');
+      index += 1;
+      addRow(index, '표시용 레코드 형태', 'title/overview/source/url', shapeOk ? '문자열 4개' : '누락', shapeOk,
+        'v4.5.1 호출부와 호환되어야 함.');
+
+      // 카탈로그 커버리지
+      const covered = new Set(cases.map((c) => c.expectWorkId).filter(Boolean));
+      const uncovered = KOREAN_CATALOG.filter((record) => !covered.has(record.workId)).map((record) => record.workId);
+      index += 1;
+      addRow(index, '카탈로그 양수 커버리지', '0건 미커버', uncovered.length ? uncovered.join(', ') : '0건', uncovered.length === 0,
+        '모든 수동 레코드에 양수 매칭 케이스가 있어야 함.');
+
+      const total = index;
+      const failed = failures.length;
+      summary.className = failed ? 'fail' : 'pass';
+      summary.textContent = failed
+        ? `실패 ${failed}건 / 전체 ${total}건`
+        : `통과 ${total}건 / 전체 ${total}건`;
+      window.__KOREAN_MATCH_RESULT__ = { total, failed, failures, finishedAt: new Date().toISOString() };
+      document.title = failed ? `FAIL ${failed}/${total}` : `PASS ${total}/${total}`;
+    } catch (error) {
+      summary.className = 'fail';
+      summary.textContent = `실행 오류: ${error.message}`;
+      window.__KOREAN_MATCH_RESULT__ = { total: 0, failed: 1, failures: [{ name: 'harness', detail: error.message }] };
+      document.title = 'ERROR';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#11131b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ANIME HUB" />
+  <meta name="description" content="전 세계 애니메이션을 검색하고 나만의 시청 목록을 관리하는 ANIME HUB" />
+  <title>ANIME HUB — 애니메이션 통합 정보</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="ANIME HUB 홈">
+        <span class="brand-mark">A<span>+</span></span>
+        <span class="brand-name">ANIME<span>HUB</span><small>애니메이션 통합 데이터베이스</small></span>
+      </a>
+      <div class="top-search" role="search">
+        <span class="search-symbol">⌕</span>
+        <input id="global-search" type="search" placeholder="작품·성우·제작사 검색" autocomplete="off" />
+        <kbd>↵</kbd>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="refresh-data" title="최신 정보 확인" aria-label="최신 정보 확인">↻</button>
+        <button class="icon-button" id="install-button" title="앱 설치" hidden>⇩</button>
+        <button class="account-button" id="account-button" title="개인 데이터 및 계정 설정"><span class="avatar">U</span><span id="account-label">로컬 저장</span></button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav-label">탐색 메뉴</div>
+        <nav id="main-nav" class="main-nav">
+          <a href="#home" data-route="home" class="nav-item active"><span>⌂</span> 홈</a>
+          <a href="#airing" data-route="airing" class="nav-item"><span>◷</span> 방영 일정</a>
+          <a href="#browse" data-route="browse" class="nav-item"><span>▦</span> 전체 애니</a>
+          <a href="#movies" data-route="movies" class="nav-item"><span>▣</span> 극장판 · 영화</a>
+          <a href="#studios" data-route="studios" class="nav-item"><span>▤</span> 제작사</a>
+          <a href="#people" data-route="people" class="nav-item"><span>♙</span> 성우 · 스태프</a>
+        </nav>
+        <div class="nav-label personal-label">나의 공간</div>
+        <nav class="main-nav">
+          <a href="#watchlist" data-route="watchlist" class="nav-item"><span>♡</span> 내 보관함</a>
+          <a href="#recommend" data-route="recommend" class="nav-item"><span>✧</span> 취향 추천</a>
+          <a href="#collections" data-route="collections" class="nav-item"><span>▣</span> 컬렉션</a>
+          <a href="#stats" data-route="stats" class="nav-item"><span>▥</span> 시청 통계</a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="source-status"><span class="live-dot"></span><div><b>데이터 연결</b><small>AniList · Jikan · TMDB(선택)</small></div></div>
+          <button class="settings-link" id="settings-open">⚙ 데이터·계정 설정</button>
+          <p class="sidebar-note">작품 정보 제공: AniList / Jikan / TMDB<br/>한글 별칭 자동 조회 · TMDB 한국어 정보 선택 연결</p>
+        </div>
+      </aside>
+
+      <main id="main-content" class="main-content">
+        <section class="welcome-skeleton"><div class="skeleton wide"></div><div class="skeleton row"></div><div class="skeleton cards"></div></section>
+      </main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

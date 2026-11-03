@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  static:
+    name: 정적 검사 · 단위 테스트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 카탈로그 생성 파일 동기화 검사
+        run: python tools/build_korean_catalog.py --check
+
+      - name: 카탈로그 데이터 검사
+        run: python tools/check_korean_catalog.py
+
+      - name: 백업 검사기 양성/음성 케이스
+        run: |
+          python tools/check_backup.py tests/fixtures/backup-valid.json
+          if python tools/check_backup.py tests/fixtures/backup-invalid.json; then
+            echo "음성 케이스가 통과하면 안 됩니다."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 문법 검사
+        run: npm run check
+
+      - name: 단위 테스트
+        run: npm test
+
+      - name: 클라이언트에 JWT 비밀키 흔적이 없는지 검사
+        run: |
+          if grep -rInE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.' \
+            --include='*.js' --include='*.html' --include='*.json' .; then
+            echo "JWT 형태의 문자열이 클라이언트 파일에 있습니다. service_role 키 여부를 확인하세요."
+            exit 1
+          fi
+
+  browser:
+    name: 브라우저 스모크 (초기 스켈레톤)
+    runs-on: ubuntu-latest
+    # 첫 CI 실행에서 안정화되면 continue-on-error를 제거해 필수 게이트로 승격합니다.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Playwright 설치
+        run: |
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: 스모크 테스트
+        run: npx playwright test
