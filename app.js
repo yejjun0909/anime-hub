@@ -4,6 +4,7 @@ import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
 import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
+import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { machineTranslateTitle, machineTranslateOverview, isMachineTranslationEnabled, setMachineTranslationEnabled, getCachedMachineTranslation } from './data/machine-translate.js';
 import { geminiTranslateTitle, geminiTranslateOverview, hasGeminiKey, setGeminiKey, getCachedGeminiTranslation } from './data/gemini-translate.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
@@ -527,6 +528,7 @@ function tmdbKoreanSourceLabel(country){
 function koreanTitleInfo(media){
   const curated=curatedKoreanOverride(media);if(curated?.title)return {title:curated.title,source:curated.source,url:curated.url,kind:'curated'};
   const user=getUserKorean(media);if(user?.title)return {title:user.title,source:user.source,url:user.url,kind:'user'};
+  const db=lookupKoreanTitle(media);if(db?.title)return db;
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.title)return {title:tmdb.title,source:tmdbKoreanSourceLabel(tmdb.titleCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
@@ -537,6 +539,7 @@ function koreanTitleInfo(media){
 function koreanDescriptionInfo(media){
   const curated=curatedKoreanOverride(media);if(curated?.overview)return {overview:curated.overview,source:curated.source,url:curated.url,kind:'curated'};
   const user=getUserKorean(media);if(user?.overview)return {overview:user.overview,source:user.source,url:user.url,kind:'user'};
+  const db=lookupKoreanTitle(media);if(db?.overview)return {overview:db.overview,source:db.source,url:db.url,kind:db.kind};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.overview&&isMostlyKorean(tmdb.overview))return {overview:tmdb.overview,source:tmdbKoreanSourceLabel(tmdb.overviewCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
   if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.description?.slice(0,1000),'ja','ko');if(mt?.text)return {overview:mt.text,source:mt.source,url:'',kind:'machine'};}
@@ -1697,4 +1700,4 @@ async function replayQueuedMutations(){
 
 setInterval(()=>{if(document.visibilityState==='visible')checkNewReleaseAlerts(false);},30*60*1000);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker registration failed',err)));}
-await loadSupabase();updateAccountButton();renderRoute();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);
+await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});renderRoute();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);

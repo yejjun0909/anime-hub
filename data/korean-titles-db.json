@@ -1,0 +1,847 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-03",
+  "count": 100,
+  "entries": {
+    "16498": {
+      "anilistId": 16498,
+      "malId": 16498,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "101922": {
+      "anilistId": 101922,
+      "malId": 38000,
+      "title": "귀멸의 칼날",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "113415": {
+      "anilistId": 113415,
+      "malId": 40748,
+      "title": "주술회전",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "1535": {
+      "anilistId": 1535,
+      "malId": 1535,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21459": {
+      "anilistId": 21459,
+      "malId": 31964,
+      "title": "나의 히어로 아카데미아 1기",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "11061": {
+      "anilistId": 11061,
+      "malId": 11061,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21087": {
+      "anilistId": 21087,
+      "malId": 30276,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21": {
+      "anilistId": 21,
+      "malId": 21,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20605": {
+      "anilistId": 20605,
+      "malId": 22319,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20958": {
+      "anilistId": 20958,
+      "malId": 25777,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "5114": {
+      "anilistId": 5114,
+      "malId": 5114,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20": {
+      "anilistId": 20,
+      "malId": 20,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "11757": {
+      "anilistId": 11757,
+      "malId": 11757,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20954": {
+      "anilistId": 20954,
+      "malId": 28851,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21519": {
+      "anilistId": 21519,
+      "malId": 32281,
+      "title": "너의 이름은.",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "99147": {
+      "anilistId": 99147,
+      "malId": 35760,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21856": {
+      "anilistId": 21856,
+      "malId": 33486,
+      "title": "나의 히어로 아카데미아 2기",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "110277": {
+      "anilistId": 110277,
+      "malId": 40028,
+      "title": "진격의 거인 더 파이널 시즌",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "127230": {
+      "anilistId": 127230,
+      "malId": 44511,
+      "title": "체인소 맨",
+      "source": "anilist",
+      "confidence": 1.0
+    },
+    "101759": {
+      "anilistId": 101759,
+      "malId": 37779,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20755": {
+      "anilistId": 20755,
+      "malId": 24833,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21507": {
+      "anilistId": 21507,
+      "malId": 32182,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21355": {
+      "anilistId": 21355,
+      "malId": 31240,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20665": {
+      "anilistId": 20665,
+      "malId": 23273,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "104578": {
+      "anilistId": 104578,
+      "malId": 38524,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "1735": {
+      "anilistId": 1735,
+      "malId": 1735,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "21234": {
+      "anilistId": 21234,
+      "malId": 31043,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "100166": {
+      "anilistId": 100166,
+      "malId": 36456,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "9253": {
+      "anilistId": 9253,
+      "malId": 9253,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "97940": {
+      "anilistId": 97940,
+      "malId": 34572,
+      "title": null,
+      "source": "none",
+      "confidence": 0.0
+    },
+    "20464": {
+      "anilistId": 20464,
+      "malId": 20583,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "101291": {
+      "anilistId": 101291,
+      "malId": 37450,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "140960": {
+      "anilistId": 140960,
+      "malId": 50265,
+      "title": "스파이 패밀리",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "101921": {
+      "anilistId": 101921,
+      "malId": 37999,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "105333": {
+      "anilistId": 105333,
+      "malId": 38691,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "101348": {
+      "anilistId": 101348,
+      "malId": 37521,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "21827": {
+      "anilistId": 21827,
+      "malId": 33352,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "124080": {
+      "anilistId": 124080,
+      "malId": 42897,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "4224": {
+      "anilistId": 4224,
+      "malId": 4224,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "19815": {
+      "anilistId": 19815,
+      "malId": 19815,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20613": {
+      "anilistId": 20613,
+      "malId": 22199,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20447": {
+      "anilistId": 20447,
+      "malId": 20507,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "104276": {
+      "anilistId": 104276,
+      "malId": 38408,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20789": {
+      "anilistId": 20789,
+      "malId": 23755,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "269": {
+      "anilistId": 269,
+      "malId": 269,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "21202": {
+      "anilistId": 21202,
+      "malId": 30831,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "112151": {
+      "anilistId": 112151,
+      "malId": 40456,
+      "title": "극장판 귀멸의 칼날: 무한열차편",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "1575": {
+      "anilistId": 1575,
+      "malId": 1575,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "99423": {
+      "anilistId": 99423,
+      "malId": 35849,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20623": {
+      "anilistId": 20623,
+      "malId": 22535,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "145064": {
+      "anilistId": 145064,
+      "malId": 51009,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "30": {
+      "anilistId": 30,
+      "malId": 30,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "154587": {
+      "anilistId": 154587,
+      "malId": 52991,
+      "title": "장송의 프리렌",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "142329": {
+      "anilistId": 142329,
+      "malId": 47778,
+      "title": "귀멸의 칼날: 환락의 거리편",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "105310": {
+      "anilistId": 105310,
+      "malId": 38671,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "199": {
+      "anilistId": 199,
+      "malId": 199,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "14719": {
+      "anilistId": 14719,
+      "malId": 14719,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "1": {
+      "anilistId": 1,
+      "malId": 1,
+      "title": "카우보이 비밥",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "97668": {
+      "anilistId": 97668,
+      "malId": 34134,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "101280": {
+      "anilistId": 101280,
+      "malId": 37430,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20931": {
+      "anilistId": 20931,
+      "malId": 28223,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "108465": {
+      "anilistId": 108465,
+      "malId": 39535,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "99263": {
+      "anilistId": 99263,
+      "malId": 35790,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "9919": {
+      "anilistId": 9919,
+      "malId": 9919,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "98314": {
+      "anilistId": 98314,
+      "malId": 34933,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "151807": {
+      "anilistId": 151807,
+      "malId": 52299,
+      "title": "나 혼자만 레벨업",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "20594": {
+      "anilistId": 20594,
+      "malId": 21881,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "98659": {
+      "anilistId": 98659,
+      "malId": 35507,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "101338": {
+      "anilistId": 101338,
+      "malId": 37510,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "120120": {
+      "anilistId": 120120,
+      "malId": 42249,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "131681": {
+      "anilistId": 131681,
+      "malId": 48583,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "6547": {
+      "anilistId": 6547,
+      "malId": 6547,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "131573": {
+      "anilistId": 131573,
+      "malId": 48561,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "112641": {
+      "anilistId": 112641,
+      "malId": 40591,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "132405": {
+      "anilistId": 132405,
+      "malId": 48736,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20997": {
+      "anilistId": 20997,
+      "malId": 28999,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "10620": {
+      "anilistId": 10620,
+      "malId": 10620,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "21311": {
+      "anilistId": 21311,
+      "malId": 31478,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "117193": {
+      "anilistId": 117193,
+      "malId": 41587,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "18679": {
+      "anilistId": 18679,
+      "malId": 18679,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20850": {
+      "anilistId": 20850,
+      "malId": 27899,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20832": {
+      "anilistId": 20832,
+      "malId": 29803,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "97986": {
+      "anilistId": 97986,
+      "malId": 34599,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20923": {
+      "anilistId": 20923,
+      "malId": 28171,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "120377": {
+      "anilistId": 120377,
+      "malId": 42310,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20992": {
+      "anilistId": 20992,
+      "malId": 28891,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20920": {
+      "anilistId": 20920,
+      "malId": 28121,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "15809": {
+      "anilistId": 15809,
+      "malId": 15809,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "3588": {
+      "anilistId": 3588,
+      "malId": 3588,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "9989": {
+      "anilistId": 9989,
+      "malId": 9989,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "171018": {
+      "anilistId": 171018,
+      "malId": 57334,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "11111": {
+      "anilistId": 11111,
+      "malId": 11111,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "108632": {
+      "anilistId": 108632,
+      "malId": 39587,
+      "title": "Re: 제로부터 시작하는 이세계 생활 2기",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "14813": {
+      "anilistId": 14813,
+      "malId": 14813,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "2001": {
+      "anilistId": 2001,
+      "malId": 2001,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "6702": {
+      "anilistId": 6702,
+      "malId": 6702,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "21699": {
+      "anilistId": 21699,
+      "malId": 32937,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "99750": {
+      "anilistId": 99750,
+      "malId": 36098,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "145139": {
+      "anilistId": 145139,
+      "malId": 51019,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "101347": {
+      "anilistId": 101347,
+      "malId": 37520,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    }
+  }
+}

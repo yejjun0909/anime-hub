@@ -57,3 +57,54 @@ create policy "Users manage own mutations"
 
 -- 클라이언트는 deleted_at이 null인 행만 기본 조회 (RLS 보조)
 -- (앱에서 .is('deleted_at', null) 필터를 사용합니다)
+
+-- ============================================================
+-- 연합형 한국어 제목 DB (Federated Korean Title Network)
+-- ============================================================
+
+create table if not exists public.korean_title_contributions (
+  id uuid primary key default gen_random_uuid(),
+  anilist_id bigint not null,
+  korean_title text not null,
+  korean_overview text,
+  source text not null check (source in ('user', 'verified', 'platform', 'community')),
+  contributor_id uuid references auth.users(id) on delete set null,
+  votes int not null default 0,
+  status text not null default 'pending' check (status in ('pending', 'verified', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (anilist_id, korean_title)
+);
+
+alter table public.korean_title_contributions enable row level security;
+
+-- 모든 인증 사용자가 읽기 가능 (공유 DB)
+drop policy if exists "Anyone can read contributions" on public.korean_title_contributions;
+create policy "Anyone can read contributions"
+  on public.korean_title_contributions for select to authenticated
+  using (true);
+
+-- 인증 사용자가 기여 가능
+drop policy if exists "Authenticated users can contribute" on public.korean_title_contributions;
+create policy "Authenticated users can contribute"
+  on public.korean_title_contributions for insert to authenticated
+  with check (auth.uid() = contributor_id);
+
+-- 투표는 RPC로 처리 (별도 함수)
+create or replace function public.vote_korean_title(contribution_id uuid, delta int)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update public.korean_title_contributions
+  set votes = votes + delta, updated_at = now()
+  where id = contribution_id;
+  -- 3표 이상이면 verified로 승격
+  update public.korean_title_contributions
+  set status = 'verified'
+  where id = contribution_id and votes >= 3 and status = 'pending';
+end;
+$$;
+
+grant execute on function public.vote_korean_title to authenticated;
