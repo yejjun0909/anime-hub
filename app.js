@@ -3,6 +3,7 @@ import { pruneNullVariables } from './data/api-vars.js';
 import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
+import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
@@ -509,6 +510,7 @@ function tmdbKoreanSourceLabel(country){
 }
 function koreanTitleInfo(media){
   const curated=curatedKoreanOverride(media);if(curated?.title)return {title:curated.title,source:curated.source,url:curated.url,kind:'curated'};
+  const user=getUserKorean(media);if(user?.title)return {title:user.title,source:user.source,url:user.url,kind:'user'};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.title)return {title:tmdb.title,source:tmdbKoreanSourceLabel(tmdb.titleCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
@@ -516,6 +518,7 @@ function koreanTitleInfo(media){
 }
 function koreanDescriptionInfo(media){
   const curated=curatedKoreanOverride(media);if(curated?.overview)return {overview:curated.overview,source:curated.source,url:curated.url,kind:'curated'};
+  const user=getUserKorean(media);if(user?.overview)return {overview:user.overview,source:user.source,url:user.url,kind:'user'};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.overview&&isMostlyKorean(tmdb.overview))return {overview:tmdb.overview,source:tmdbKoreanSourceLabel(tmdb.overviewCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
   return null;
@@ -528,7 +531,7 @@ function koreanMetadataSourceMarkup(media){
   const titleLine=`제목: ${link(titleInfo)}`;
   const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)': '소개';
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
-  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
   return `${titleLine}<br>${descLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}
@@ -1357,14 +1360,23 @@ function detailExtrasMarkup(m){
 
 function detailStudiosMarkup(m){const studios=m.studios?.nodes||m.studios||[];if(!studios.length)return '정보 없음';return studios.map(st=>st.id?`<button class="credit-link" data-studio="${esc(st.id)}" data-studio-name="${esc(st.name)}">${esc(st.name)}</button>`:`<span>${esc(st.name)}</span>`).join(', ');}
 
+function showUserKoreanModal(media){
+  const existing=getUserKorean(media);
+  const root=$('#modal-root');
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:520px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">사용자 입력</div><h2>한국어 제목·소개 직접 입력</h2><p class="page-subtitle">공식 자료가 없는 작품에 직접 한국어 제목과 소개를 입력할 수 있습니다. "사용자 입력"으로 표시되며, 언제든 수정·삭제할 수 있습니다.</p><form class="settings-form" id="user-korean-form"><label>한국어 제목<input id="uk-title" type="text" placeholder="예: 귀멸의 칼날" value="${esc(existing?.title||'')}"></label><label>한국어 소개<textarea id="uk-overview" rows="4" placeholder="작품 소개를 입력하세요">${esc(existing?.overview||'')}</textarea></label><label>출처 URL (선택)<input id="uk-url" type="url" placeholder="https://..." value="${esc(existing?.url||'')}"></label><div class="watch-controls"><button class="primary-button" type="submit">저장</button>${existing?`<button class="ghost-button danger-button" type="button" id="uk-delete">삭제</button>`:''}<button class="ghost-button" type="button" data-close-modal>취소</button></div></form></div></div></div>`;
+  const form=$('#user-korean-form');
+  form.onsubmit=e=>{e.preventDefault();const title=$('#uk-title').value.trim();const overview=$('#uk-overview').value.trim();const url=$('#uk-url').value.trim();if(!title&&!overview){toast('제목 또는 소개를 입력해 주세요.','error');return;}setUserKorean(media,{title,overview,url});toast('한국어 자료를 저장했습니다.');root.innerHTML='';state.currentModal={media};renderDetailModal(media);};
+  $('#uk-delete')?.addEventListener('click',()=>{deleteUserKorean(media);toast('사용자 입력 자료를 삭제했습니다.');root.innerHTML='';state.currentModal={media};renderDetailModal(media);});
+};
+
 function renderDetailModal(m,mal=null,options={}){
   const root=$('#modal-root');const id=m.id;const saved=state.watchlist.find(x=>String(x.media_id)===String(id));const originalDesc=cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');
-  const originalTitle=localizedTitleSource(m);const koreanTitle=localizedTitle(m);const koreanDescInfo=koreanDescriptionInfo(m);const koreanDesc=koreanDescInfo?.overview||'';const descriptionBadge=koreanDescInfo?.kind==='curated'?'국내 카탈로그 기반 요약':koreanDescInfo?'한국어 등록 소개':'한국어 소개 미등록 · 원문 표시';const displayedDesc=koreanDesc||cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');const native=m.title?.native||'';const english=m.title?.english||'';const romaji=m.title?.romaji||'';
+  const originalTitle=localizedTitleSource(m);const koreanTitle=localizedTitle(m);const koreanDescInfo=koreanDescriptionInfo(m);const koreanDesc=koreanDescInfo?.overview||'';const descriptionBadge=koreanDescInfo?.kind==='curated'?'국내 카탈로그 기반 요약':koreanDescInfo?.kind==='user'?'사용자 입력 소개':koreanDescInfo?'한국어 등록 소개':'한국어 소개 미등록 · 원문 표시';const displayedDesc=koreanDesc||cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');const native=m.title?.native||'';const english=m.title?.english||'';const romaji=m.title?.romaji||'';
   const originalNames=[native,english,romaji].filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
   const relationMarkup=detailRelationsMarkup(m);
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal"><div class="modal-top"><button class="close-button" data-close-modal aria-label="닫기">×</button></div>
   <div class="detail-hero"><img class="detail-cover" src="${esc(posterOf(m))}" alt="${esc(originalTitle)}" onerror="this.style.opacity='.2'"><div><div class="eyebrow">${esc(formatOf(m))} · ${esc(yearOf(m))}</div><h2 class="detail-title" data-translate-title>${esc(koreanTitle)}</h2><div class="detail-native">원제: ${esc(originalNames||originalTitle)}</div><div class="detail-stats"><span class="stat-chip"><strong>★ ${((m.averageScore||0)/10).toFixed(1)}</strong>AniList</span><span data-detail-mal></span><span class="stat-chip">${esc(statusOf(m.status))}</span>${m.episodes?`<span class="stat-chip">${m.episodes}화</span>`:''}<span class="stat-chip">인기 ${Number(m.popularity||0).toLocaleString('ko-KR')}</span></div><div class="tag-list">${(m.genres||[]).map(g=>`<span class="genre-tag">${esc(GENRE_LABELS[g]||g)}</span>`).join('')}</div><div class="card-meta">제작사: ${detailStudiosMarkup(m)}</div><div class="detail-actions"><select class="status-select" id="detail-status"><option value="">시청 상태 선택</option>${STATUSES.map(([s,l])=>`<option value="${s}" ${saved?.status===s?'selected':''}>${l}</option>`).join('')}</select><button class="secondary-button" data-save-anime="${esc(id)}">${saved?'목록 업데이트':'내 보관함에 추가'}</button><select class="status-select" id="detail-collection-select"><option value="">컬렉션 선택</option>${state.collections.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="ghost-button" data-add-collection="${esc(id)}">컬렉션에 담기</button><button class="ghost-button" data-create-collection-detail="${esc(id)}">새 컬렉션 만들기</button><a class="secondary-button" href="${esc(m.siteUrl||'#')}" target="_blank" rel="noopener">원본 정보 ↗</a></div></div></div>
-  <div class="detail-body"><section class="detail-section"><h3>작품 소개 <span class="translation-badge">${esc(descriptionBadge)}</span></h3><div class="detail-desc" data-translate-description>${esc(displayedDesc)}</div><details class="translation-original"><summary>${koreanDesc?'원문 보기':'원문 정보'}</summary><div class="detail-desc" data-translation-original-content>${esc(originalDesc.slice(0,5000))}${originalDesc.length>5000?'…':''}</div></details><p class="translation-note" data-korean-metadata-source>${koreanMetadataSourceMarkup(m)}</p><button class="ghost-button" id="retry-korean-translation" type="button">한국어 등록 정보 다시 조회</button></section>
+  <div class="detail-body"><section class="detail-section"><h3>작품 소개 <span class="translation-badge">${esc(descriptionBadge)}</span></h3><div class="detail-desc" data-translate-description>${esc(displayedDesc)}</div><details class="translation-original"><summary>${koreanDesc?'원문 보기':'원문 정보'}</summary><div class="detail-desc" data-translation-original-content>${esc(originalDesc.slice(0,5000))}${originalDesc.length>5000?'…':''}</div></details><p class="translation-note" data-korean-metadata-source>${koreanMetadataSourceMarkup(m)}</p><button class="ghost-button" id="retry-korean-translation" type="button">한국어 등록 정보 다시 조회</button> <button class="ghost-button" id="user-korean-input" type="button">한국어 제목 직접 입력</button></section>
   <section class="detail-section"><h3>방영 · 제작 정보</h3><div class="detail-desc" data-detail-production-info>${detailProductionMarkup(m)}</div></section>
   <section class="detail-section similar-section"><h3>비슷한 작품</h3><button class="ghost-button" id="load-similar-works">비슷한 작품 찾기</button><div id="similar-works-results"></div></section><div data-detail-relations>${relationMarkup}</div>${options.extrasLoading?`<section class="detail-section" data-detail-extras><h3>등장인물 · 제작진</h3><p class="muted">기본 정보를 표시했습니다. 인물 및 제작진 정보를 이어서 불러오고 있습니다...</p></section>`:detailExtrasMarkup(m)}
   <p class="source-footnote">정보 출처: AniList · MyAnimeList/Jikan · TMDB(선택 설정) · 일부 국내 서비스 카탈로그를 확인해 정리한 한국어 자료. 한국어 제목 별칭과 한국어 줄거리는 출처와 신뢰 수준을 구분해 표시하며, 등록되지 않은 줄거리는 원문 그대로 제공합니다.</p></div></div></div>`;
@@ -1574,6 +1586,9 @@ $('#modal-root').addEventListener('click',async e=>{
   if(backdrop||closeButton){$('#modal-root').innerHTML='';state.currentModal=null;return;}
   if(e.target.closest('#retry-korean-translation')){
     if(state.currentModal?.media){await loadKoreanMetadataIntoDetail(state.currentModal.media,{force:true});toast('한국어 등록 정보를 다시 조회했습니다.');}return;
+  }
+  if(e.target.closest('#user-korean-input')){
+    if(state.currentModal?.media)showUserKoreanModal(state.currentModal.media);return;
   }
   if(e.target.closest('#load-similar-works')){loadSimilarWorks();return;}
   if(e.target.closest('#open-franchise-map')){const media=state.currentModal?.media;if(media)renderFranchisePage(media);return;}
