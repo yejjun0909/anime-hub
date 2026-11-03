@@ -63,9 +63,20 @@
 
 **대안**: 나무위키 API (비공식) 또는 사용자가 직접 입력한 데이터를 나무위키에서 확인
 
+### 방안 5: 퍼지 검색 (Fuzzy Search, v4.9+)
+
+**문제**: 번역·수집된 데이터가 "완벽히 같은 이름"일 때만 검색 결과가 나왔음. 사용자가 번역된 이름이나 비슷한 이름(예: "귀멸의 칼날: 무한열차편" vs "귀멸의 칼날")으로 검색해도 결과가 없었음.
+
+**해결**: `data/fuzzy-search.js` — Levenshtein similarity + 정규화 + 부분 매칭.
+
+- `levenshtein`, `similarity`, `normalizeForSearch`, `fuzzyMatch`, `fuzzyFilter`, `searchVariants` (v4.9+)
+- 검색 폴백: 정확한 매칭이 모두 실패 → 후보 풀에서 `fuzzyFilter` → 유사 이름 결과 반환
+
+**기대 효과**: "완벽히 같아야 나오는 게 아니라 비슷한 이름의 결과가 나왔으면 좋겠다" 요구 충족.
+
 ---
 
-## 즉시 구현: 방안 1 + 방안 2
+## 즉시 구현: 방안 1 + 방안 2 + 방안 5
 
 ### 1. TMDB 매칭 강화
 
@@ -88,6 +99,6 @@
 - **C**: B + crowdsourced DB 뼈대 (중기, +50%)
 - **D**: 모두 (B + C + DB 구축)
 
-**추천**: B (TMDB 강화 + Gemini 무료 API). 비용 $0, 즉시 효과, 품질 대폭 향상.
+**추천**: B + 방안 5 (현재 구현 완료). 비용 $0, 즉시 효과, 품질 대폭 향상, 유사 이름 검색 지원.
 
 Gemini API 키는 https://aistudio.google.com 에서 무료로 발급받을 수 있습니다 (Google 계정만 있으면 됨).

@@ -267,33 +267,7 @@ for i in range(1, len(snapshots)):
 
 ---
 
-## 6. 배포 가이드
-
-### 6.1 단일 파일 배포 (가장 간단)
-
-1. `anime-hub-single.html` 하나를 Netlify Drop에 업로드
-2. HTTPS 주소 생성 → 모바일/PC에서 접속
-
-### 6.2 다중 파일 배포 (PWA 포함)
-
-1. ZIP에 포함할 파일:
-   - `index.html`, `styles.css`, `app.js`, `sw.js`, `manifest.webmanifest`, `_headers`
-   - `assets/` 폴더 (icon.svg, icon-192.png, icon-512.png)
-   - `data/` 폴더 (korean-catalog.js, korean-match.js, api-vars.js, schedule-*.js, recommend-*.js, sync-*.js, user-korean.js)
-2. Netlify Drop 또는 GitHub Pages에 업로드
-3. HTTPS 주소에서 PWA 설치 가능
-
-### 6.3 Supabase 연결 (선택)
-
-1. Supabase 프로젝트 생성 (2.1 참고)
-2. `supabase/schema.sql` 실행
-3. `supabase/migrations/0001_sync_hardening.sql` 실행
-4. 앱 설정에서 Project URL + anon key 입력
-5. 계정 만들기 → 이메일 인증 → 로그인
-
----
-
-## 7. 체크리스트 (릴리스 전)
+## 6. 체크리스트 (릴리스 전)
 
 ### v4.6.0 릴리스
 - [x] 카탈로그 데이터 분리
@@ -341,7 +315,7 @@ for i in range(1, len(snapshots)):
 
 ---
 
-## 8. 문제 발생 시
+## 7. 문제 발생 시
 
 ### 앱이 로드되지 않음
 - 브라우저 콘솔 확인 (F12 → Console)
@@ -365,7 +339,7 @@ for i in range(1, len(snapshots)):
 
 ---
 
-## 9. 연락처·참고
+## 8. 연락처·참고
 
 - **AniList API 문서**: https://docs.anilist.co/
 - **TMDB API 문서**: https://developer.themoviedb.org/
