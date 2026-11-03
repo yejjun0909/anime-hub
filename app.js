@@ -403,6 +403,13 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
+    // Machine translation prefetch (experimental, opt-in)
+    if(isMachineTranslationEnabled()&&!curatedKoreanOverride(media)&&!getUserKorean(media)){
+      const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
+      if(nativeTitle&&!getCachedMachineTranslation(nativeTitle,'ja','ko'))await machineTranslateTitle(media);
+      const desc=String(media?.description||'').trim();
+      if(desc.length>=20&&!getCachedMachineTranslation(desc.slice(0,1000),'ja','ko'))await machineTranslateOverview(media);
+    }
     if(state.currentModal?.media?.id!==media.id)return;
     refresh();
     const originalNode=$('[data-translation-original-content]',root);if(originalNode)originalNode.textContent=cleanDescription(media.description||media.synopsis||'원문 설명이 없습니다.');
