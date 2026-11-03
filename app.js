@@ -6,7 +6,7 @@ import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/
 import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { machineTranslateTitle, machineTranslateOverview, isMachineTranslationEnabled, setMachineTranslationEnabled, getCachedMachineTranslation } from './data/machine-translate.js';
-import { geminiTranslateTitle, geminiTranslateOverview, hasGeminiKey, setGeminiKey, getCachedGeminiTranslation } from './data/gemini-translate.js';
+import { geminiTranslateTitle, geminiTranslateOverview, geminiTranslate, hasGeminiKey, setGeminiKey, getCachedGeminiTranslation } from './data/gemini-translate.js';
 import { searchNamuWiki } from './data/namu-search.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
@@ -407,11 +407,16 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+    // 나무위키 조회 (v4.9+): 실제 한국어 소스 우선, 미등록 시 나무위키 시도
+    // AI(번역)은 나무위키 검색에 한정해서만 허용: 한국어 후보 생성 → 나무위키 재검색 → 결과 사용
     if(!curatedKoreanOverride(media)&&!getUserKorean(media)){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
       if(nativeTitle&&String(nativeTitle).trim().length>1){
-        const result=await searchNamuWiki(nativeTitle);
+        let result=await searchNamuWiki(nativeTitle);
+        if(!result?.length){
+          const aiTitle=await geminiTranslate(nativeTitle,'ja','ko');
+          if(aiTitle?.text)result=await searchNamuWiki(aiTitle.text);
+        }
         if(result?.length){
           const best=result[0];
           writeKoreanMetadata(media,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
@@ -688,6 +693,10 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   for(const m of namuPending){
     try{
       const result=await searchNamuWiki(m?.title?.native||m?.title?.romaji||m?.title?.english);
+      if(!result?.length){
+        const aiTitle=await geminiTranslate(m?.title?.native||m?.title?.romaji||m?.title?.english,'ja','ko');
+        if(aiTitle?.text)result=await searchNamuWiki(aiTitle.text);
+      }
       if(result?.length){
         const best=result[0];
         writeKoreanMetadata(m,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
