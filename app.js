@@ -11,6 +11,7 @@ import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
 import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.js';
+import { fuzzyFilter, searchVariants, normalizeForSearch } from './data/fuzzy-search.js';
 
 const APP_VERSION = '4.6.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
@@ -39,7 +40,7 @@ const state = {
   query: '', page: 1, hasNext: false, results: [], filters: defaultFilters(),
   watchlist: loadLocalList(), collections: loadCollections(), savedSearches: loadSavedSearches(), user: null, supabase: null, supabaseError: '',
   installPrompt: null, lastAiring: [], homeMedia: [], movieMedia: [], recommendedMedia: [], currentModal: null, browseMode: 'anime', mediaIndex: new Map(), watchStatusFilter: '', activeCollectionId: null, franchiseFocus: null, peopleMode: 'ALL', notificationsEnabled: localStorage.getItem(RELEASE_ALERT_KEY)==='1',
-  forceRefreshApi: false, lastAutoRefresh: Date.now(), lastDataUpdated: 0, staleDataUsed: false, syncStatus: 'idle', cloudProfileWarned: false, pendingConflicts: [], recommendMetrics: null, airingMineOnly: false, airingAllItems: [], airingSource: 'AniList 방영 일정', airingTimeZone: (localStorage.getItem('animehub_airing_tz_v1') || 'Asia/Seoul')
+  forceRefreshApi: false, lastAutoRefresh: Date.now(), lastDataUpdated: 0, staleDataUsed: false, syncStatus: 'idle', cloudProfileWarned: false, pendingConflicts: [], recommendMetrics: null, lastSearchFuzzy: false, airingMineOnly: false, airingAllItems: [], airingSource: 'AniList 방영 일정', airingTimeZone: (localStorage.getItem('animehub_airing_tz_v1') || 'Asia/Seoul')
 };
 
 const MEDIA_FIELDS = `
@@ -849,11 +850,17 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
       if(filtered.length)data={...retry,media:filtered,total:filtered.length};
     }catch(error){if(!lastError)lastError=error;}
   }
-  if((!data||!data.media?.length)&&!query){
+  if(!data||data.media?.length===0){
+    // 퍼지 검색 폴백: 정확한 매칭이 모두 실패하면 유사한 이름의 작품을 결과로 반환합니다.
     try{
       const retry=await fetchAnimeListSimple({page,perPage:50,sort:requestFilters.sort,forceRefresh:true});
-      const filtered=filterClientMedia(retry.media,f);
-      data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;
+      const pool=retry?.media||[];
+      const source=query?fuzzyFilter(pool,query,0.6):pool;
+      const filtered=filterClientMedia(source,f);
+      if(filtered.length){
+        data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;
+        if(query)state.lastSearchFuzzy=true;
+      }
     }catch(error){if(!lastError)lastError=error;}
   }
   // AniList 우선 조회 후, Jikan 결과는 지원 가능한 필터를 브라우저에서 다시 적용해 보완합니다.

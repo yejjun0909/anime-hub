@@ -80,6 +80,9 @@ export async function machineTranslate(text, from = 'ja', to = 'ko', storage = (
     if (!translated || translated === value) return null;
     // 한글이 포함되어야 유효한 번역으로 간주
     if (!/[가-힣]/.test(translated)) return null;
+    // 검증: 길이 비율
+    const ratio = translated.length / value.length;
+    if (ratio < 0.2 || ratio > 4.0) return null;
 
     const result = { text: translated, from, to, source: '자동 번역 (Google, 비공식)' };
     cache[key] = result;

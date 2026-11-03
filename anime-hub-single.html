@@ -1243,6 +1243,9 @@ async function machineTranslate(text, from = 'ja', to = 'ko', storage = (typeof 
     if (!translated || translated === value) return null;
     // 한글이 포함되어야 유효한 번역으로 간주
     if (!/[가-힣]/.test(translated)) return null;
+    // 검증: 길이 비율
+    const ratio = translated.length / value.length;
+    if (ratio < 0.2 || ratio > 4.0) return null;
 
     const result = { text: translated, from, to, source: '자동 번역 (Google, 비공식)' };
     cache[key] = result;
@@ -1349,14 +1352,32 @@ async function geminiTranslate(text, from = 'ja', to = 'ko', storage = (typeof l
   if (cache[ck]) return cache[ck];
 
   try {
-    const prompt = `다음 ${from === 'ja' ? '일본어' : from} 텍스트를 자연스러운 한국어로 번역하세요. 애니메이션 제목/소개일 수 있습니다. 번역 결과만 출력하세요 (설명 없이):\n\n${value}`;
+    const isTitle = value.length < 80;
+    const prompt = isTitle
+      ? `다음은 일본 애니메이션의 제목입니다. 한국에서 통용되는 한국어 제목으로 번역하세요.
+
+규칙:
+- 고유명사(인명, 지명)는 한국에서 일반적으로 사용하는 표기를 사용하세요
+- 이미 한국에서 널리 알려진 제목은 그대로 사용하세요
+- 세미콜론, 특수문자는 자연스럽게 처리하세요
+- 번역 결과만 출력하세요 (설명, 주석 없이)
+
+예시:
+鬼滅の刃 → 귀멸의 칼날
+進撃の巨人 → 진격의 거인
+Steins;Gate → 슈타인즈 게이트
+Re:Zero → Re:제로부터 시작하는 이세계 생활
+僕のヒーローアカデミア → 나의 히어로 아카데미아
+
+번역할 제목: ${value}`
+      : `다음 일본어 텍스트를 자연스러운 한국어로 번역하세요. 애니메이션 소개일 수 있습니다. 번역 결과만 출력하세요:\n\n${value}`;
 
     const response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+        generationConfig: { temperature: 0, maxOutputTokens: 1024 }
       })
     });
 
@@ -1365,6 +1386,13 @@ async function geminiTranslate(text, from = 'ja', to = 'ko', storage = (typeof l
     const translated = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
     if (!translated || translated === value) return null;
     if (!/[가-힣]/.test(translated)) return null;
+    // 검증: 길이 비율 확인 (원문 대비 0.3~3.0배)
+    const ratio = translated.length / value.length;
+    if (ratio < 0.2 || ratio > 4.0) return null;
+    // 검증: 고유명사 보존 (영어/숫자가 원문에 있으면 번역에도 있어야)
+    const origAlphanum = (value.match(/[A-Za-z0-9]/g) || []).length;
+    const transAlphanum = (translated.match(/[A-Za-z0-9]/g) || []).length;
+    if (origAlphanum > 3 && transAlphanum < origAlphanum * 0.3) return null;
 
     const result = { text: translated, from, to, source: 'Gemini AI 번역 (비공식, 실험적)' };
     cache[ck] = result;
@@ -1471,11 +1499,86 @@ async function loadKoreanTitlesDb(url = './data/korean-titles-db.json') {
 return { getKoreanTitlesDb, isDbLoaded, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb };
 })();
 const { getKoreanTitlesDb, isDbLoaded, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb } = __ns_data_korean_titles_db_js;
+// ===== data/fuzzy-search.js =====
+const __ns_data_fuzzy_search_js = (function() {
+// 퍼지 검색 (v4.9+)
+//
+// Levenshtein distance 기반 유사도 매칭.
+// 정확한 매칭이 실패해도 비슷한 이름의 결과를 반환합니다.
+
+function levenshtein(a, b) {
+  a = String(a || '');
+  b = String(b || '');
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+function similarity(a, b) {
+  a = String(a || '');
+  b = String(b || '');
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+function normalizeForSearch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+    .replace(/시즌\d+|season\d+/g, '');
+}
+
+function fuzzyMatch(query, target, threshold = 0.6) {
+  const q = normalizeForSearch(query);
+  const t = normalizeForSearch(target);
+  if (!q || !t) return false;
+  if (t.includes(q)) return true;
+  if (q.includes(t)) return true;
+  return similarity(q, t) >= threshold;
+}
+
+function fuzzyFilter(items, query, threshold = 0.6) {
+  if (!query || !items?.length) return items || [];
+  return items.filter((item) => {
+    const title = item?.title?.userPreferred || item?.title?.english || item?.title?.romaji || item?.title?.native || '';
+    const synonyms = item?.synonyms || [];
+    if (fuzzyMatch(query, title, threshold)) return true;
+    return synonyms.some((s) => fuzzyMatch(query, s, threshold));
+  });
+}
+
+function searchVariants(query) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  const variants = new Set([q]);
+  // 띄어쓰기 제거
+  variants.add(q.replace(/\s+/g, ''));
+  // 영어/일본어 혼용
+  // (추가 변형은 호출자가 처리)
+  return [...variants];
+}
+
+return { fuzzyFilter, fuzzyMatch, levenshtein, normalizeForSearch, searchVariants, similarity };
+})();
+const { fuzzyFilter, fuzzyMatch, levenshtein, normalizeForSearch, searchVariants, similarity } = __ns_data_fuzzy_search_js;
 // ===== korean-titles-db (inlined) =====
 setKoreanTitlesDb({
   "version": 1,
-  "generatedAt": "2026-11-03",
-  "count": 100,
+  "generatedAt": "2026-11-04",
+  "count": 200,
   "entries": {
     "16498": {
       "anilistId": 16498,
@@ -2316,10 +2419,911 @@ setKoreanTitlesDb({
       "source": "none",
       "overviewSource": "none",
       "confidence": 0.0
+    },
+    "21170": {
+      "anilistId": 21170,
+      "malId": 30654,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "128893": {
+      "anilistId": 128893,
+      "malId": 46569,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "2904": {
+      "anilistId": 2904,
+      "malId": 2904,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "431": {
+      "anilistId": 431,
+      "malId": 431,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "129874": {
+      "anilistId": 129874,
+      "malId": 49926,
+      "title": "귀멸의 칼날: 무한열차편",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "21698": {
+      "anilistId": 21698,
+      "malId": 32935,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "21804": {
+      "anilistId": 21804,
+      "malId": 33255,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "106286": {
+      "anilistId": 106286,
+      "malId": 38826,
+      "title": "날씨의 아이",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "13601": {
+      "anilistId": 13601,
+      "malId": 13601,
+      "title": "PSYCHO-PASS 사이코 패스",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "14741": {
+      "anilistId": 14741,
+      "malId": 14741,
+      "title": "중이병에서도 사랑하고 싶다!",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "98460": {
+      "anilistId": 98460,
+      "malId": 35120,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "12189": {
+      "anilistId": 12189,
+      "malId": 12189,
+      "title": "빙과",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "10087": {
+      "anilistId": 10087,
+      "malId": 10087,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "20474": {
+      "anilistId": 20474,
+      "malId": 20899,
+      "title": "조조의 이상한 모험 스타 더스트 크루세이더스",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "19": {
+      "anilistId": 19,
+      "malId": 19,
+      "title": "몬스터",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "5081": {
+      "anilistId": 5081,
+      "malId": 5081,
+      "title": "화 이야기",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "161645": {
+      "anilistId": 161645,
+      "malId": 54492,
+      "title": "약사의 혼잣말",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "113936": {
+      "anilistId": 113936,
+      "malId": 40852,
+      "title": "닥터 스톤 STONE WARS",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "115230": {
+      "anilistId": 115230,
+      "malId": 40221,
+      "title": "신의 탑",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "150672": {
+      "anilistId": 150672,
+      "malId": 52034,
+      "title": "【최애의 아이】",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "142838": {
+      "anilistId": 142838,
+      "malId": 50602,
+      "title": "스파이 패밀리",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "20829": {
+      "anilistId": 20829,
+      "malId": 26243,
+      "title": "마지막 세라프",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "21776": {
+      "anilistId": 21776,
+      "malId": 33206,
+      "title": "고바야시 산치의 메이드 드래곤",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "99578": {
+      "anilistId": 99578,
+      "malId": 35968,
+      "title": "오타쿠에게 사랑이 어렵다.",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "137822": {
+      "anilistId": 137822,
+      "malId": 49596,
+      "title": "블루락",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "127720": {
+      "anilistId": 127720,
+      "malId": 45576,
+      "title": "무직 환생 ～이세계 가면 진심으로 한다～ 제2 쿨",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "116589": {
+      "anilistId": 116589,
+      "malId": 41457,
+      "title": "86-에이티식스-",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "9756": {
+      "anilistId": 9756,
+      "malId": 9756,
+      "title": "마법소녀 마도카☆마기카",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "103572": {
+      "anilistId": 103572,
+      "malId": 38101,
+      "title": "오등분의 신부",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "108511": {
+      "anilistId": 108511,
+      "malId": 39551,
+      "title": "환생했을 때 슬라임이었던 건 제2기",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "133965": {
+      "anilistId": 133965,
+      "malId": 48926,
+      "title": "후루미씨는, 코뮤증입니다.",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "108725": {
+      "anilistId": 108725,
+      "malId": 39617,
+      "title": "약속의 네버랜드 2",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "130298": {
+      "anilistId": 130298,
+      "malId": 48316,
+      "title": "그늘의 실력자가 되고 싶어서!",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "114535": {
+      "anilistId": 114535,
+      "malId": 41025,
+      "title": "불멸의 그대에게",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "21450": {
+      "anilistId": 21450,
+      "malId": 31933,
+      "title": "조조의 이상한 모험 다이아몬드는 부서지지 않는다.",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "176496": {
+      "anilistId": 176496,
+      "malId": 58567,
+      "title": "나 혼자만 레벨업 2",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "11617": {
+      "anilistId": 11617,
+      "malId": 11617,
+      "title": "고등학교 DxD",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "105334": {
+      "anilistId": 105334,
+      "malId": 38680,
+      "title": "과일 바구니 1st Season",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "119661": {
+      "anilistId": 119661,
+      "malId": 42203,
+      "title": "Re: 제로부터 시작하는 이세계 생활 2기 파트 2",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "21128": {
+      "anilistId": 21128,
+      "malId": 30503,
+      "title": "노라가미 ARAGOTO",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "100388": {
+      "anilistId": 100388,
+      "malId": 36649,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "113813": {
+      "anilistId": 113813,
+      "malId": 40839,
+      "title": "그녀, 빌려",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "100240": {
+      "anilistId": 100240,
+      "malId": 36511,
+      "title": "도쿄 식종-도쿄 구르-:re",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "101165": {
+      "anilistId": 101165,
+      "malId": 37349,
+      "title": "고블린 슬레이어",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "164": {
+      "anilistId": 164,
+      "malId": 164,
+      "title": "Mononoke 공주",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "114236": {
+      "anilistId": 114236,
+      "malId": 40956,
+      "title": "불꽃 노 소방대 이노 노장",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "102883": {
+      "anilistId": 102883,
+      "malId": 37991,
+      "title": "조조의 이상한 모험 황금 바람",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "2167": {
+      "anilistId": 2167,
+      "malId": 2167,
+      "title": "클라나드 -클라나드-",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "116006": {
+      "anilistId": 116006,
+      "malId": 41353,
+      "title": "갓 오브 하이스쿨",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "918": {
+      "anilistId": 918,
+      "malId": 918,
+      "title": "은혼",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "106625": {
+      "anilistId": 106625,
+      "malId": 38883,
+      "title": "하이큐!! TO THE TOP",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "125367": {
+      "anilistId": 125367,
+      "malId": 43608,
+      "title": "카구야 씨는 말하고 싶다 - 울트라 로맨틱 -",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "6746": {
+      "anilistId": 6746,
+      "malId": 6746,
+      "title": "듀라라라!!",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "151801": {
+      "anilistId": 151801,
+      "malId": 52211,
+      "title": "매쉬 -MASHLE-",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "20799": {
+      "anilistId": 20799,
+      "malId": 26055,
+      "title": "조조의 이상한 모험 스타 더스트 크루세이더스 이집트편",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "20661": {
+      "anilistId": 20661,
+      "malId": 23283,
+      "title": "잔향 테롤",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "100182": {
+      "anilistId": 100182,
+      "malId": 36474,
+      "title": "소드 아트 온라인 알리시제이션",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "7054": {
+      "anilistId": 7054,
+      "malId": 7054,
+      "title": "회장은 하녀 님!",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "8074": {
+      "anilistId": 8074,
+      "malId": 8074,
+      "title": "학원 묵시록 HIGHSCHOOL OF THE DEAD",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "11771": {
+      "anilistId": 11771,
+      "malId": 11771,
+      "title": "쿠로코 농구",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "153288": {
+      "anilistId": 153288,
+      "malId": 52588,
+      "title": "괴수 8호",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "99539": {
+      "anilistId": 99539,
+      "malId": 34577,
+      "title": "일곱 대죄 계명의 부활",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "141391": {
+      "anilistId": 141391,
+      "malId": 50346,
+      "title": "요후카시 노래",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "124845": {
+      "anilistId": 124845,
+      "malId": 43299,
+      "title": "원더에그 우선 순위",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "166240": {
+      "anilistId": 166240,
+      "malId": 55701,
+      "title": "귀멸의 칼날 기둥 연고편",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "21613": {
+      "anilistId": 21613,
+      "malId": 32615,
+      "title": "유녀전기",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "523": {
+      "anilistId": 523,
+      "malId": 523,
+      "title": "이웃집 토토로",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "205": {
+      "anilistId": 205,
+      "malId": 205,
+      "title": "사무라이 참프루",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "5680": {
+      "anilistId": 5680,
+      "malId": 5680,
+      "title": "케이온!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "18153": {
+      "anilistId": 18153,
+      "malId": 18153,
+      "title": "경계의 그분",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "136430": {
+      "anilistId": 136430,
+      "malId": 49387,
+      "title": "빈랜드 사가 SEASON2",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "20698": {
+      "anilistId": 20698,
+      "malId": 23847,
+      "title": "역시 나의 청춘 러브 쌀은 잘못되어 있다. 계속",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "13759": {
+      "anilistId": 13759,
+      "malId": 13759,
+      "title": "사쿠라소의 애완동물 그녀",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "226": {
+      "anilistId": 226,
+      "malId": 226,
+      "title": "엘펜리트",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "116742": {
+      "anilistId": 116742,
+      "malId": 41487,
+      "title": "환생했을 때 슬라임이었던 건 제2기 제2 쿨",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "139630": {
+      "anilistId": 139630,
+      "malId": 49918,
+      "title": "내 영웅 아카데미아 6",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "146065": {
+      "anilistId": 146065,
+      "malId": 51179,
+      "title": "무직전생Ⅱ ～이세계 가면 진심이다",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "130003": {
+      "anilistId": 130003,
+      "malId": 47917,
+      "title": "외톨이 THE ROCK!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "112301": {
+      "anilistId": 112301,
+      "malId": 40496,
+      "title": "마왕학원의 부적합자 ～사상 최강의 마왕의 시조, 환생하여 자손들의 학교에 다니는～",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "18897": {
+      "anilistId": 18897,
+      "malId": 18897,
+      "title": "니세코이",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "120697": {
+      "anilistId": 120697,
+      "malId": 42361,
+      "title": "괴롭히지 말아요, 나가토로 양\t",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "172463": {
+      "anilistId": 172463,
+      "malId": 57658,
+      "title": "주술회전 사멸회부 전편",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "98437": {
+      "anilistId": 98437,
+      "malId": 35073,
+      "title": "오버로드 II",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "17895": {
+      "anilistId": 17895,
+      "malId": 17895,
+      "title": "골든 타임",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "121": {
+      "anilistId": 121,
+      "malId": 121,
+      "title": "강철의 연금술사",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "140439": {
+      "anilistId": 140439,
+      "malId": 50172,
+      "title": "몹 사이코 100 Ⅲ",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "19603": {
+      "anilistId": 19603,
+      "malId": 22297,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "145545": {
+      "anilistId": 145545,
+      "malId": 51096,
+      "title": "환영 실력 지상주의 교실에 2nd Season",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "178025": {
+      "anilistId": 178025,
+      "malId": 59062,
+      "title": "가치 액터",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "14227": {
+      "anilistId": 14227,
+      "malId": 14227,
+      "title": "이웃 괴물 군",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "104157": {
+      "anilistId": 104157,
+      "malId": 38329,
+      "title": "청춘 돼지 녀석은 유메 보는 소녀의 꿈을 꾸지 않는다.",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "4898": {
+      "anilistId": 4898,
+      "malId": 4898,
+      "title": "흑집사 1기",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "21049": {
+      "anilistId": 21049,
+      "malId": 30015,
+      "title": null,
+      "overview": null,
+      "source": "none",
+      "overviewSource": "none",
+      "confidence": 0.0
+    },
+    "813": {
+      "anilistId": 813,
+      "malId": 813,
+      "title": "드래곤볼Z",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "20458": {
+      "anilistId": 20458,
+      "malId": 20785,
+      "title": "마법과 고등학교의 열등생",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "21518": {
+      "anilistId": 21518,
+      "malId": 32282,
+      "title": "식도의 소마 弍ノ皿",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "20872": {
+      "anilistId": 20872,
+      "malId": 27775,
+      "title": "플라스틱 메모리즈",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "853": {
+      "anilistId": 853,
+      "malId": 853,
+      "title": "사쿠라란 고등학교 호스트부",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
+    },
+    "107660": {
+      "anilistId": 107660,
+      "malId": 39195,
+      "title": "비스타즈",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "113538": {
+      "anilistId": 113538,
+      "malId": 40776,
+      "title": "하이큐!! TO THE TOP 2",
+      "overview": null,
+      "source": "google",
+      "overviewSource": "none",
+      "confidence": 0.4
     }
   }
 });
 // ===== app.js =====
+
 
 
 
@@ -2360,7 +3364,7 @@ const state = {
   query: '', page: 1, hasNext: false, results: [], filters: defaultFilters(),
   watchlist: loadLocalList(), collections: loadCollections(), savedSearches: loadSavedSearches(), user: null, supabase: null, supabaseError: '',
   installPrompt: null, lastAiring: [], homeMedia: [], movieMedia: [], recommendedMedia: [], currentModal: null, browseMode: 'anime', mediaIndex: new Map(), watchStatusFilter: '', activeCollectionId: null, franchiseFocus: null, peopleMode: 'ALL', notificationsEnabled: localStorage.getItem(RELEASE_ALERT_KEY)==='1',
-  forceRefreshApi: false, lastAutoRefresh: Date.now(), lastDataUpdated: 0, staleDataUsed: false, syncStatus: 'idle', cloudProfileWarned: false, pendingConflicts: [], recommendMetrics: null, airingMineOnly: false, airingAllItems: [], airingSource: 'AniList 방영 일정', airingTimeZone: (localStorage.getItem('animehub_airing_tz_v1') || 'Asia/Seoul')
+  forceRefreshApi: false, lastAutoRefresh: Date.now(), lastDataUpdated: 0, staleDataUsed: false, syncStatus: 'idle', cloudProfileWarned: false, pendingConflicts: [], recommendMetrics: null, lastSearchFuzzy: false, airingMineOnly: false, airingAllItems: [], airingSource: 'AniList 방영 일정', airingTimeZone: (localStorage.getItem('animehub_airing_tz_v1') || 'Asia/Seoul')
 };
 
 const MEDIA_FIELDS = `
@@ -3170,11 +4174,17 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
       if(filtered.length)data={...retry,media:filtered,total:filtered.length};
     }catch(error){if(!lastError)lastError=error;}
   }
-  if((!data||!data.media?.length)&&!query){
+  if(!data||data.media?.length===0){
+    // 퍼지 검색 폴백: 정확한 매칭이 모두 실패하면 유사한 이름의 작품을 결과로 반환합니다.
     try{
       const retry=await fetchAnimeListSimple({page,perPage:50,sort:requestFilters.sort,forceRefresh:true});
-      const filtered=filterClientMedia(retry.media,f);
-      data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;
+      const pool=retry?.media||[];
+      const source=query?fuzzyFilter(pool,query,0.6):pool;
+      const filtered=filterClientMedia(source,f);
+      if(filtered.length){
+        data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;
+        if(query)state.lastSearchFuzzy=true;
+      }
     }catch(error){if(!lastError)lastError=error;}
   }
   // AniList 우선 조회 후, Jikan 결과는 지원 가능한 필터를 브라우저에서 다시 적용해 보완합니다.

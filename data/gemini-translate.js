@@ -70,14 +70,32 @@ export async function geminiTranslate(text, from = 'ja', to = 'ko', storage = (t
   if (cache[ck]) return cache[ck];
 
   try {
-    const prompt = `다음 ${from === 'ja' ? '일본어' : from} 텍스트를 자연스러운 한국어로 번역하세요. 애니메이션 제목/소개일 수 있습니다. 번역 결과만 출력하세요 (설명 없이):\n\n${value}`;
+    const isTitle = value.length < 80;
+    const prompt = isTitle
+      ? `다음은 일본 애니메이션의 제목입니다. 한국에서 통용되는 한국어 제목으로 번역하세요.
+
+규칙:
+- 고유명사(인명, 지명)는 한국에서 일반적으로 사용하는 표기를 사용하세요
+- 이미 한국에서 널리 알려진 제목은 그대로 사용하세요
+- 세미콜론, 특수문자는 자연스럽게 처리하세요
+- 번역 결과만 출력하세요 (설명, 주석 없이)
+
+예시:
+鬼滅の刃 → 귀멸의 칼날
+進撃の巨人 → 진격의 거인
+Steins;Gate → 슈타인즈 게이트
+Re:Zero → Re:제로부터 시작하는 이세계 생활
+僕のヒーローアカデミア → 나의 히어로 아카데미아
+
+번역할 제목: ${value}`
+      : `다음 일본어 텍스트를 자연스러운 한국어로 번역하세요. 애니메이션 소개일 수 있습니다. 번역 결과만 출력하세요:\n\n${value}`;
 
     const response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+        generationConfig: { temperature: 0, maxOutputTokens: 1024 }
       })
     });
 
@@ -86,6 +104,13 @@ export async function geminiTranslate(text, from = 'ja', to = 'ko', storage = (t
     const translated = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
     if (!translated || translated === value) return null;
     if (!/[가-힣]/.test(translated)) return null;
+    // 검증: 길이 비율 확인 (원문 대비 0.3~3.0배)
+    const ratio = translated.length / value.length;
+    if (ratio < 0.2 || ratio > 4.0) return null;
+    // 검증: 고유명사 보존 (영어/숫자가 원문에 있으면 번역에도 있어야)
+    const origAlphanum = (value.match(/[A-Za-z0-9]/g) || []).length;
+    const transAlphanum = (translated.match(/[A-Za-z0-9]/g) || []).length;
+    if (origAlphanum > 3 && transAlphanum < origAlphanum * 0.3) return null;
 
     const result = { text: translated, from, to, source: 'Gemini AI 번역 (비공식, 실험적)' };
     cache[ck] = result;
