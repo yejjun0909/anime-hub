@@ -214,7 +214,7 @@ def check_wiring() -> None:
         expected_cache = f"anime-hub-shell-v{app_version.replace('.', '-')}"
         if cache.group(1) != expected_cache:
             fail(f"sw.js 캐시 이름이 버전과 다릅니다: {cache.group(1)} (기대: {expected_cache})")
-    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js"):
+    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js", "./data/gemini-translate.js"):
         if asset not in sw:
             fail(f"sw.js SHELL에 {asset} 가 없습니다.")
 
