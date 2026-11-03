@@ -1,5 +1,5 @@
 const CACHE_NAME = 'anime-hub-shell-v4-6-0';
-const SHELL = ['./','./index.html','./styles.css','./app.js','./data/korean-catalog.js','./data/korean-match.js','./data/api-vars.js','./data/schedule-merge.js','./data/schedule-cache.js','./data/schedule-status.js','./data/recommend-score.js','./data/recommend-eval.js','./data/sync-merge.js','./data/sync-queue.js','./data/user-korean.js','./manifest.webmanifest','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
+const SHELL = ['./','./index.html','./styles.css','./app.js','./data/korean-catalog.js','./data/korean-match.js','./data/api-vars.js','./data/schedule-merge.js','./data/schedule-cache.js','./data/schedule-status.js','./data/recommend-score.js','./data/recommend-eval.js','./data/sync-merge.js','./data/sync-queue.js','./data/user-korean.js','./data/machine-translate.js','./manifest.webmanifest','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('anime-hub-shell-')&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

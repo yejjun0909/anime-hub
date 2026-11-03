@@ -1159,7 +1159,124 @@ function allUserKorean(storage) {
 return { allUserKorean, deleteUserKorean, getUserKorean, setUserKorean };
 })();
 const { allUserKorean, deleteUserKorean, getUserKorean, setUserKorean } = __ns_data_user_korean_js;
+// ===== data/machine-translate.js =====
+const __ns_data_machine_translate_js = (function() {
+// 자동 번역 (실험적, 비공식) — v4.9+
+//
+// Google Translate 무료 엔드포인트를 사용합니다.
+// 공식 한국어 자료가 아님을 명시하고, 사용자가 설정에서 명시적으로 켠 경우에만 사용합니다.
+// 정책: 작품명·줄거리는 원칙적으로 기계 번역하지 않지만, 사용자 선택에 따른 실험적 기능으로 제공합니다.
+
+const CACHE_KEY = 'animehub_machine_translate_v1';
+const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
+
+function readCache(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return {};
+  try {
+    const raw = storage.getItem(CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function writeCache(cache, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return false;
+  try {
+    const entries = Object.entries(cache).slice(-500);
+    storage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function isMachineTranslationEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return false;
+  try {
+    return storage.getItem('animehub_machine_translate_enabled_v1') === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
+function setMachineTranslationEnabled(enabled, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return false;
+  try {
+    if (enabled) storage.setItem('animehub_machine_translate_enabled_v1', '1');
+    else storage.removeItem('animehub_machine_translate_enabled_v1');
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function cacheKey(text, from, to) {
+  return `${from}|${to}|${text}`;
+}
+
+function getCachedMachineTranslation(text, from = 'ja', to = 'ko', storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!isMachineTranslationEnabled(storage)) return null;
+  const value = String(text || '').trim();
+  if (!value) return null;
+  const cache = readCache(storage);
+  const key = cacheKey(value, from, to);
+  return cache[key] || null;
+}
+async function machineTranslate(text, from = 'ja', to = 'ko', storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  const value = String(text || '').trim();
+  if (!value || value.length < 2) return null;
+  if (value.length > 5000) return null; // 너무 긴 텍스트는 번역하지 않음
+
+  const cache = readCache(storage);
+  const key = cacheKey(value, from, to);
+  if (cache[key]) return cache[key];
+
+  try {
+    const url = `${ENDPOINT}?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(value)}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    // data[0] is array of [translated, original, ...]
+    const translated = (data?.[0] || []).map((row) => row?.[0] || '').join('').trim();
+    if (!translated || translated === value) return null;
+    // 한글이 포함되어야 유효한 번역으로 간주
+    if (!/[가-힣]/.test(translated)) return null;
+
+    const result = { text: translated, from, to, source: '자동 번역 (Google, 비공식)' };
+    cache[key] = result;
+    writeCache(cache, storage);
+    return result;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function machineTranslateTitle(media, storage) {
+  if (!isMachineTranslationEnabled(storage)) return null;
+  const candidates = [media?.title?.native, media?.title?.romaji, media?.title?.english].filter(Boolean);
+  for (const candidate of candidates) {
+    const result = await machineTranslate(candidate, 'ja', 'ko', storage);
+    if (result?.text) return { title: result.text, source: result.source, url: '', kind: 'machine' };
+  }
+  return null;
+}
+
+async function machineTranslateOverview(media, storage) {
+  if (!isMachineTranslationEnabled(storage)) return null;
+  const desc = String(media?.description || '').trim();
+  if (!desc || desc.length < 20) return null;
+  const result = await machineTranslate(desc.slice(0, 1000), 'ja', 'ko', storage);
+  if (!result?.text) return null;
+  return { overview: result.text, source: result.source, url: '', kind: 'machine' };
+}
+
+return { getCachedMachineTranslation, isMachineTranslationEnabled, machineTranslate, machineTranslateOverview, machineTranslateTitle, setMachineTranslationEnabled };
+})();
+const { getCachedMachineTranslation, isMachineTranslationEnabled, machineTranslate, machineTranslateOverview, machineTranslateTitle, setMachineTranslationEnabled } = __ns_data_machine_translate_js;
 // ===== app.js =====
+
 
 
 
@@ -1675,6 +1792,7 @@ function koreanTitleInfo(media){
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.title)return {title:tmdb.title,source:tmdbKoreanSourceLabel(tmdb.titleCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
+  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.title?.native||media?.title?.romaji||media?.title?.english,'ja','ko');if(mt?.text)return {title:mt.text,source:mt.source,url:'',kind:'machine'};}
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
@@ -1682,6 +1800,7 @@ function koreanDescriptionInfo(media){
   const user=getUserKorean(media);if(user?.overview)return {overview:user.overview,source:user.source,url:user.url,kind:'user'};
   const tmdb=cachedKoreanMetadata(media);if(tmdb?.overview&&isMostlyKorean(tmdb.overview))return {overview:tmdb.overview,source:tmdbKoreanSourceLabel(tmdb.overviewCountry||tmdb.translationCountry),url:tmdb.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
+  if(isMachineTranslationEnabled()){const mt=getCachedMachineTranslation(media?.description?.slice(0,1000),'ja','ko');if(mt?.text)return {overview:mt.text,source:mt.source,url:'',kind:'machine'};}
   return null;
 }
 function localizedTitle(media){return koreanTitleInfo(media).title;}
@@ -1692,7 +1811,7 @@ function koreanMetadataSourceMarkup(media){
   const titleLine=`제목: ${link(titleInfo)}`;
   const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)': '소개';
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
-  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='machine'?'자동 번역(비공식, 실험적)입니다. 정확하지 않을 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
   return `${titleLine}<br>${descLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}
@@ -1826,6 +1945,20 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
+  // Machine translation prefetch (experimental, opt-in)
+  if(isMachineTranslationEnabled()){
+    const mtPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanAlias(m)&&!cachedKoreanMetadata(m)).slice(0,maxItems);
+    for(const m of mtPending){
+      machineTranslateTitle(m).then(result=>{
+        if(result?.title&&root.isConnected){
+          const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
+          const titleNode=card?.querySelector('.card-title,.schedule-name');
+          if(titleNode)titleNode.textContent=result.title;
+        }
+      }).catch(()=>{});
+      machineTranslateOverview(m).then(()=>{}).catch(()=>{});
+    }
+  }
   if(!root.isConnected)return;
   for(const media of unique){
     const title=localizedTitle(media);
@@ -2701,8 +2834,8 @@ function showConflictModal(conflicts){
 
 function showSettings(){
   const cfg=JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');const tmdbCfg=loadTMDBConfig();const root=$('#modal-root');
-  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선)을 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
-  root.addEventListener('change',e=>{if(e.target.id==='import-backup-file')importAllData(e.target.files?.[0]);});
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선)을 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>자동 번역 (실험적)</h3><p class="detail-desc">공식 한국어 자료가 없는 작품에 Google Translate를 사용해 제목·소개를 자동 번역합니다. <b>비공식·실험적 기능</b>이며 정확하지 않을 수 있습니다. 원문과 함께 표시되며, "자동 번역 (Google, 비공식)"으로 출처가 표시됩니다.</p><label class="watch-controls" style="margin:8px 0"><input type="checkbox" id="machine-translate-toggle" ${isMachineTranslationEnabled()?'checked':''}> 자동 번역 사용</label><p class="hint">켜면 한국어 자료가 없는 작품의 제목·소개가 자동으로 번역됩니다. 끄면 원문이 표시됩니다.</p></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
+  root.addEventListener('change',e=>{if(e.target.id==='import-backup-file')importAllData(e.target.files?.[0]);if(e.target.id==='machine-translate-toggle'){setMachineTranslationEnabled(e.target.checked);toast(e.target.checked?'자동 번역을 켰습니다. 한국어 자료가 없는 작품이 자동 번역됩니다.':'자동 번역을 껐습니다.');}});
   root.onsubmit=async e=>{if(e.target.id==='tmdb-settings-form'){e.preventDefault();const readAccessToken=$('#tmdb-read-token').value.trim();if(readAccessToken){localStorage.setItem(TMDB_CONFIG_KEY,JSON.stringify({readAccessToken}));toast('한국어 현지화 데이터 연결을 저장했습니다.');}else{localStorage.removeItem(TMDB_CONFIG_KEY);toast('TMDB 연결을 해제했습니다.');}localStorage.removeItem(KOREAN_METADATA_CACHE_KEY);showSettings();return;}if(e.target.id!=='settings-form')return;e.preventDefault();const url=$('#supabase-url').value.trim().replace(/\/$/,''),key=$('#supabase-key').value.trim();if(!url||!key){toast('Project URL과 공개 키를 모두 입력해 주세요.','error');return;}try{new URL(url);}catch{toast('Project URL 형식이 올바르지 않습니다.','error');return;}localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));state.supabase=null;state.user=null;await loadSupabase();if(state.supabase){toast('Supabase 연결 정보를 저장했습니다.');showSettings();}else toast(`연결 실패: ${state.supabaseError||'설정을 확인해 주세요.'}`,'error');};
   root.onclick=e=>{if(e.target.id==='export-all-data'){exportAllData();}if(e.target.id==='import-all-data')$('#import-backup-file')?.click();if(e.target.id==='import-backup-file')return;if(e.target.id==='export-list'){const blob=new Blob([JSON.stringify(state.watchlist,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-watchlist.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='export-collections'){const blob=new Blob([JSON.stringify(state.collections,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-collections.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='clear-local'){if(confirm('이 기기에 저장된 보관함을 삭제할까요? 클라우드 데이터는 삭제하지 않습니다.')){state.watchlist=[];saveLocalList();toast('이 기기의 보관함을 비웠습니다.');root.innerHTML='';if(state.route==='watchlist')renderWatchlist();}}};
 }
