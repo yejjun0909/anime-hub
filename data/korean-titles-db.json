@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "generatedAt": "2026-11-04",
   "count": 200,
   "entries": {
@@ -909,29 +909,35 @@
     "106286": {
       "anilistId": 106286,
       "malId": 38826,
-      "title": "날씨의 아이",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "날씨의 아이",
+      "withheld": "machine-translation"
     },
     "13601": {
       "anilistId": 13601,
       "malId": 13601,
-      "title": "PSYCHO-PASS 사이코 패스",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "PSYCHO-PASS 사이코 패스",
+      "withheld": "machine-translation"
     },
     "14741": {
       "anilistId": 14741,
       "malId": 14741,
-      "title": "중이병에서도 사랑하고 싶다!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "중이병에서도 사랑하고 싶다!",
+      "withheld": "machine-translation"
     },
     "98460": {
       "anilistId": 98460,
@@ -963,29 +969,35 @@
     "20474": {
       "anilistId": 20474,
       "malId": 20899,
-      "title": "조조의 이상한 모험 스타 더스트 크루세이더스",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 스타 더스트 크루세이더스",
+      "withheld": "machine-translation"
     },
     "19": {
       "anilistId": 19,
       "malId": 19,
-      "title": "몬스터",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "몬스터",
+      "withheld": "machine-translation"
     },
     "5081": {
       "anilistId": 5081,
       "malId": 5081,
-      "title": "화 이야기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "화 이야기",
+      "withheld": "machine-translation"
     },
     "161645": {
       "anilistId": 161645,
@@ -1035,110 +1047,134 @@
     "20829": {
       "anilistId": 20829,
       "malId": 26243,
-      "title": "마지막 세라프",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마지막 세라프",
+      "withheld": "machine-translation"
     },
     "21776": {
       "anilistId": 21776,
       "malId": 33206,
-      "title": "고바야시 산치의 메이드 드래곤",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고바야시 산치의 메이드 드래곤",
+      "withheld": "machine-translation"
     },
     "99578": {
       "anilistId": 99578,
       "malId": 35968,
-      "title": "오타쿠에게 사랑이 어렵다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오타쿠에게 사랑이 어렵다.",
+      "withheld": "machine-translation"
     },
     "137822": {
       "anilistId": 137822,
       "malId": 49596,
-      "title": "블루락",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "블루락",
+      "withheld": "machine-translation"
     },
     "127720": {
       "anilistId": 127720,
       "malId": 45576,
-      "title": "무직 환생 ～이세계 가면 진심으로 한다～ 제2 쿨",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "무직 환생 ～이세계 가면 진심으로 한다～ 제2 쿨",
+      "withheld": "machine-translation"
     },
     "116589": {
       "anilistId": 116589,
       "malId": 41457,
-      "title": "86-에이티식스-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "86-에이티식스-",
+      "withheld": "machine-translation"
     },
     "9756": {
       "anilistId": 9756,
       "malId": 9756,
-      "title": "마법소녀 마도카☆마기카",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마법소녀 마도카☆마기카",
+      "withheld": "machine-translation"
     },
     "103572": {
       "anilistId": 103572,
       "malId": 38101,
-      "title": "오등분의 신부",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오등분의 신부",
+      "withheld": "machine-translation"
     },
     "108511": {
       "anilistId": 108511,
       "malId": 39551,
-      "title": "환생했을 때 슬라임이었던 건 제2기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환생했을 때 슬라임이었던 건 제2기",
+      "withheld": "machine-translation"
     },
     "133965": {
       "anilistId": 133965,
       "malId": 48926,
-      "title": "후루미씨는, 코뮤증입니다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "후루미씨는, 코뮤증입니다.",
+      "withheld": "machine-translation"
     },
     "108725": {
       "anilistId": 108725,
       "malId": 39617,
-      "title": "약속의 네버랜드 2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "약속의 네버랜드 2",
+      "withheld": "machine-translation"
     },
     "130298": {
       "anilistId": 130298,
       "malId": 48316,
-      "title": "그늘의 실력자가 되고 싶어서!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "그늘의 실력자가 되고 싶어서!",
+      "withheld": "machine-translation"
     },
     "114535": {
       "anilistId": 114535,
@@ -1152,11 +1188,13 @@
     "21450": {
       "anilistId": 21450,
       "malId": 31933,
-      "title": "조조의 이상한 모험 다이아몬드는 부서지지 않는다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 다이아몬드는 부서지지 않는다.",
+      "withheld": "machine-translation"
     },
     "176496": {
       "anilistId": 176496,
@@ -1170,20 +1208,24 @@
     "11617": {
       "anilistId": 11617,
       "malId": 11617,
-      "title": "고등학교 DxD",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고등학교 DxD",
+      "withheld": "machine-translation"
     },
     "105334": {
       "anilistId": 105334,
       "malId": 38680,
-      "title": "과일 바구니 1st Season",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "과일 바구니 1st Season",
+      "withheld": "machine-translation"
     },
     "119661": {
       "anilistId": 119661,
@@ -1197,11 +1239,13 @@
     "21128": {
       "anilistId": 21128,
       "malId": 30503,
-      "title": "노라가미 ARAGOTO",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "노라가미 ARAGOTO",
+      "withheld": "machine-translation"
     },
     "100388": {
       "anilistId": 100388,
@@ -1215,65 +1259,79 @@
     "113813": {
       "anilistId": 113813,
       "malId": 40839,
-      "title": "그녀, 빌려",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "그녀, 빌려",
+      "withheld": "machine-translation"
     },
     "100240": {
       "anilistId": 100240,
       "malId": 36511,
-      "title": "도쿄 식종-도쿄 구르-:re",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "도쿄 식종-도쿄 구르-:re",
+      "withheld": "machine-translation"
     },
     "101165": {
       "anilistId": 101165,
       "malId": 37349,
-      "title": "고블린 슬레이어",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고블린 슬레이어",
+      "withheld": "machine-translation"
     },
     "164": {
       "anilistId": 164,
       "malId": 164,
-      "title": "Mononoke 공주",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "Mononoke 공주",
+      "withheld": "machine-translation"
     },
     "114236": {
       "anilistId": 114236,
       "malId": 40956,
-      "title": "불꽃 노 소방대 이노 노장",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "불꽃 노 소방대 이노 노장",
+      "withheld": "machine-translation"
     },
     "102883": {
       "anilistId": 102883,
       "malId": 37991,
-      "title": "조조의 이상한 모험 황금 바람",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 황금 바람",
+      "withheld": "machine-translation"
     },
     "2167": {
       "anilistId": 2167,
       "malId": 2167,
-      "title": "클라나드 -클라나드-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "클라나드 -클라나드-",
+      "withheld": "machine-translation"
     },
     "116006": {
       "anilistId": 116006,
@@ -1287,101 +1345,123 @@
     "918": {
       "anilistId": 918,
       "malId": 918,
-      "title": "은혼",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "은혼",
+      "withheld": "machine-translation"
     },
     "106625": {
       "anilistId": 106625,
       "malId": 38883,
-      "title": "하이큐!! TO THE TOP",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "하이큐!! TO THE TOP",
+      "withheld": "machine-translation"
     },
     "125367": {
       "anilistId": 125367,
       "malId": 43608,
-      "title": "카구야 씨는 말하고 싶다 - 울트라 로맨틱 -",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "카구야 씨는 말하고 싶다 - 울트라 로맨틱 -",
+      "withheld": "machine-translation"
     },
     "6746": {
       "anilistId": 6746,
       "malId": 6746,
-      "title": "듀라라라!!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "듀라라라!!",
+      "withheld": "machine-translation"
     },
     "151801": {
       "anilistId": 151801,
       "malId": 52211,
-      "title": "매쉬 -MASHLE-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "매쉬 -MASHLE-",
+      "withheld": "machine-translation"
     },
     "20799": {
       "anilistId": 20799,
       "malId": 26055,
-      "title": "조조의 이상한 모험 스타 더스트 크루세이더스 이집트편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 스타 더스트 크루세이더스 이집트편",
+      "withheld": "machine-translation"
     },
     "20661": {
       "anilistId": 20661,
       "malId": 23283,
-      "title": "잔향 테롤",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "잔향 테롤",
+      "withheld": "machine-translation"
     },
     "100182": {
       "anilistId": 100182,
       "malId": 36474,
-      "title": "소드 아트 온라인 알리시제이션",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "소드 아트 온라인 알리시제이션",
+      "withheld": "machine-translation"
     },
     "7054": {
       "anilistId": 7054,
       "malId": 7054,
-      "title": "회장은 하녀 님!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "회장은 하녀 님!",
+      "withheld": "machine-translation"
     },
     "8074": {
       "anilistId": 8074,
       "malId": 8074,
-      "title": "학원 묵시록 HIGHSCHOOL OF THE DEAD",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "학원 묵시록 HIGHSCHOOL OF THE DEAD",
+      "withheld": "machine-translation"
     },
     "11771": {
       "anilistId": 11771,
       "malId": 11771,
-      "title": "쿠로코 농구",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "쿠로코 농구",
+      "withheld": "machine-translation"
     },
     "153288": {
       "anilistId": 153288,
@@ -1395,65 +1475,79 @@
     "99539": {
       "anilistId": 99539,
       "malId": 34577,
-      "title": "일곱 대죄 계명의 부활",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "일곱 대죄 계명의 부활",
+      "withheld": "machine-translation"
     },
     "141391": {
       "anilistId": 141391,
       "malId": 50346,
-      "title": "요후카시 노래",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "요후카시 노래",
+      "withheld": "machine-translation"
     },
     "124845": {
       "anilistId": 124845,
       "malId": 43299,
-      "title": "원더에그 우선 순위",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "원더에그 우선 순위",
+      "withheld": "machine-translation"
     },
     "166240": {
       "anilistId": 166240,
       "malId": 55701,
-      "title": "귀멸의 칼날 기둥 연고편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "귀멸의 칼날 기둥 연고편",
+      "withheld": "machine-translation"
     },
     "21613": {
       "anilistId": 21613,
       "malId": 32615,
-      "title": "유녀전기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "유녀전기",
+      "withheld": "machine-translation"
     },
     "523": {
       "anilistId": 523,
       "malId": 523,
-      "title": "이웃집 토토로",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "이웃집 토토로",
+      "withheld": "machine-translation"
     },
     "205": {
       "anilistId": 205,
       "malId": 205,
-      "title": "사무라이 참프루",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사무라이 참프루",
+      "withheld": "machine-translation"
     },
     "5680": {
       "anilistId": 5680,
@@ -1467,74 +1561,90 @@
     "18153": {
       "anilistId": 18153,
       "malId": 18153,
-      "title": "경계의 그분",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "경계의 그분",
+      "withheld": "machine-translation"
     },
     "136430": {
       "anilistId": 136430,
       "malId": 49387,
-      "title": "빈랜드 사가 SEASON2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "빈랜드 사가 SEASON2",
+      "withheld": "machine-translation"
     },
     "20698": {
       "anilistId": 20698,
       "malId": 23847,
-      "title": "역시 나의 청춘 러브 쌀은 잘못되어 있다. 계속",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "역시 나의 청춘 러브 쌀은 잘못되어 있다. 계속",
+      "withheld": "machine-translation"
     },
     "13759": {
       "anilistId": 13759,
       "malId": 13759,
-      "title": "사쿠라소의 애완동물 그녀",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사쿠라소의 애완동물 그녀",
+      "withheld": "machine-translation"
     },
     "226": {
       "anilistId": 226,
       "malId": 226,
-      "title": "엘펜리트",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "엘펜리트",
+      "withheld": "machine-translation"
     },
     "116742": {
       "anilistId": 116742,
       "malId": 41487,
-      "title": "환생했을 때 슬라임이었던 건 제2기 제2 쿨",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환생했을 때 슬라임이었던 건 제2기 제2 쿨",
+      "withheld": "machine-translation"
     },
     "139630": {
       "anilistId": 139630,
       "malId": 49918,
-      "title": "내 영웅 아카데미아 6",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "내 영웅 아카데미아 6",
+      "withheld": "machine-translation"
     },
     "146065": {
       "anilistId": 146065,
       "malId": 51179,
-      "title": "무직전생Ⅱ ～이세계 가면 진심이다",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "무직전생Ⅱ ～이세계 가면 진심이다",
+      "withheld": "machine-translation"
     },
     "130003": {
       "anilistId": 130003,
@@ -1548,20 +1658,24 @@
     "112301": {
       "anilistId": 112301,
       "malId": 40496,
-      "title": "마왕학원의 부적합자 ～사상 최강의 마왕의 시조, 환생하여 자손들의 학교에 다니는～",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마왕학원의 부적합자 ～사상 최강의 마왕의 시조, 환생하여 자손들의 학교에 다니는～",
+      "withheld": "machine-translation"
     },
     "18897": {
       "anilistId": 18897,
       "malId": 18897,
-      "title": "니세코이",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "니세코이",
+      "withheld": "machine-translation"
     },
     "120697": {
       "anilistId": 120697,
@@ -1575,29 +1689,35 @@
     "172463": {
       "anilistId": 172463,
       "malId": 57658,
-      "title": "주술회전 사멸회부 전편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "주술회전 사멸회부 전편",
+      "withheld": "machine-translation"
     },
     "98437": {
       "anilistId": 98437,
       "malId": 35073,
-      "title": "오버로드 II",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오버로드 II",
+      "withheld": "machine-translation"
     },
     "17895": {
       "anilistId": 17895,
       "malId": 17895,
-      "title": "골든 타임",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "골든 타임",
+      "withheld": "machine-translation"
     },
     "121": {
       "anilistId": 121,
@@ -1611,11 +1731,13 @@
     "140439": {
       "anilistId": 140439,
       "malId": 50172,
-      "title": "몹 사이코 100 Ⅲ",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "몹 사이코 100 Ⅲ",
+      "withheld": "machine-translation"
     },
     "19603": {
       "anilistId": 19603,
@@ -1629,38 +1751,46 @@
     "145545": {
       "anilistId": 145545,
       "malId": 51096,
-      "title": "환영 실력 지상주의 교실에 2nd Season",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환영 실력 지상주의 교실에 2nd Season",
+      "withheld": "machine-translation"
     },
     "178025": {
       "anilistId": 178025,
       "malId": 59062,
-      "title": "가치 액터",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "가치 액터",
+      "withheld": "machine-translation"
     },
     "14227": {
       "anilistId": 14227,
       "malId": 14227,
-      "title": "이웃 괴물 군",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "이웃 괴물 군",
+      "withheld": "machine-translation"
     },
     "104157": {
       "anilistId": 104157,
       "malId": 38329,
-      "title": "청춘 돼지 녀석은 유메 보는 소녀의 꿈을 꾸지 않는다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "청춘 돼지 녀석은 유메 보는 소녀의 꿈을 꾸지 않는다.",
+      "withheld": "machine-translation"
     },
     "4898": {
       "anilistId": 4898,
@@ -1683,47 +1813,57 @@
     "813": {
       "anilistId": 813,
       "malId": 813,
-      "title": "드래곤볼Z",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "드래곤볼Z",
+      "withheld": "machine-translation"
     },
     "20458": {
       "anilistId": 20458,
       "malId": 20785,
-      "title": "마법과 고등학교의 열등생",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마법과 고등학교의 열등생",
+      "withheld": "machine-translation"
     },
     "21518": {
       "anilistId": 21518,
       "malId": 32282,
-      "title": "식도의 소마 弍ノ皿",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "식도의 소마 弍ノ皿",
+      "withheld": "machine-translation"
     },
     "20872": {
       "anilistId": 20872,
       "malId": 27775,
-      "title": "플라스틱 메모리즈",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "플라스틱 메모리즈",
+      "withheld": "machine-translation"
     },
     "853": {
       "anilistId": 853,
       "malId": 853,
-      "title": "사쿠라란 고등학교 호스트부",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사쿠라란 고등학교 호스트부",
+      "withheld": "machine-translation"
     },
     "107660": {
       "anilistId": 107660,
@@ -1737,11 +1877,16 @@
     "113538": {
       "anilistId": 113538,
       "malId": 40776,
-      "title": "하이큐!! TO THE TOP 2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "하이큐!! TO THE TOP 2",
+      "withheld": "machine-translation"
     }
-  }
+  },
+  "policy": "verified-only",
+  "sanitizedAt": "2026-11-04",
+  "verifiedCount": 32
 }

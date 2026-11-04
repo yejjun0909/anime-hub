@@ -5,16 +5,15 @@ import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/sc
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
 import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
-import { geminiTranslate, getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
-import { lookupKoreanWikipedia } from './data/korean-wiki.js';
-import { searchNamuWiki } from './data/namu-search.js';
+import { getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
+import { lookupKoreanSource } from './data/korean-source.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
 import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.js';
 import { fuzzyFilter, searchVariants, normalizeForSearch } from './data/fuzzy-search.js';
 
-const APP_VERSION = '4.6.0';
+const APP_VERSION = '4.7.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -393,18 +392,10 @@ async function enrichKoreanMetadata(items,concurrency=2){
     }
   });await Promise.all(workers);
 }
-// 한국어 소스 폴백 (v4.9+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
+// 한국어 소스 폴백 (v4.7+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
 // AI는 오직 나무위키 검색 후보 생성에만 사용하며, 화면 표시 출처로 쓰지 않습니다.
 async function lookupKoreanFallback(nativeTitle){
-  const value=String(nativeTitle||'').trim();
-  if(value.length<2)return null;
-  let namu=await searchNamuWiki(value);
-  if(!namu?.length){
-    const aiTitle=await geminiTranslate(value,'ja','ko');
-    if(aiTitle?.text)namu=await searchNamuWiki(aiTitle.text);
-  }
-  if(namu?.length)return {...namu[0],source:namu[0].source||'나무위키',kind:'namu'};
-  return await lookupKoreanWikipedia(value);
+  return lookupKoreanSource(nativeTitle);
 }
 async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
@@ -420,7 +411,7 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+    // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
     // 이미 확인된 한국어 제목(카탈로그/DB/사용자/TMDB/AniList)이 있으면 덮어쓰지 않습니다.
     if(!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
@@ -700,7 +691,7 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
-  // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+  // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
   const sourcePending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanMetadata(m)?.title&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   for(const m of sourcePending){
     try{

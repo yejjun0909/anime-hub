@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — 한국어 소스 통합 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    h1 { font-size: 20px; }
+    #summary { font-size: 16px; font-weight: 700; padding: 12px 16px; border-radius: 8px; background: #1c2030; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+    th, td { border-bottom: 1px solid #2a3044; padding: 8px; text-align: left; vertical-align: top; }
+    tr.fail td { background: #3a1c22; }
+    code { color: #9fc4ff; }
+  </style>
+</head>
+<body>
+  <h1>한국어 소스 통합 · 사전 DB 검증 테스트</h1>
+  <p><code>data/korean-source.js</code>, <code>data/korean-query.js</code>, <code>data/korean-titles-db.js</code>를 실제 모듈로 실행합니다.</p>
+  <div id="summary">실행 중…</div>
+  <table>
+    <thead><tr><th>#</th><th>케이스</th><th>기대</th><th>실제</th><th>결과</th><th>이유</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script type="module">
+    import { setKoreanTitlesDb, lookupKoreanTitle, isVerifiedKoreanSource } from '../data/korean-titles-db.js';
+    import { normalizeKoreanQueryCandidates, generateKoreanQueryCandidates } from '../data/korean-query.js';
+    import { lookupKoreanSource, createKoreanSourceResolver } from '../data/korean-source.js';
+
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+    let index = 0;
+
+    function check(name, expected, actual, why) {
+      index += 1;
+      const passed = JSON.stringify(expected) === JSON.stringify(actual);
+      const tr = document.createElement('tr');
+      if (!passed) tr.className = 'fail';
+      tr.innerHTML = `<td>${index}</td><td>${name}</td><td><code>${JSON.stringify(expected)}</code></td>` +
+        `<td><code>${JSON.stringify(actual)}</code></td><td>${passed ? '통과' : '실패'}</td><td>${why}</td>`;
+      rows.appendChild(tr);
+      if (!passed) failures.push({ name, expected, actual, why });
+    }
+
+    try {
+      check('출처 검증: AniList 허용', true, isVerifiedKoreanSource('anilist'), '실제 별칭 출처.');
+      check('출처 검증: Google 거부', false, isVerifiedKoreanSource('google'), '기계 번역은 표시하지 않음.');
+      check('출처 검증: Gemini 거부', false, isVerifiedKoreanSource('gemini'), 'AI 번역은 표시하지 않음.');
+
+      setKoreanTitlesDb({ entries: {
+        '1': { title: '귀멸의 칼날', source: 'anilist' },
+        '2': { title: '날씨의 아이', source: 'google' },
+        '3': { title: 'AI 제목', source: 'gemini' }
+      } });
+      check('사전 DB: AniList 반환', '귀멸의 칼날', lookupKoreanTitle({ id: 1 })?.title, '확인된 출처.');
+      check('사전 DB: Google 제외', null, lookupKoreanTitle({ id: 2 }), '기계 번역 차단.');
+      check('사전 DB: Gemini 제외', null, lookupKoreanTitle({ id: 3 }), 'AI 번역 차단.');
+
+      check('검색 후보: 부제 분리', ['귀멸의 칼날: 무한열차편', '귀멸의 칼날'], normalizeKoreanQueryCandidates('귀멸의 칼날: 무한열차편', 'Kimetsu'), 'AI 결과는 검색어로만.');
+      check('검색 후보: 비한국어 제외', [], normalizeKoreanQueryCandidates('Steins;Gate', 'Steins;Gate'), '한국어 후보만 허용.');
+
+      const generated = await generateKoreanQueryCandidates('鬼滅の刃', { translate: async () => '귀멸의 칼날' });
+      check('AI 후보 생성', ['귀멸의 칼날'], generated, 'AI 응답을 후보 배열로 변환.');
+
+      const namuQueries = [];
+      const namu = await lookupKoreanSource('Kimetsu no Yaiba', {
+        searchNamu: async (query) => {
+          namuQueries.push(query);
+          return query === '귀멸의 칼날' ? [{ title: '귀멸의 칼날', source: '나무위키' }] : [];
+        },
+        lookupWiki: async () => null,
+        isNamuCoolingDown: () => false,
+        translate: async () => '귀멸의 칼날'
+      });
+      check('리졸버: AI 후보로 나무위키 재검색', ['Kimetsu no Yaiba', '귀멸의 칼날'], namuQueries, 'AI는 검색어로만 사용.');
+      check('리졸버: 나무위키 결과 반환', 'namu', namu?.kind, '확인된 문서만 표시.');
+      check('리졸버: 나무위키 출처', '나무위키', namu?.source, '출처 표기.');
+
+      const aiOnly = await lookupKoreanSource('원제', {
+        searchNamu: async () => [],
+        lookupWiki: async () => null,
+        isNamuCoolingDown: () => false,
+        translate: async () => 'AI가 만든 제목',
+        logger: { warn() {} }
+      });
+      check('리졸버: AI 결과 직접 반환 금지', null, aiOnly, '확인된 문서가 없으면 null.');
+
+      let wikiCalls = 0;
+      const wiki = await lookupKoreanSource('ぼっち・ざ・ろっく！', {
+        searchNamu: async () => [],
+        lookupWiki: async () => { wikiCalls += 1; return { title: '봇치 더 록!', overview: '일본의 만화.', source: '한국어 위키백과' }; },
+        isNamuCoolingDown: () => false,
+        translate: async () => '봇치 더 록!'
+      });
+      check('리졸버: 위키백과 폴백', 'wiki', wiki?.kind, '나무위키 실패 시 실제 한국어 문서.');
+      check('리졸버: 위키백과 호출 횟수', 1, wikiCalls, '한 번만 조회.');
+
+      let namuCalls = 0;
+      const cooled = await lookupKoreanSource('진격의 거인', {
+        searchNamu: async () => { namuCalls += 1; return []; },
+        lookupWiki: async () => ({ title: '진격의 거인', overview: '거인과 싸우는 이야기.' }),
+        isNamuCoolingDown: () => true,
+        translate: async () => '진격의 거인'
+      });
+      check('리졸버: 쿨다운 중 나무위키 생략', 0, namuCalls, '실패 직후 재시도 방지.');
+      check('리졸버: 쿨다운 중 위키백과 사용', 'wiki', cooled?.kind, '다음 소스로 진행.');
+
+      const resolve = createKoreanSourceResolver({
+        searchNamu: async () => [{ title: '고정 결과', source: '나무위키' }],
+        isNamuCoolingDown: () => false
+      });
+      const fixed = await resolve('아무 제목');
+      check('리졸버 팩토리', '고정 결과', fixed?.title, '의존성 고정 재사용.');
+    } catch (error) {
+      failures.push({ name: '예외', expected: '없음', actual: error.message, why: error.stack || '' });
+    }
+
+    summary.textContent = failures.length ? `실패 ${failures.length}건 / ${index}건` : `통과 ${index}/${index}`;
+    summary.className = failures.length ? 'fail' : 'pass';
+  </script>
+</body>
+</html>

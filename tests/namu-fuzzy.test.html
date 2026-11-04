@@ -26,7 +26,7 @@
 
   <script type="module">
     import { levenshtein, similarity, normalizeForSearch, fuzzyMatch, fuzzyFilter, searchVariants } from '../data/fuzzy-search.js';
-    import { searchNamuWiki, lookupNamuTitle } from '../data/namu-search.js';
+    import { searchNamuWiki, lookupNamuTitle, isNamuWikiCoolingDown, resetNamuWikiHealth } from '../data/namu-search.js';
     import { searchKoreanWikipedia, lookupKoreanWikipedia } from '../data/korean-wiki.js';
 
     const rows = document.getElementById('rows');
@@ -93,23 +93,29 @@
       );
       check('나무위키: 평면 results 형태', '진격의 거인', flat[0]?.title, 'results 배열도 지원.');
 
+      resetNamuWikiHealth();
       const notFound = await withFetch(
         async () => new Response('not found', { status: 404 }),
         () => searchNamuWiki('없는문서')
       );
       check('나무위키: 404는 빈 배열', [], notFound, '실패해도 예외 없이 빈 배열.');
 
+      resetNamuWikiHealth();
       const networkFail = await withFetch(
         async () => { throw new Error('network down'); },
         () => searchNamuWiki('네트워크실패')
       );
       check('나무위키: 네트워크 오류는 빈 배열', [], networkFail, 'best-effort 원칙.');
+      check('나무위키: 실패 후 쿨다운', true, isNamuWikiCoolingDown(), '연속 실패 시 재시도 중지.');
+      resetNamuWikiHealth();
+      check('나무위키: 수동 초기화', false, isNamuWikiCoolingDown(), '테스트/재시도용 초기화.');
 
       const malformed = await withFetch(
         async () => new Response('<html>not json</html>', { status: 200 }),
         () => searchNamuWiki('깨진응답')
       );
       check('나무위키: 비JSON 응답은 빈 배열', [], malformed, '파싱 실패 시 안전.');
+      resetNamuWikiHealth();
 
       let fetchCalls = 0;
       const shortQuery = await withFetch(
@@ -119,6 +125,7 @@
       check('나무위키: 짧은 검색어는 요청 안 함', 0, fetchCalls, '2자 미만은 조회 생략.');
       check('나무위키: 짧은 검색어 결과', [], shortQuery, '빈 배열 반환.');
 
+      resetNamuWikiHealth();
       const lookup = await withFetch(
         async () => new Response(JSON.stringify({ query: { search: { results: [{ title: '강철의 연금술사' }] } } }), { status: 200 }),
         () => lookupNamuTitle({ title: { native: '鋼の錬金術師' } })

@@ -9,6 +9,29 @@ const ENDPOINTS = [
   'https://namu.wiki/api',
 ];
 
+// 나무위키 API는 현재 브라우저에서 CORS/DNS 문제로 실패하는 경우가 많습니다.
+// 실패가 확인되면 일정 시간 동안 재시도하지 않아 콘솔 오류와 지연을 줄입니다.
+const RETRY_COOLDOWN_MS = 10 * 60 * 1000;
+let lastFailureAt = 0;
+let lastSuccessAt = 0;
+
+export function isNamuWikiCoolingDown(now = Date.now(), cooldownMs = RETRY_COOLDOWN_MS) {
+  return lastFailureAt > lastSuccessAt && now - lastFailureAt < cooldownMs;
+}
+
+export function getNamuWikiHealth() {
+  return {
+    lastFailureAt,
+    lastSuccessAt,
+    coolingDown: isNamuWikiCoolingDown()
+  };
+}
+
+export function resetNamuWikiHealth() {
+  lastFailureAt = 0;
+  lastSuccessAt = 0;
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json, text/plain, */*' } });
   if (!response.ok) return null;
@@ -38,14 +61,23 @@ function extractResults(data) {
 export async function searchNamuWiki(query, options = {}) {
   const value = String(query || '').trim();
   if (!value || value.length < 2) return [];
+  if (isNamuWikiCoolingDown()) return [];
   const maxResults = Number(options?.maxResults || 5) || 5;
   const results = [];
   const seen = new Set();
+  let attempts = 0;
+  let failures = 0;
   for (const base of ENDPOINTS) {
     if (results.length >= maxResults) break;
+    attempts += 1;
     const url = `${base}?action=query&list=search&srsearch=${encodeURIComponent(value)}&srlimit=5&format=json`;
     try {
       const data = await fetchJson(url);
+      if (!data) {
+        failures += 1;
+        continue;
+      }
+      lastSuccessAt = Date.now();
       const found = extractResults(data);
       for (const item of found) {
         const key = `${item.originTitle || ''}|${item.title}`;
@@ -54,8 +86,13 @@ export async function searchNamuWiki(query, options = {}) {
         results.push({ ...item, source: '나무위키', url: options?.baseUrl || `https://namu.wiki/wiki/${encodeURIComponent(item.title)}` });
         if (results.length >= maxResults) break;
       }
-    } catch (error) { /* best-effort */ }
+    } catch (error) {
+      failures += 1;
+      /* best-effort */
+    }
   }
+  // 모든 엔드포인트가 실패하면 일정 시간 재시도를 멈춥니다.
+  if (attempts > 0 && failures === attempts) lastFailureAt = Date.now();
   return results;
 }
 

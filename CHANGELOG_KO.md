@@ -1,5 +1,31 @@
 # 변경 내역
 
+## v4.7.0 — 검증된 한국어 소스 · 일반 사이트 유지보수 (2026-11-04)
+
+### 번역·한국어 데이터
+- 사전 DB(`data/korean-titles-db.json`)에서 기계 번역 항목 71건을 `withheldTitle`로 분리하고 표시용 `title`을 비웠습니다. `policy: verified-only`, `verifiedCount: 32`를 기록합니다.
+- `data/korean-titles-db.js`에 `VERIFIED_KOREAN_SOURCES`, `isVerifiedKoreanSource`, `filterVerifiedDb`를 추가해 로드·조회 단계에서 `google`/`gemini`/`none`을 차단합니다.
+- `data/korean-query.js`를 추가했습니다. Gemini 응답은 나무위키 검색 후보로만 정규화되며 화면·캐시에 저장되지 않습니다.
+- `data/korean-source.js`를 추가해 나무위키 → AI 후보 재검색 → 한국어 위키백과 순서를 한 곳에서 처리합니다. `app.js`는 더 이상 나무위키/위키백과/Gemini를 직접 호출하지 않습니다.
+- 나무위키 연속 실패 시 10분 쿨다운을 적용해 불필요한 재시도와 콘솔 오류를 줄였습니다.
+- `tools/build_korean_titles_db.py`를 확인된 출처(AniList/TMDB/MAL) 전용으로 정리하고, `tools/harvest_korean_titles.py`는 통합 래퍼로 변경했습니다.
+
+### 일반 사이트 유지보수
+- `tools/serve.py` 로컬 정적 서버 추가 (`Cache-Control: no-store`).
+- `tools/build_single.py`를 저장소에 포함하고 `--check` 옵션을 추가했습니다.
+- `package.json`에 `start`, `serve`, `build`, `validate` 스크립트를 추가했습니다.
+- `sw.js`를 앱 코드 네트워크 우선으로 변경하고 캐시를 `anime-hub-shell-v4-7-0`으로 갱신했습니다. 새 모듈 `korean-query.js`, `korean-source.js`를 셸에 포함했습니다.
+- `tools/check_korean_catalog.py`가 새 모듈 배선, 사전 DB 검증 장치, 단일 HTML 최신 여부를 검사합니다.
+
+### 검증
+- `tests/korean-source.test.mjs` 추가: 검증 출처 필터, 기계 번역 차단, AI 검색 후보 변환, 리졸버 순서/쿨다운/오류 처리.
+- `tests/korean-source.test.html` 추가: 브라우저에서 동일 흐름을 수동 확인.
+- `py tools/check_korean_catalog.py`와 `py tools/build_single.py --check`를 CI에 연결할 수 있도록 정리했습니다.
+
+### 버전
+- `APP_VERSION` 4.7.0, `VERSION.txt` 4.7.0, PWA 셸 캐시 `anime-hub-shell-v4-7-0`.
+- 기존 localStorage 키와 사용자 데이터 형식은 유지했습니다.
+
 ## v4.6.0 — 데이터 기반 정리 (2026-11-03)
 
 ### 데이터 구조

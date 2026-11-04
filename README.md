@@ -1,20 +1,25 @@
-# ANIME HUB v4.6.0
+# ANIME HUB v4.7.0
 
-PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 관리 웹앱입니다. 별도 플레이어가 아니라 작품 검색, 한국어 메타데이터, 개인 취향 추천, 보관함과 컬렉션을 한 곳에서 관리하는 데 집중합니다.
+PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 관리 웹앱입니다. 작품 검색, 한국어 메타데이터, 개인 취향 추천, 보관함과 컬렉션을 한 곳에서 관리합니다.
 
-> v4.6.0은 v4.5.1의 데이터 연결 보완 패치 위에 **데이터 기반 정리** 릴리스입니다. 수동 한국어 카탈로그를 `data/korean-catalog.json`으로 분리하고, AniList 비교 연산자 null 오류를 고쳐 검색이 정상 동작하도록 했습니다. 다음 단계 계획과 출시 전 품질 기준은 `ROADMAP_KO.md`를 참고하세요.
+이 버전부터는 **`index.html`을 중심으로 한 일반적인 정적 사이트**를 기본으로 유지합니다. `anime-hub-single.html`은 CSS·JS·데이터를 하나로 묶은 오프라인/보관용 사본이며, 배포나 개발의 기준 파일이 아닙니다.
 
-별도 파일 없이 열람하려면 `anime-hub-single.html` 하나만 열면 됩니다 (모든 CSS·JS·데이터가 인라인). 모바일 브라우저에서도 동일하게 동작합니다.
+## 빠른 시작 (로컬)
 
-## 사용 방법: 별도 설치 없는 웹
+정적 사이트이므로 빌드 과정 없이 파일을 열어도 되지만, 서비스 워커와 모듈 import를 정상적으로 확인하려면 로컬 서버를 사용하세요.
 
-이 릴리스는 정적 웹 배포용입니다. 이용자 기기에 Python, Node.js, 별도 프로그램을 설치할 필요가 없습니다.
+```bash
+py tools/serve.py
+# http://127.0.0.1:8123/
+```
 
-1. ZIP 압축을 풉니다.
-2. [Netlify Drop](https://app.netlify.com/drop) 등에 `index.html`, `app.js`, `styles.css`, `sw.js`, `manifest.webmanifest`, `_headers`, `assets` 폴더가 바로 보이는 폴더를 업로드합니다.
-3. 생성된 HTTPS 주소를 PC 또는 스마트폰 브라우저에서 엽니다.
+Node.js가 있다면:
 
-처음 한 번 호스팅 계정과 파일 업로드는 필요합니다. 업로드 후에는 앱 사용자들이 웹 주소만으로 접속할 수 있습니다. 자세한 절차는 `DEPLOY_NO_INSTALL_KO.md`를 참고하세요.
+```bash
+npm run serve
+```
+
+> 개발 편의를 위한 Python/Node.js 사용이며, 사이트 이용자에게 설치를 요구하지 않습니다.
 
 ## 주요 기능
 
@@ -31,36 +36,107 @@ PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 �
 
 추천은 보관함 기반 규칙형 추천입니다. 개인 기록을 반영하지만 머신러닝이나 집단 협업 필터링은 아닙니다.
 
-## 한국어 제목·줄거리 정책
+## 한국어 제목·줄거리 전략
 
-제목과 줄거리는 서로 독립적으로 출처를 확인합니다. 작품 제목이 한국어로 확인되더라도 줄거리가 없으면 원문을 유지할 수 있습니다.
+ANIME HUB는 “모든 것을 한국어처럼 보이게 만드는 것”보다 **확인 가능한 출처를 한국어로 정확히 표시하는 것**을 우선합니다. 제목과 줄거리는 서로 독립적으로 판정합니다.
 
-### 제목 표시 우선순위
+### 표시 우선순위
 
-1. 국내 플랫폼 카탈로그에서 확인해 정리한 대표 작품 데이터
-2. TMDB에 등록된 한국어 현지화 제목(대한민국 `ko-KR` 우선)
-3. AniList의 한글 별칭
-4. MyAnimeList/Jikan의 한글 대체 제목
-5. 원제 그대로 표시
+1. 국내 플랫폼 카탈로그에서 사람이 확인해 정리한 자료 (`data/korean-catalog.json`)
+2. 사용자가 직접 입력한 한국어 자료
+3. 확인된 한국어 사전 DB (`data/korean-titles-db.json`)
+4. TMDB 한국어 번역 (대한민국 `ko-KR` 우선)
+5. AniList 한글 별칭
+6. MyAnimeList/Jikan 한글 대체 제목
+7. 나무위키 문서 (best-effort)
+8. 한국어 위키백과 문서 (CORS 허용, 애니메이션 문서로 확인된 경우)
+9. 원제 또는 원문 소개
 
-### 줄거리 표시 우선순위
+### 기계 번역과 AI의 역할
 
-1. 국내 플랫폼 카탈로그를 대조해 직접 정리한 요약 소개
-2. TMDB에 등록된 한국어 소개
-3. 실제 한국어로 등록된 Jikan/MAL 소개
-4. 한국어 소개가 없으면 원문 표시
+- Google Translate·MyMemory 같은 **기계 번역 결과는 제목·줄거리·인물명·제작사명에 표시하지 않습니다.**
+- Gemini는 **나무위키 검색 후보(한국어 검색어)를 만드는 데만** 사용합니다. AI가 만든 문장은 화면에 표시되지 않고, 캐시의 출처로도 저장되지 않습니다.
+- AI 후보로 나무위키를 재검색했더라도, 실제 문서가 확인된 경우에만 해당 문서의 제목·소개를 사용합니다.
+- 사전 DB에 남아 있는 기계 번역 항목은 `data/korean-titles-db.js`의 검증 필터에서 제외됩니다. 원본 JSON에는 감사·재검토용으로 `withheldTitle`만 남기고 표시용 `title`은 비웁니다.
+- 검색은 정확히 같은 이름이 아니어도 유사한 이름을 찾도록 퍼지 매칭을 사용합니다.
 
-작품명·줄거리·인물명·제작사명은 화면 표시를 위해 기계 번역하지 않습니다. 한국어 검색어를 외부 검색어로 바꾸는 입력 보조 번역만 사용합니다.
+자세한 기준은 `KOREAN_DATA_POLICY_KO.md`, 구현 배경은 `TRANSLATION_IMPROVEMENT_KO.md`를 참고하세요.
 
-국내 카탈로그를 확인해 직접 정리한 자료에는 출처 링크가 있습니다. 일부 작품 소개는 플랫폼 문장을 복사하지 않은 요약입니다. v4.5에는 진격의 거인, 귀멸의 칼날, 주술회전, 장송의 프리렌, 나의 히어로 아카데미아, 원피스, [최애의 아이], 체인소 맨, 나루토, 스파이 패밀리, 하이큐!!, 원펀맨, 블루 록이 포함됩니다.
+### 데이터 출처
 
-AniList·MAL의 별칭은 커뮤니티 대체 제목이며 판권사의 공식 표기라고 보장할 수 없습니다. TMDB 번역도 TMDB에 등록된 현지화 자료로 국내 판권사·방송사의 최종 표기와 다를 수 있습니다. 모든 애니메이션의 국내 공식 한국어 제목·소개를 제공하는 단일 공개 API는 확인하지 못했습니다.
+- AniList GraphQL: 작품·방영·장르·제작사·인물·관계 데이터와 일부 한글 별칭
+- Jikan / MyAnimeList: 보조 평점·순위·일부 작품 정보·한글 대체 제목. Jikan은 MyAnimeList의 비공식 API입니다.
+- TMDB: 선택 연결 시 한국어 제목·줄거리·작품별 번역 정보
+- 국내 서비스 카탈로그: 대표 작품에 한해 수동으로 확인하고 요약한 한국어 메타데이터
+- 나무위키 / 한국어 위키백과: 확인된 문서의 제목·소개 (best-effort)
 
-### TMDB 연결
+API 응답과 데이터 범위는 각 제공처의 갱신 시점, 요청 제한, 서비스 상태에 영향을 받습니다.
 
-TMDB 한국어 데이터 범위를 넓히려면 설정 → 데이터·계정 설정 → 한국어 작품명·줄거리 정보에서 TMDB v4 Read Access Token을 등록하세요. 토큰은 해당 브라우저의 로컬 저장소에 보관됩니다. 토큰이 없어도 국내 수동 정리 자료와 AniList/Jikan의 한글 별칭은 사용할 수 있습니다.
+## 사이트 유지보수
 
-공개 다중 사용자 서비스에서 공통 토큰을 브라우저에 넣으면 토큰이 이용자에게 노출됩니다. 여러 이용자가 공통 토큰을 써야 한다면 서버 프록시가 필요합니다.
+### 파일 구조
+
+```text
+anime-hub/
+├── index.html                  # 일반 사이트 진입점
+├── app.js                      # 앱 로직
+├── styles.css
+├── sw.js                       # 서비스 워커 (앱 코드 네트워크 우선)
+├── manifest.webmanifest
+├── data/
+│   ├── korean-catalog.json     # 수동 확인 한국어 카탈로그 원본
+│   ├── korean-catalog.js       # 위 JSON에서 생성
+│   ├── korean-match.js         # ID 기반 카탈로그 매칭
+│   ├── korean-titles-db.json   # 사전 계산 한국어 제목 DB
+│   ├── korean-titles-db.js     # 검증된 출처만 노출
+│   ├── korean-query.js         # AI 검색 후보 생성 (표시용 아님)
+│   ├── korean-source.js        # 나무위키 → 위키백과 통합 리졸버
+│   ├── namu-search.js
+│   ├── korean-wiki.js
+│   └── ...                     # 일정·추천·동기화 모듈
+├── tools/
+│   ├── serve.py                # 로컬 정적 서버
+│   ├── build_single.py         # 단일 HTML 생성/검사
+│   ├── build_korean_catalog.py
+│   ├── build_korean_titles_db.py
+│   ├── check_korean_catalog.py
+│   └── ...
+├── tests/
+│   ├── *.test.mjs              # Node 단위 테스트
+│   ├── *.test.html             # 브라우저 수동 테스트
+│   └── e2e/
+├── anime-hub-single.html       # 생성된 단일 파일 사본
+└── supabase/
+```
+
+### 자주 쓰는 명령
+
+```bash
+# 로컬 서버
+py tools/serve.py
+
+# 한국어 카탈로그 JSON → JS 생성
+py tools/build_korean_catalog.py
+
+# 사전 제목 DB 재수집 (확인된 출처만)
+py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
+
+# 단일 HTML 재생성 / 최신 여부 검사
+py tools/build_single.py
+py tools/build_single.py --check
+
+# 전체 정적 검증 (카탈로그 + 배선 + 단일 파일 최신 여부)
+py tools/check_korean_catalog.py
+
+# Node 테스트 (Node.js 20+)
+npm test
+```
+
+### 캐시와 버전
+
+- `sw.js`는 HTML·JS·CSS·JSON을 **네트워크 우선**으로 가져옵니다. 앱 코드를 수정하면 새로고침만으로 반영됩니다.
+- 이미지·아이콘은 캐시 우선입니다.
+- 버전을 올릴 때는 `app.js`의 `APP_VERSION`, `VERSION.txt`, `sw.js`의 `CACHE_NAME`, `package.json`의 `version`을 함께 맞춥니다. `py tools/check_korean_catalog.py`가 불일치를 검사합니다.
 
 ## 데이터 저장과 계정
 
@@ -72,66 +148,10 @@ TMDB 한국어 데이터 범위를 넓히려면 설정 → 데이터·계정 설
 - Jikan 전용 작품(`mal:` ID)은 현재 보관함 클라우드 동기화에서 제외됩니다.
 - 설정의 전체 백업 기능으로 보관함·컬렉션·저장 검색 조건을 JSON으로 내려받을 수 있습니다.
 
-## API 및 데이터 출처
-
-- AniList GraphQL: 작품·방영·장르·제작사·인물·관계 데이터와 일부 한글 별칭
-- Jikan / MyAnimeList: 보조 평점·순위·일부 작품 정보·한글 대체 제목. Jikan은 MyAnimeList의 비공식 API입니다.
-- TMDB: 선택 연결 시 한국어 제목·줄거리·작품별 번역 정보
-- 국내 서비스 카탈로그: 대표 작품에 한해 수동으로 확인하고 요약한 한국어 메타데이터
-
-API 응답과 데이터 범위는 각 제공처의 갱신 시점, 요청 제한, 서비스 상태에 영향을 받습니다. 일부 정보는 늦게 표시되거나 제공되지 않을 수 있습니다.
-
 ## API 약관 유의 사항
 
-AniList는 API 이용 약관에서 경쟁 관계에 있는 비보완형 애니메이션/만화 목록·트래커 서비스에 대한 API 사용을 제한한다고 명시합니다. 개인 프로젝트를 공개 다중 사용자 서비스로 확장하거나 배포 범위를 넓히기 전에 현재 약관과 허가 필요 여부를 확인해야 합니다: https://docs.anilist.co/guide/terms-of-use/
+AniList는 API 이용 약관에서 경쟁 관계에 있는 비보완형 애니메이션/만화 목록·트래커 서비스에 대한 API 사용을 제한한다고 명시합니다. 사용 범위를 넓히기 전에 현재 약관과 허가 필요 여부를 확인해야 합니다: https://docs.anilist.co/guide/terms-of-use/
 
 ## PWA와 모바일
 
-Android Chrome 및 iPhone Safari에서 HTTPS 웹 주소로 접속해 일반 웹사이트로 이용할 수 있습니다. 원한다면 Android의 앱 설치/홈 화면 추가 또는 iPhone Safari의 공유 → 홈 화면에 추가 기능을 사용할 수 있습니다. 별도 APK는 포함하지 않습니다.
-
-서비스 워커는 앱 셸과 일부 정적 파일을 캐시합니다. 모든 애니메이션 정보가 오프라인에서 동작하는 것은 아니며, 외부 API 조회에는 인터넷 연결이 필요합니다.
-
-## 폴더 구조
-
-```text
-ANIME-HUB-Web/
-├── index.html
-├── styles.css
-├── app.js
-├── sw.js
-├── manifest.webmanifest
-├── _headers
-├── package.json
-├── VERSION.txt
-├── DEPLOY_NO_INSTALL_KO.md
-├── START_HERE_KO.md
-├── START_HERE_NO_INSTALL_KO.md
-├── CHANGELOG_KO.md
-├── TEST_REPORT_KO.md
-├── KOREAN_DATA_POLICY_KO.md
-├── ROADMAP_KO.md
-├── DECISION_G0_KO.md
-├── assets/
-├── data/
-│   ├── korean-catalog.json
-│   ├── korean-catalog.js
-│   ├── korean-match.js
-│   └── api-vars.js
-├── tools/
-│   ├── build_korean_catalog.py
-│   ├── check_korean_catalog.py
-│   ├── check_backup.py
-│   └── schedule_probe.py
-├── tests/
-│   ├── korean-id-cases.json
-│   ├── korean-catalog.test.mjs
-│   ├── api-vars.test.mjs
-│   ├── id-match.test.html
-│   ├── e2e/
-│   └── fixtures/
-└── supabase/
-    ├── schema.sql
-    └── tests/
-        ├── rls_access_test.sql
-        └── README_KO.md
-```
+Android Chrome 및 iPhone Safari에서 일반 웹사이트로 이용할 수 있습니다. 원한다면 홈 화면에 추가해 앱처럼 사용할 수 있습니다. 서비스 워커는 앱 셸과 일부 정적 파일을 캐시하며, 외부 API 조회에는 인터넷 연결이 필요합니다.

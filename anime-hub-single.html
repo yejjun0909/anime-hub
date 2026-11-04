@@ -1436,19 +1436,68 @@ return { geminiTranslate, geminiTranslateOverview, geminiTranslateTitle, getCach
 const { geminiTranslate, geminiTranslateOverview, geminiTranslateTitle, getCachedGeminiTranslation, getGeminiKey, hasGeminiKey, setGeminiKey } = __ns_data_gemini_translate_js;
 // ===== data/korean-titles-db.js =====
 const __ns_data_korean_titles_db_js = (function() {
-// 사전 계산 한국어 제목 DB (v4.9+)
+// 사전 계산 한국어 제목 DB (v4.7+)
 //
-// tools/harvest_korean_titles.py로 생성된 DB를 로드합니다.
-// AniList synonyms + TMDB + Gemini/Google Translate로 수확된 한국어 제목을 제공합니다.
+// tools/build_korean_titles_db.py로 생성된 DB를 로드합니다.
+// 이 파일은 "확인된 한국어 출처"만 화면에 노출합니다.
+// Google/Gemini 같은 기계 번역 결과는 원본 DB에 남아 있을 수 있지만
+// lookupKoreanTitle()에서는 절대 반환하지 않습니다.
 
 // DB는 빌드 시 인라인되거나, 런타임에 fetch됩니다.
 // 단일 파일 모드에서는 인라인, 다중 파일 모드에서는 fetch.
 
+const VERIFIED_KOREAN_SOURCES = Object.freeze([
+  'anilist',
+  'tmdb',
+  'mal',
+  'jikan',
+  'namu',
+  'wiki',
+  'catalog',
+  'curated',
+  'manual'
+]);
+
+const SOURCE_META = Object.freeze({
+  anilist: { label: 'AniList 한글 별칭', kind: 'anilist' },
+  tmdb: { label: 'TMDB 한국어 등록 번역', kind: 'tmdb' },
+  mal: { label: 'MyAnimeList 대체 제목', kind: 'jikan' },
+  jikan: { label: 'MyAnimeList 대체 제목', kind: 'jikan' },
+  namu: { label: '나무위키', kind: 'namu' },
+  wiki: { label: '한국어 위키백과', kind: 'wiki' },
+  catalog: { label: '국내 카탈로그 확인 자료', kind: 'curated' },
+  curated: { label: '국내 카탈로그 확인 자료', kind: 'curated' },
+  manual: { label: '수동 확인 자료', kind: 'curated' }
+});
+
 let _db = null;
 let _dbLoaded = false;
 
+function isVerifiedKoreanSource(source) {
+  return VERIFIED_KOREAN_SOURCES.includes(String(source || '').trim().toLowerCase());
+}
+
+function sourceMeta(source) {
+  return SOURCE_META[String(source || '').trim().toLowerCase()] || null;
+}
+
+function hasDisplayValue(entry) {
+  return Boolean(entry && (String(entry.title || '').trim() || String(entry.overview || '').trim()));
+}
+
+// 원본 DB는 보존하고, 화면에 표시 가능한 항목만 새 객체로 돌려줍니다.
+function filterVerifiedDb(db) {
+  if (!db || typeof db !== 'object' || !db.entries || typeof db.entries !== 'object') return db;
+  const entries = {};
+  for (const [id, entry] of Object.entries(db.entries)) {
+    if (!hasDisplayValue(entry) || !isVerifiedKoreanSource(entry.source)) continue;
+    entries[id] = entry;
+  }
+  return { ...db, entries, count: Object.keys(entries).length };
+}
+
 function setKoreanTitlesDb(db) {
-  _db = db;
+  _db = filterVerifiedDb(db);
   _dbLoaded = true;
 }
 
@@ -1460,25 +1509,34 @@ function isDbLoaded() {
   return _dbLoaded;
 }
 
+function getKoreanTitlesDbStats() {
+  return {
+    loaded: _dbLoaded,
+    count: _db?.entries ? Object.keys(_db.entries).length : 0,
+    sources: _db?.entries
+      ? Object.values(_db.entries).reduce((acc, entry) => {
+          const source = String(entry?.source || 'none');
+          acc[source] = (acc[source] || 0) + 1;
+          return acc;
+        }, {})
+      : {}
+  };
+}
+
 function lookupKoreanTitle(media) {
   if (!_db?.entries) return null;
   const id = media?.id != null ? String(media.id) : null;
   if (!id) return null;
   const entry = _db.entries[id];
-  if (!entry || !entry.title) return null;
+  if (!entry || !hasDisplayValue(entry)) return null;
+  if (!isVerifiedKoreanSource(entry.source)) return null;
+  const meta = sourceMeta(entry.source);
   return {
-    title: entry.title,
-    overview: entry.overview || '',
-    source: entry.source === 'anilist' ? 'AniList 한글 별칭' :
-            entry.source === 'tmdb' ? 'TMDB 한국어 등록 번역' :
-            entry.source === 'gemini' ? 'Gemini AI 번역 (비공식, 실험적)' :
-            entry.source === 'google' ? '자동 번역 (Google, 비공식)' :
-            '사전 계산 DB',
-    url: '',
-    kind: entry.source === 'anilist' ? 'anilist' :
-          entry.source === 'tmdb' ? 'tmdb' :
-          entry.source === 'gemini' ? 'gemini' :
-          entry.source === 'google' ? 'machine' : 'db'
+    title: String(entry.title || '').trim(),
+    overview: String(entry.overview || '').trim(),
+    source: meta?.label || '사전 계산 DB',
+    url: String(entry.url || '').trim(),
+    kind: meta?.kind || 'db'
   };
 }
 
@@ -1488,17 +1546,83 @@ async function loadKoreanTitlesDb(url = './data/korean-titles-db.json') {
     const response = await fetch(url);
     if (!response.ok) return null;
     const data = await response.json();
-    _db = data;
-    _dbLoaded = true;
-    return data;
+    setKoreanTitlesDb(data);
+    return _db;
   } catch (error) {
     return null;
   }
 }
 
-return { getKoreanTitlesDb, isDbLoaded, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb };
+return { VERIFIED_KOREAN_SOURCES, filterVerifiedDb, getKoreanTitlesDb, getKoreanTitlesDbStats, isDbLoaded, isVerifiedKoreanSource, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb };
 })();
-const { getKoreanTitlesDb, isDbLoaded, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb } = __ns_data_korean_titles_db_js;
+const { VERIFIED_KOREAN_SOURCES, filterVerifiedDb, getKoreanTitlesDb, getKoreanTitlesDbStats, isDbLoaded, isVerifiedKoreanSource, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb } = __ns_data_korean_titles_db_js;
+// ===== data/korean-query.js =====
+const __ns_data_korean_query_js = (function() {
+// AI 한국어 검색 후보 생성 (v4.7+)
+//
+// 이 모듈의 결과는 "검색어"로만 사용합니다.
+// 화면 제목/소개, 캐시의 출처, 메타데이터로 저장하지 않습니다.
+// 실제 표시는 나무위키·한국어 위키백과·TMDB·AniList·MAL에서 확인된 자료만 사용합니다.
+
+const HANGUL = /[가-힣]/;
+const MAX_CANDIDATE_LENGTH = 80;
+const DEFAULT_MAX_CANDIDATES = 4;
+const DELIMITER = /\s*(?::|：|\s[-–—]\s|~|～)\s*/;
+const SEASON_SUFFIX = /\s*(?:제\s*\d+\s*(?:기|쿨)|시즌\s*\d+|\d+\s*(?:기|쿨)|part\s*\d+|the\s+final\s+season)\s*$/i;
+const BRACKETS = /\s*[\(（\[【][^\)）\]】]*[\)）\]】]\s*/g;
+
+function stripDecorations(value) {
+  return String(value || '')
+    .replace(/^\s*(?:번역|한국어\s*제목|제목)\s*[:：]\s*/i, '')
+    .replace(/[「」『』"'“”]/g, '')
+    .replace(BRACKETS, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function baseTitle(value) {
+  return String(value || '').split(DELIMITER)[0].trim();
+}
+
+function removeSeasonSuffix(value) {
+  return String(value || '').replace(SEASON_SUFFIX, '').replace(/\s+/g, ' ').trim();
+}
+
+// AI가 만든 제목 하나에서 실제 검색에 쓸 수 있는 변형을 만듭니다.
+// 예: "귀멸의 칼날: 무한열차편" → ["귀멸의 칼날: 무한열차편", "귀멸의 칼날"]
+function normalizeKoreanQueryCandidates(text, original = '') {
+  const raw = stripDecorations(text);
+  if (!raw) return [];
+  const originalValue = String(original || '').trim();
+  const variants = [raw, baseTitle(raw), removeSeasonSuffix(raw), removeSeasonSuffix(baseTitle(raw))];
+  const candidates = [];
+  for (const variant of variants) {
+    if (!variant || variant.length < 2 || variant.length > MAX_CANDIDATE_LENGTH) continue;
+    if (!HANGUL.test(variant)) continue;
+    if (originalValue && variant === originalValue) continue;
+    if (candidates.includes(variant)) continue;
+    candidates.push(variant);
+  }
+  return candidates;
+}
+
+async function generateKoreanQueryCandidates(nativeTitle, options = {}) {
+  const original = String(nativeTitle || '').trim();
+  if (original.length < 2) return [];
+  if (typeof options.translate !== 'function') return [];
+  const limit = Math.min(Math.max(Number(options.maxCandidates || DEFAULT_MAX_CANDIDATES) || DEFAULT_MAX_CANDIDATES, 1), 6);
+  try {
+    const result = await options.translate(original, 'ja', 'ko');
+    const text = typeof result === 'string' ? result : result?.text;
+    return normalizeKoreanQueryCandidates(text, original).slice(0, limit);
+  } catch (error) {
+    return [];
+  }
+}
+
+return { generateKoreanQueryCandidates, normalizeKoreanQueryCandidates };
+})();
+const { generateKoreanQueryCandidates, normalizeKoreanQueryCandidates } = __ns_data_korean_query_js;
 // ===== data/fuzzy-search.js =====
 const __ns_data_fuzzy_search_js = (function() {
 // 퍼지 검색 (v4.9+)
@@ -1587,6 +1711,29 @@ const ENDPOINTS = [
   'https://namu.wiki/api',
 ];
 
+// 나무위키 API는 현재 브라우저에서 CORS/DNS 문제로 실패하는 경우가 많습니다.
+// 실패가 확인되면 일정 시간 동안 재시도하지 않아 콘솔 오류와 지연을 줄입니다.
+const RETRY_COOLDOWN_MS = 10 * 60 * 1000;
+let lastFailureAt = 0;
+let lastSuccessAt = 0;
+
+function isNamuWikiCoolingDown(now = Date.now(), cooldownMs = RETRY_COOLDOWN_MS) {
+  return lastFailureAt > lastSuccessAt && now - lastFailureAt < cooldownMs;
+}
+
+function getNamuWikiHealth() {
+  return {
+    lastFailureAt,
+    lastSuccessAt,
+    coolingDown: isNamuWikiCoolingDown()
+  };
+}
+
+function resetNamuWikiHealth() {
+  lastFailureAt = 0;
+  lastSuccessAt = 0;
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json, text/plain, */*' } });
   if (!response.ok) return null;
@@ -1616,14 +1763,23 @@ function extractResults(data) {
 async function searchNamuWiki(query, options = {}) {
   const value = String(query || '').trim();
   if (!value || value.length < 2) return [];
+  if (isNamuWikiCoolingDown()) return [];
   const maxResults = Number(options?.maxResults || 5) || 5;
   const results = [];
   const seen = new Set();
+  let attempts = 0;
+  let failures = 0;
   for (const base of ENDPOINTS) {
     if (results.length >= maxResults) break;
+    attempts += 1;
     const url = `${base}?action=query&list=search&srsearch=${encodeURIComponent(value)}&srlimit=5&format=json`;
     try {
       const data = await fetchJson(url);
+      if (!data) {
+        failures += 1;
+        continue;
+      }
+      lastSuccessAt = Date.now();
       const found = extractResults(data);
       for (const item of found) {
         const key = `${item.originTitle || ''}|${item.title}`;
@@ -1632,8 +1788,13 @@ async function searchNamuWiki(query, options = {}) {
         results.push({ ...item, source: '나무위키', url: options?.baseUrl || `https://namu.wiki/wiki/${encodeURIComponent(item.title)}` });
         if (results.length >= maxResults) break;
       }
-    } catch (error) { /* best-effort */ }
+    } catch (error) {
+      failures += 1;
+      /* best-effort */
+    }
   }
+  // 모든 엔드포인트가 실패하면 일정 시간 재시도를 멈춥니다.
+  if (attempts > 0 && failures === attempts) lastFailureAt = Date.now();
   return results;
 }
 
@@ -1646,9 +1807,9 @@ async function lookupNamuTitle(media, options = {}) {
   return null;
 }
 
-return { lookupNamuTitle, searchNamuWiki };
+return { getNamuWikiHealth, isNamuWikiCoolingDown, lookupNamuTitle, resetNamuWikiHealth, searchNamuWiki };
 })();
-const { lookupNamuTitle, searchNamuWiki } = __ns_data_namu_search_js;
+const { getNamuWikiHealth, isNamuWikiCoolingDown, lookupNamuTitle, resetNamuWikiHealth, searchNamuWiki } = __ns_data_namu_search_js;
 // ===== data/korean-wiki.js =====
 const __ns_data_korean_wiki_js = (function() {
 // 한국어 위키백과 조회 모듈 (v4.9+)
@@ -1782,9 +1943,96 @@ async function lookupKoreanWikipedia(query, options = {}) {
 return { lookupKoreanWikipedia, searchKoreanWikipedia };
 })();
 const { lookupKoreanWikipedia, searchKoreanWikipedia } = __ns_data_korean_wiki_js;
+// ===== data/korean-source.js =====
+const __ns_data_korean_source_js = (function() {
+// 한국어 소스 통합 조회 (v4.7+)
+//
+// 표시 우선순위:
+//   1) 나무위키 (best-effort, 직접 검색)
+//   2) AI가 만든 한국어 "검색 후보"로 나무위키 재검색
+//   3) 한국어 위키백과 (CORS 허용, 실제 문서 확인)
+//   4) 원제 유지 (호출부에서 처리)
+//
+// AI 결과 자체는 절대 반환하지 않습니다. AI는 2단계의 검색어로만 사용합니다.
+
+
+
+
+
+const KOREAN_SOURCE_ORDER = Object.freeze(['namu', 'wiki', 'original']);
+const AI_QUERY_LIMIT = 3;
+
+async function safeCall(fn, logger) {
+  try {
+    return await fn();
+  } catch (error) {
+    if (logger && typeof logger.warn === 'function') {
+      logger.warn('Korean source lookup skipped:', error?.message || error);
+    }
+    return null;
+  }
+}
+
+async function lookupKoreanSource(nativeTitle, options = {}) {
+  const value = String(nativeTitle || '').trim();
+  if (value.length < 2) return null;
+
+  const logger = options.logger === undefined ? console : options.logger;
+  const searchNamu = options.searchNamu || searchNamuWiki;
+  const lookupWiki = options.lookupWiki || lookupKoreanWikipedia;
+  const coolingDown = options.isNamuCoolingDown || isNamuWikiCoolingDown;
+  const translate = options.translate === undefined ? geminiTranslate : options.translate;
+  const allowAiQuery = options.allowAiQuery !== false;
+  const generateCandidates = options.generateCandidates
+    || ((title) => generateKoreanQueryCandidates(title, { translate }));
+
+  const findNamu = async (query) => {
+    if (coolingDown()) return null;
+    const results = await safeCall(() => searchNamu(query), logger);
+    return Array.isArray(results) && results.length ? results[0] : null;
+  };
+
+  // 1) 원제/원어 제목으로 나무위키 검색
+  let namu = await findNamu(value);
+
+  // 2) AI는 나무위키 검색 후보로만 사용
+  if (!namu && allowAiQuery && typeof translate === 'function') {
+    const candidates = await safeCall(() => generateCandidates(value), logger);
+    for (const candidate of (Array.isArray(candidates) ? candidates : []).slice(0, AI_QUERY_LIMIT)) {
+      if (candidate === value) continue;
+      namu = await findNamu(candidate);
+      if (namu) break;
+    }
+  }
+
+  if (namu?.title) {
+    return {
+      ...namu,
+      source: namu.source || '나무위키',
+      kind: 'namu'
+    };
+  }
+
+  // 3) 실제 한국어 문서가 확인되는 위키백과로 폴백
+  const wiki = await safeCall(() => lookupWiki(value), logger);
+  if (wiki?.title || wiki?.overview) {
+    return { ...wiki, kind: 'wiki' };
+  }
+
+  return null;
+}
+
+// 의존성을 고정해 테스트/앱에서 재사용할 수 있는 리졸버를 만듭니다.
+function createKoreanSourceResolver(dependencies = {}) {
+  return (nativeTitle, options = {}) => lookupKoreanSource(nativeTitle, { ...dependencies, ...options });
+}
+
+return { KOREAN_SOURCE_ORDER, createKoreanSourceResolver, lookupKoreanSource };
+})();
+const { KOREAN_SOURCE_ORDER, createKoreanSourceResolver, lookupKoreanSource } = __ns_data_korean_source_js;
 // ===== korean-titles-db (inlined) =====
 setKoreanTitlesDb({
-  "version": 1,
+  "version": 2,
   "generatedAt": "2026-11-04",
   "count": 200,
   "entries": {
@@ -2694,29 +2942,35 @@ setKoreanTitlesDb({
     "106286": {
       "anilistId": 106286,
       "malId": 38826,
-      "title": "날씨의 아이",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "날씨의 아이",
+      "withheld": "machine-translation"
     },
     "13601": {
       "anilistId": 13601,
       "malId": 13601,
-      "title": "PSYCHO-PASS 사이코 패스",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "PSYCHO-PASS 사이코 패스",
+      "withheld": "machine-translation"
     },
     "14741": {
       "anilistId": 14741,
       "malId": 14741,
-      "title": "중이병에서도 사랑하고 싶다!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "중이병에서도 사랑하고 싶다!",
+      "withheld": "machine-translation"
     },
     "98460": {
       "anilistId": 98460,
@@ -2748,29 +3002,35 @@ setKoreanTitlesDb({
     "20474": {
       "anilistId": 20474,
       "malId": 20899,
-      "title": "조조의 이상한 모험 스타 더스트 크루세이더스",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 스타 더스트 크루세이더스",
+      "withheld": "machine-translation"
     },
     "19": {
       "anilistId": 19,
       "malId": 19,
-      "title": "몬스터",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "몬스터",
+      "withheld": "machine-translation"
     },
     "5081": {
       "anilistId": 5081,
       "malId": 5081,
-      "title": "화 이야기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "화 이야기",
+      "withheld": "machine-translation"
     },
     "161645": {
       "anilistId": 161645,
@@ -2820,110 +3080,134 @@ setKoreanTitlesDb({
     "20829": {
       "anilistId": 20829,
       "malId": 26243,
-      "title": "마지막 세라프",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마지막 세라프",
+      "withheld": "machine-translation"
     },
     "21776": {
       "anilistId": 21776,
       "malId": 33206,
-      "title": "고바야시 산치의 메이드 드래곤",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고바야시 산치의 메이드 드래곤",
+      "withheld": "machine-translation"
     },
     "99578": {
       "anilistId": 99578,
       "malId": 35968,
-      "title": "오타쿠에게 사랑이 어렵다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오타쿠에게 사랑이 어렵다.",
+      "withheld": "machine-translation"
     },
     "137822": {
       "anilistId": 137822,
       "malId": 49596,
-      "title": "블루락",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "블루락",
+      "withheld": "machine-translation"
     },
     "127720": {
       "anilistId": 127720,
       "malId": 45576,
-      "title": "무직 환생 ～이세계 가면 진심으로 한다～ 제2 쿨",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "무직 환생 ～이세계 가면 진심으로 한다～ 제2 쿨",
+      "withheld": "machine-translation"
     },
     "116589": {
       "anilistId": 116589,
       "malId": 41457,
-      "title": "86-에이티식스-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "86-에이티식스-",
+      "withheld": "machine-translation"
     },
     "9756": {
       "anilistId": 9756,
       "malId": 9756,
-      "title": "마법소녀 마도카☆마기카",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마법소녀 마도카☆마기카",
+      "withheld": "machine-translation"
     },
     "103572": {
       "anilistId": 103572,
       "malId": 38101,
-      "title": "오등분의 신부",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오등분의 신부",
+      "withheld": "machine-translation"
     },
     "108511": {
       "anilistId": 108511,
       "malId": 39551,
-      "title": "환생했을 때 슬라임이었던 건 제2기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환생했을 때 슬라임이었던 건 제2기",
+      "withheld": "machine-translation"
     },
     "133965": {
       "anilistId": 133965,
       "malId": 48926,
-      "title": "후루미씨는, 코뮤증입니다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "후루미씨는, 코뮤증입니다.",
+      "withheld": "machine-translation"
     },
     "108725": {
       "anilistId": 108725,
       "malId": 39617,
-      "title": "약속의 네버랜드 2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "약속의 네버랜드 2",
+      "withheld": "machine-translation"
     },
     "130298": {
       "anilistId": 130298,
       "malId": 48316,
-      "title": "그늘의 실력자가 되고 싶어서!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "그늘의 실력자가 되고 싶어서!",
+      "withheld": "machine-translation"
     },
     "114535": {
       "anilistId": 114535,
@@ -2937,11 +3221,13 @@ setKoreanTitlesDb({
     "21450": {
       "anilistId": 21450,
       "malId": 31933,
-      "title": "조조의 이상한 모험 다이아몬드는 부서지지 않는다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 다이아몬드는 부서지지 않는다.",
+      "withheld": "machine-translation"
     },
     "176496": {
       "anilistId": 176496,
@@ -2955,20 +3241,24 @@ setKoreanTitlesDb({
     "11617": {
       "anilistId": 11617,
       "malId": 11617,
-      "title": "고등학교 DxD",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고등학교 DxD",
+      "withheld": "machine-translation"
     },
     "105334": {
       "anilistId": 105334,
       "malId": 38680,
-      "title": "과일 바구니 1st Season",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "과일 바구니 1st Season",
+      "withheld": "machine-translation"
     },
     "119661": {
       "anilistId": 119661,
@@ -2982,11 +3272,13 @@ setKoreanTitlesDb({
     "21128": {
       "anilistId": 21128,
       "malId": 30503,
-      "title": "노라가미 ARAGOTO",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "노라가미 ARAGOTO",
+      "withheld": "machine-translation"
     },
     "100388": {
       "anilistId": 100388,
@@ -3000,65 +3292,79 @@ setKoreanTitlesDb({
     "113813": {
       "anilistId": 113813,
       "malId": 40839,
-      "title": "그녀, 빌려",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "그녀, 빌려",
+      "withheld": "machine-translation"
     },
     "100240": {
       "anilistId": 100240,
       "malId": 36511,
-      "title": "도쿄 식종-도쿄 구르-:re",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "도쿄 식종-도쿄 구르-:re",
+      "withheld": "machine-translation"
     },
     "101165": {
       "anilistId": 101165,
       "malId": 37349,
-      "title": "고블린 슬레이어",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "고블린 슬레이어",
+      "withheld": "machine-translation"
     },
     "164": {
       "anilistId": 164,
       "malId": 164,
-      "title": "Mononoke 공주",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "Mononoke 공주",
+      "withheld": "machine-translation"
     },
     "114236": {
       "anilistId": 114236,
       "malId": 40956,
-      "title": "불꽃 노 소방대 이노 노장",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "불꽃 노 소방대 이노 노장",
+      "withheld": "machine-translation"
     },
     "102883": {
       "anilistId": 102883,
       "malId": 37991,
-      "title": "조조의 이상한 모험 황금 바람",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 황금 바람",
+      "withheld": "machine-translation"
     },
     "2167": {
       "anilistId": 2167,
       "malId": 2167,
-      "title": "클라나드 -클라나드-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "클라나드 -클라나드-",
+      "withheld": "machine-translation"
     },
     "116006": {
       "anilistId": 116006,
@@ -3072,101 +3378,123 @@ setKoreanTitlesDb({
     "918": {
       "anilistId": 918,
       "malId": 918,
-      "title": "은혼",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "은혼",
+      "withheld": "machine-translation"
     },
     "106625": {
       "anilistId": 106625,
       "malId": 38883,
-      "title": "하이큐!! TO THE TOP",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "하이큐!! TO THE TOP",
+      "withheld": "machine-translation"
     },
     "125367": {
       "anilistId": 125367,
       "malId": 43608,
-      "title": "카구야 씨는 말하고 싶다 - 울트라 로맨틱 -",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "카구야 씨는 말하고 싶다 - 울트라 로맨틱 -",
+      "withheld": "machine-translation"
     },
     "6746": {
       "anilistId": 6746,
       "malId": 6746,
-      "title": "듀라라라!!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "듀라라라!!",
+      "withheld": "machine-translation"
     },
     "151801": {
       "anilistId": 151801,
       "malId": 52211,
-      "title": "매쉬 -MASHLE-",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "매쉬 -MASHLE-",
+      "withheld": "machine-translation"
     },
     "20799": {
       "anilistId": 20799,
       "malId": 26055,
-      "title": "조조의 이상한 모험 스타 더스트 크루세이더스 이집트편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "조조의 이상한 모험 스타 더스트 크루세이더스 이집트편",
+      "withheld": "machine-translation"
     },
     "20661": {
       "anilistId": 20661,
       "malId": 23283,
-      "title": "잔향 테롤",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "잔향 테롤",
+      "withheld": "machine-translation"
     },
     "100182": {
       "anilistId": 100182,
       "malId": 36474,
-      "title": "소드 아트 온라인 알리시제이션",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "소드 아트 온라인 알리시제이션",
+      "withheld": "machine-translation"
     },
     "7054": {
       "anilistId": 7054,
       "malId": 7054,
-      "title": "회장은 하녀 님!",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "회장은 하녀 님!",
+      "withheld": "machine-translation"
     },
     "8074": {
       "anilistId": 8074,
       "malId": 8074,
-      "title": "학원 묵시록 HIGHSCHOOL OF THE DEAD",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "학원 묵시록 HIGHSCHOOL OF THE DEAD",
+      "withheld": "machine-translation"
     },
     "11771": {
       "anilistId": 11771,
       "malId": 11771,
-      "title": "쿠로코 농구",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "쿠로코 농구",
+      "withheld": "machine-translation"
     },
     "153288": {
       "anilistId": 153288,
@@ -3180,65 +3508,79 @@ setKoreanTitlesDb({
     "99539": {
       "anilistId": 99539,
       "malId": 34577,
-      "title": "일곱 대죄 계명의 부활",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "일곱 대죄 계명의 부활",
+      "withheld": "machine-translation"
     },
     "141391": {
       "anilistId": 141391,
       "malId": 50346,
-      "title": "요후카시 노래",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "요후카시 노래",
+      "withheld": "machine-translation"
     },
     "124845": {
       "anilistId": 124845,
       "malId": 43299,
-      "title": "원더에그 우선 순위",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "원더에그 우선 순위",
+      "withheld": "machine-translation"
     },
     "166240": {
       "anilistId": 166240,
       "malId": 55701,
-      "title": "귀멸의 칼날 기둥 연고편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "귀멸의 칼날 기둥 연고편",
+      "withheld": "machine-translation"
     },
     "21613": {
       "anilistId": 21613,
       "malId": 32615,
-      "title": "유녀전기",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "유녀전기",
+      "withheld": "machine-translation"
     },
     "523": {
       "anilistId": 523,
       "malId": 523,
-      "title": "이웃집 토토로",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "이웃집 토토로",
+      "withheld": "machine-translation"
     },
     "205": {
       "anilistId": 205,
       "malId": 205,
-      "title": "사무라이 참프루",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사무라이 참프루",
+      "withheld": "machine-translation"
     },
     "5680": {
       "anilistId": 5680,
@@ -3252,74 +3594,90 @@ setKoreanTitlesDb({
     "18153": {
       "anilistId": 18153,
       "malId": 18153,
-      "title": "경계의 그분",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "경계의 그분",
+      "withheld": "machine-translation"
     },
     "136430": {
       "anilistId": 136430,
       "malId": 49387,
-      "title": "빈랜드 사가 SEASON2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "빈랜드 사가 SEASON2",
+      "withheld": "machine-translation"
     },
     "20698": {
       "anilistId": 20698,
       "malId": 23847,
-      "title": "역시 나의 청춘 러브 쌀은 잘못되어 있다. 계속",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "역시 나의 청춘 러브 쌀은 잘못되어 있다. 계속",
+      "withheld": "machine-translation"
     },
     "13759": {
       "anilistId": 13759,
       "malId": 13759,
-      "title": "사쿠라소의 애완동물 그녀",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사쿠라소의 애완동물 그녀",
+      "withheld": "machine-translation"
     },
     "226": {
       "anilistId": 226,
       "malId": 226,
-      "title": "엘펜리트",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "엘펜리트",
+      "withheld": "machine-translation"
     },
     "116742": {
       "anilistId": 116742,
       "malId": 41487,
-      "title": "환생했을 때 슬라임이었던 건 제2기 제2 쿨",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환생했을 때 슬라임이었던 건 제2기 제2 쿨",
+      "withheld": "machine-translation"
     },
     "139630": {
       "anilistId": 139630,
       "malId": 49918,
-      "title": "내 영웅 아카데미아 6",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "내 영웅 아카데미아 6",
+      "withheld": "machine-translation"
     },
     "146065": {
       "anilistId": 146065,
       "malId": 51179,
-      "title": "무직전생Ⅱ ～이세계 가면 진심이다",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "무직전생Ⅱ ～이세계 가면 진심이다",
+      "withheld": "machine-translation"
     },
     "130003": {
       "anilistId": 130003,
@@ -3333,20 +3691,24 @@ setKoreanTitlesDb({
     "112301": {
       "anilistId": 112301,
       "malId": 40496,
-      "title": "마왕학원의 부적합자 ～사상 최강의 마왕의 시조, 환생하여 자손들의 학교에 다니는～",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마왕학원의 부적합자 ～사상 최강의 마왕의 시조, 환생하여 자손들의 학교에 다니는～",
+      "withheld": "machine-translation"
     },
     "18897": {
       "anilistId": 18897,
       "malId": 18897,
-      "title": "니세코이",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "니세코이",
+      "withheld": "machine-translation"
     },
     "120697": {
       "anilistId": 120697,
@@ -3360,29 +3722,35 @@ setKoreanTitlesDb({
     "172463": {
       "anilistId": 172463,
       "malId": 57658,
-      "title": "주술회전 사멸회부 전편",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "주술회전 사멸회부 전편",
+      "withheld": "machine-translation"
     },
     "98437": {
       "anilistId": 98437,
       "malId": 35073,
-      "title": "오버로드 II",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "오버로드 II",
+      "withheld": "machine-translation"
     },
     "17895": {
       "anilistId": 17895,
       "malId": 17895,
-      "title": "골든 타임",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "골든 타임",
+      "withheld": "machine-translation"
     },
     "121": {
       "anilistId": 121,
@@ -3396,11 +3764,13 @@ setKoreanTitlesDb({
     "140439": {
       "anilistId": 140439,
       "malId": 50172,
-      "title": "몹 사이코 100 Ⅲ",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "몹 사이코 100 Ⅲ",
+      "withheld": "machine-translation"
     },
     "19603": {
       "anilistId": 19603,
@@ -3414,38 +3784,46 @@ setKoreanTitlesDb({
     "145545": {
       "anilistId": 145545,
       "malId": 51096,
-      "title": "환영 실력 지상주의 교실에 2nd Season",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "환영 실력 지상주의 교실에 2nd Season",
+      "withheld": "machine-translation"
     },
     "178025": {
       "anilistId": 178025,
       "malId": 59062,
-      "title": "가치 액터",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "가치 액터",
+      "withheld": "machine-translation"
     },
     "14227": {
       "anilistId": 14227,
       "malId": 14227,
-      "title": "이웃 괴물 군",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "이웃 괴물 군",
+      "withheld": "machine-translation"
     },
     "104157": {
       "anilistId": 104157,
       "malId": 38329,
-      "title": "청춘 돼지 녀석은 유메 보는 소녀의 꿈을 꾸지 않는다.",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "청춘 돼지 녀석은 유메 보는 소녀의 꿈을 꾸지 않는다.",
+      "withheld": "machine-translation"
     },
     "4898": {
       "anilistId": 4898,
@@ -3468,47 +3846,57 @@ setKoreanTitlesDb({
     "813": {
       "anilistId": 813,
       "malId": 813,
-      "title": "드래곤볼Z",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "드래곤볼Z",
+      "withheld": "machine-translation"
     },
     "20458": {
       "anilistId": 20458,
       "malId": 20785,
-      "title": "마법과 고등학교의 열등생",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "마법과 고등학교의 열등생",
+      "withheld": "machine-translation"
     },
     "21518": {
       "anilistId": 21518,
       "malId": 32282,
-      "title": "식도의 소마 弍ノ皿",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "식도의 소마 弍ノ皿",
+      "withheld": "machine-translation"
     },
     "20872": {
       "anilistId": 20872,
       "malId": 27775,
-      "title": "플라스틱 메모리즈",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "플라스틱 메모리즈",
+      "withheld": "machine-translation"
     },
     "853": {
       "anilistId": 853,
       "malId": 853,
-      "title": "사쿠라란 고등학교 호스트부",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "사쿠라란 고등학교 호스트부",
+      "withheld": "machine-translation"
     },
     "107660": {
       "anilistId": 107660,
@@ -3522,13 +3910,18 @@ setKoreanTitlesDb({
     "113538": {
       "anilistId": 113538,
       "malId": 40776,
-      "title": "하이큐!! TO THE TOP 2",
+      "title": null,
       "overview": null,
-      "source": "google",
+      "source": "none",
       "overviewSource": "none",
-      "confidence": 0.4
+      "confidence": 0.0,
+      "withheldTitle": "하이큐!! TO THE TOP 2",
+      "withheld": "machine-translation"
     }
-  }
+  },
+  "policy": "verified-only",
+  "sanitizedAt": "2026-11-04",
+  "verifiedCount": 32
 });
 // ===== app.js =====
 
@@ -3545,8 +3938,7 @@ setKoreanTitlesDb({
 
 
 
-
-const APP_VERSION = '4.6.0';
+const APP_VERSION = '4.7.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -3925,18 +4317,10 @@ async function enrichKoreanMetadata(items,concurrency=2){
     }
   });await Promise.all(workers);
 }
-// 한국어 소스 폴백 (v4.9+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
+// 한국어 소스 폴백 (v4.7+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
 // AI는 오직 나무위키 검색 후보 생성에만 사용하며, 화면 표시 출처로 쓰지 않습니다.
 async function lookupKoreanFallback(nativeTitle){
-  const value=String(nativeTitle||'').trim();
-  if(value.length<2)return null;
-  let namu=await searchNamuWiki(value);
-  if(!namu?.length){
-    const aiTitle=await geminiTranslate(value,'ja','ko');
-    if(aiTitle?.text)namu=await searchNamuWiki(aiTitle.text);
-  }
-  if(namu?.length)return {...namu[0],source:namu[0].source||'나무위키',kind:'namu'};
-  return await lookupKoreanWikipedia(value);
+  return lookupKoreanSource(nativeTitle);
 }
 async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
@@ -3952,7 +4336,7 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+    // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
     // 이미 확인된 한국어 제목(카탈로그/DB/사용자/TMDB/AniList)이 있으면 덮어쓰지 않습니다.
     if(!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
@@ -4232,7 +4616,7 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
-  // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+  // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
   const sourcePending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanMetadata(m)?.title&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   for(const m of sourcePending){
     try{

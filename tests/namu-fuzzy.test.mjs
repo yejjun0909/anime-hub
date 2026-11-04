@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   levenshtein,
@@ -8,8 +8,10 @@ import {
   fuzzyFilter,
   searchVariants
 } from '../data/fuzzy-search.js';
-import { searchNamuWiki, lookupNamuTitle } from '../data/namu-search.js';
+import { searchNamuWiki, lookupNamuTitle, isNamuWikiCoolingDown, resetNamuWikiHealth } from '../data/namu-search.js';
 import { searchKoreanWikipedia, lookupKoreanWikipedia } from '../data/korean-wiki.js';
+
+beforeEach(() => resetNamuWikiHealth());
 
 function withFetch(stub, fn) {
   const real = globalThis.fetch;
@@ -85,17 +87,36 @@ test('searchNamuWiki: 실패 응답/오류는 빈 배열', async () => {
   );
   assert.deepEqual(notFound, []);
 
+  resetNamuWikiHealth();
   const networkFail = await withFetch(
     async () => { throw new Error('network down'); },
     () => searchNamuWiki('네트워크실패')
   );
   assert.deepEqual(networkFail, []);
 
+  resetNamuWikiHealth();
   const malformed = await withFetch(
     async () => new Response('<html>not json</html>', { status: 200 }),
     () => searchNamuWiki('깨진응답')
   );
   assert.deepEqual(malformed, []);
+});
+
+test('searchNamuWiki: 연속 실패 후 쿨다운, 초기화로 해제', async () => {
+  await withFetch(
+    async () => { throw new Error('network down'); },
+    () => searchNamuWiki('네트워크실패')
+  );
+  assert.equal(isNamuWikiCoolingDown(), true);
+  let calls = 0;
+  const blocked = await withFetch(
+    async () => { calls += 1; return new Response('{}', { status: 200 }); },
+    () => searchNamuWiki('다시시도')
+  );
+  assert.deepEqual(blocked, []);
+  assert.equal(calls, 0, '쿨다운 중에는 요청하지 않습니다.');
+  resetNamuWikiHealth();
+  assert.equal(isNamuWikiCoolingDown(), false);
 });
 
 test('searchNamuWiki: 2자 미만 검색어는 요청하지 않음', async () => {

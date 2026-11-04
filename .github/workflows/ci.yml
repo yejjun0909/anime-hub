@@ -19,6 +19,12 @@ jobs:
       - name: 카탈로그 생성 파일 동기화 검사
         run: python tools/build_korean_catalog.py --check
 
+      - name: 단일 HTML 최신 여부 검사
+        run: python tools/build_single.py --check
+
+      - name: Python 도구 문법 검사
+        run: python -m compileall -q tools
+
       - name: 카탈로그 데이터 검사
         run: python tools/check_korean_catalog.py
 

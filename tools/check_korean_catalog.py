@@ -197,6 +197,13 @@ def check_wiring() -> None:
         fail("app.js가 data/korean-match.js를 import하지 않습니다.")
     if "from './data/api-vars.js'" not in app:
         fail("app.js가 data/api-vars.js를 import하지 않습니다.")
+    if "from './data/korean-source.js'" not in app:
+        fail("app.js가 data/korean-source.js를 import하지 않습니다.")
+    for direct in ("from './data/namu-search.js'", "from './data/korean-wiki.js'"):
+        if direct in app:
+            fail(f"app.js가 한국어 소스 모듈을 직접 import합니다: {direct}")
+    if "lookupKoreanSource(" not in app:
+        fail("app.js가 lookupKoreanSource()를 사용하지 않습니다.")
     for legacy in ("CURATED_KOREAN_OVERRIDES", "CURATED_KOREAN_MAL_IDS", "CURATED_KOREAN_BY_MAL"):
         if legacy in app:
             fail(f"app.js에 구버전 상수가 남아 있습니다: {legacy}")
@@ -214,9 +221,14 @@ def check_wiring() -> None:
         expected_cache = f"anime-hub-shell-v{app_version.replace('.', '-')}"
         if cache.group(1) != expected_cache:
             fail(f"sw.js 캐시 이름이 버전과 다릅니다: {cache.group(1)} (기대: {expected_cache})")
-    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js", "./data/gemini-translate.js", "./data/korean-titles-db.js", "./data/fuzzy-search.js", "./data/namu-search.js", "./data/korean-wiki.js"):
+    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/korean-query.js", "./data/korean-source.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js", "./data/gemini-translate.js", "./data/korean-titles-db.js", "./data/fuzzy-search.js", "./data/namu-search.js", "./data/korean-wiki.js"):
         if asset not in sw:
             fail(f"sw.js SHELL에 {asset} 가 없습니다.")
+
+    db_module = (ROOT / "data" / "korean-titles-db.js").read_text(encoding="utf-8")
+    for token in ("VERIFIED_KOREAN_SOURCES", "isVerifiedKoreanSource", "filterVerifiedDb"):
+        if token not in db_module:
+            fail(f"data/korean-titles-db.js에 {token} 검증 장치가 없습니다.")
 
     version_file = (ROOT / "VERSION.txt").read_text(encoding="utf-8")
     if app_version not in version_file:
@@ -236,6 +248,17 @@ def check_generated() -> None:
         fail("data/korean-catalog.js 가 없습니다.")
 
 
+def check_single_file() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "build_single.py"), "--check"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.returncode != 0:
+        fail(result.stderr.strip() or "anime-hub-single.html 최신 상태 검사 실패")
+
+
 def main() -> int:
     if not CATALOG.exists():
         print("실패: data/korean-catalog.json 이 없습니다.", file=sys.stderr)
@@ -245,6 +268,7 @@ def main() -> int:
     check_cases(records)
     check_wiring()
     check_generated()
+    check_single_file()
 
     for message in warnings:
         print(f"경고: {message}")
