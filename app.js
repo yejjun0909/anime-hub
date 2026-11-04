@@ -6,6 +6,7 @@ import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/
 import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { geminiTranslate, getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
+import { lookupKoreanWikipedia } from './data/korean-wiki.js';
 import { searchNamuWiki } from './data/namu-search.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
@@ -392,6 +393,19 @@ async function enrichKoreanMetadata(items,concurrency=2){
     }
   });await Promise.all(workers);
 }
+// 한국어 소스 폴백 (v4.9+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
+// AI는 오직 나무위키 검색 후보 생성에만 사용하며, 화면 표시 출처로 쓰지 않습니다.
+async function lookupKoreanFallback(nativeTitle){
+  const value=String(nativeTitle||'').trim();
+  if(value.length<2)return null;
+  let namu=await searchNamuWiki(value);
+  if(!namu?.length){
+    const aiTitle=await geminiTranslate(value,'ja','ko');
+    if(aiTitle?.text)namu=await searchNamuWiki(aiTitle.text);
+  }
+  if(namu?.length)return {...namu[0],source:namu[0].source||'나무위키',kind:'namu'};
+  return await lookupKoreanWikipedia(value);
+}
 async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
   const titleNode=$('[data-translate-title]',root),descNode=$('[data-translate-description]',root),sourceNode=$('[data-korean-metadata-source]',root);
@@ -406,20 +420,13 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   try{
     if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
     if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
-    // 나무위키 조회 (v4.9+): 실제 한국어 소스 우선, 미등록 시 나무위키 시도
-    // AI(번역)은 나무위키 검색에 한정해서만 허용: 한국어 후보 생성 → 나무위키 재검색 → 결과 사용
-    if(!curatedKoreanOverride(media)&&!getUserKorean(media)){
+    // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+    // 이미 확인된 한국어 제목(카탈로그/DB/사용자/TMDB/AniList)이 있으면 덮어쓰지 않습니다.
+    if(!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
       if(nativeTitle&&String(nativeTitle).trim().length>1){
-        let result=await searchNamuWiki(nativeTitle);
-        if(!result?.length){
-          const aiTitle=await geminiTranslate(nativeTitle,'ja','ko');
-          if(aiTitle?.text)result=await searchNamuWiki(aiTitle.text);
-        }
-        if(result?.length){
-          const best=result[0];
-          writeKoreanMetadata(media,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
-        }
+        const found=await lookupKoreanFallback(nativeTitle);
+        if(found?.title)writeKoreanMetadata(media,{title:found.title,overview:found.overview||'',source:found.source,kind:found.kind,titleCountry:'KR',missing:false,url:found.url||''});
       }
     }
     if(state.currentModal?.media?.id!==media.id)return;
@@ -533,11 +540,11 @@ function koreanTitleInfo(media){
   const user=getUserKorean(media);if(user?.title)return {title:user.title,source:user.source,url:user.url,kind:'user'};
   const db=lookupKoreanTitle(media);if(db?.title)return db;
   const cached=cachedKoreanMetadata(media);
-  const cachedIsNamu=cached?.source==='나무위키';
-  if(cached?.title&&!cachedIsNamu)return {title:cached.title,source:cached.source&&!/^TMDB/i.test(cached.source)?cached.source:tmdbKoreanSourceLabel(cached.titleCountry||cached.translationCountry),url:cached.url,kind:'tmdb'};
+  const directKind=cached?.kind==='namu'||cached?.source==='나무위키'?'namu':cached?.kind==='wiki'?'wiki':null;
+  if(cached?.title&&!directKind)return {title:cached.title,source:cached.source&&!/^TMDB/i.test(cached.source)?cached.source:tmdbKoreanSourceLabel(cached.titleCountry||cached.translationCountry),url:cached.url,kind:'tmdb'};
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
-  if(cached?.title&&cachedIsNamu)return {title:cached.title,source:'나무위키',url:cached.url||'',kind:'namu'};
+  if(cached?.title&&directKind)return {title:cached.title,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
@@ -545,10 +552,10 @@ function koreanDescriptionInfo(media){
   const user=getUserKorean(media);if(user?.overview)return {overview:user.overview,source:user.source,url:user.url,kind:'user'};
   const db=lookupKoreanTitle(media);if(db?.overview)return {overview:db.overview,source:db.source,url:db.url,kind:db.kind};
   const cached=cachedKoreanMetadata(media);
-  const cachedIsNamu=cached?.source==='나무위키';
-  if(cached?.overview&&!cachedIsNamu&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source&&!/^TMDB/i.test(cached.source)?cached.source:tmdbKoreanSourceLabel(cached.overviewCountry||cached.translationCountry),url:cached.url,kind:'tmdb'};
+  const directKind=cached?.kind==='namu'||cached?.source==='나무위키'?'namu':cached?.kind==='wiki'?'wiki':null;
+  if(cached?.overview&&!directKind&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source&&!/^TMDB/i.test(cached.source)?cached.source:tmdbKoreanSourceLabel(cached.overviewCountry||cached.translationCountry),url:cached.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
-  if(cached?.overview&&cachedIsNamu&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:'나무위키',url:cached.url||'',kind:'namu'};
+  if(cached?.overview&&directKind&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
   return null;
 }
 function localizedTitle(media){return koreanTitleInfo(media).title;}
@@ -559,7 +566,7 @@ function koreanMetadataSourceMarkup(media){
   const titleLine=`제목: ${link(titleInfo)}`;
   const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)': '소개';
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
-  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 한국어 표기입니다. 문서 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
   return `${titleLine}<br>${descLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}
@@ -693,21 +700,17 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
   const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
-  // 나무위키 조회 (v4.9+): AI 번역 대신 실제 한국어 소스 우선, 미등록 시 나무위키 시도
-  const namuPending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
-  for(const m of namuPending){
+  // 한국어 소스 조회 (v4.9+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
+  const sourcePending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanMetadata(m)?.title&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
+  for(const m of sourcePending){
     try{
-      let result=await searchNamuWiki(m?.title?.native||m?.title?.romaji||m?.title?.english);
-      if(!result?.length){
-        const aiTitle=await geminiTranslate(m?.title?.native||m?.title?.romaji||m?.title?.english,'ja','ko');
-        if(aiTitle?.text)result=await searchNamuWiki(aiTitle.text);
-      }
-      if(result?.length){
-        const best=result[0];
-        writeKoreanMetadata(m,{title:best.title,overview:best.overview||'',source:'나무위키',titleCountry:'KR',missing:false});
+      const nativeTitle=m?.title?.native||m?.title?.romaji||m?.title?.english;
+      const found=await lookupKoreanFallback(nativeTitle);
+      if(found?.title){
+        writeKoreanMetadata(m,{title:found.title,overview:found.overview||'',source:found.source,kind:found.kind,titleCountry:'KR',missing:false,url:found.url||''});
         const card=$$('.anime-card,.schedule-row',root).find(node=>String(node.dataset.open)===String(m.id));
         const titleNode=card?.querySelector('.card-title,.schedule-name');
-        if(titleNode)titleNode.textContent=best.title;
+        if(titleNode)titleNode.textContent=found.title;
       }
     }catch(error){}
   }
@@ -1592,7 +1595,7 @@ function showConflictModal(conflicts){
 
 function showSettings(){
   const cfg=JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');const tmdbCfg=loadTMDBConfig();const root=$('#modal-root');
-  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, 사전 수확 한국어 제목 DB, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선), 나무위키에서 확인된 한국어 표기를 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>Gemini AI · 나무위키 검색 보조 (선택)</h3><p class="detail-desc">Google Gemini 무료 API 키를 입력하면, 한국어 자료가 없는 작품의 <b>나무위키 검색 후보(한국어 제목)</b>를 만드는 데에만 사용합니다. AI가 만든 번역을 화면에 표시하지 않으며, 나무위키에서 실제 문서가 확인된 경우에만 그 제목·소개를 사용합니다. 키가 없으면 원제로 나무위키를 직접 검색합니다.</p><form class="settings-form" id="gemini-settings-form"><label>Gemini API Key<input id="gemini-key" type="password" placeholder="AIzaSy..." value="${esc(getGeminiKey())}" autocomplete="off"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">무료 tier: 15 req/min, 1M tokens/day. API 키는 이 브라우저에만 저장되며, 나무위키 검색 보조 외에는 사용되지 않습니다.</p></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>나무위키: 번역 자료가 없는 작품의 한국어 제목·소개 보조(문서가 확인된 경우에 한함)<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 제목 DB → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 나무위키 확인 문서 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 소개 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 나무위키 확인 문서 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, 사전 수확 한국어 제목 DB, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선), 나무위키·한국어 위키백과에서 확인된 한국어 표기를 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>Gemini AI · 나무위키 검색 보조 (선택)</h3><p class="detail-desc">Google Gemini 무료 API 키를 입력하면, 한국어 자료가 없는 작품의 <b>나무위키 검색 후보(한국어 제목)</b>를 만드는 데에만 사용합니다. AI가 만든 번역을 화면에 표시하지 않으며, 나무위키·한국어 위키백과에서 실제 문서가 확인된 경우에만 그 제목·소개를 사용합니다. 키가 없으면 원제로 나무위키·한국어 위키백과를 직접 검색합니다.</p><form class="settings-form" id="gemini-settings-form"><label>Gemini API Key<input id="gemini-key" type="password" placeholder="AIzaSy..." value="${esc(getGeminiKey())}" autocomplete="off"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">무료 tier: 15 req/min, 1M tokens/day. API 키는 이 브라우저에만 저장되며, 나무위키 검색 보조 외에는 사용되지 않습니다.</p></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>나무위키: 1차 한국어 제목·소개 보조(문서가 확인된 경우에 한함)<br>한국어 위키백과: 나무위키 조회 실패 시 한국어 제목·소개 보조(애니메이션·만화 문서로 확인된 경우)<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 제목 DB → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 소개 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
   root.addEventListener('change',e=>{if(e.target.id==='import-backup-file')importAllData(e.target.files?.[0]);});
   root.onsubmit=async e=>{if(e.target.id==='tmdb-settings-form'){e.preventDefault();const readAccessToken=$('#tmdb-read-token').value.trim();if(readAccessToken){localStorage.setItem(TMDB_CONFIG_KEY,JSON.stringify({readAccessToken}));toast('한국어 현지화 데이터 연결을 저장했습니다.');}else{localStorage.removeItem(TMDB_CONFIG_KEY);toast('TMDB 연결을 해제했습니다.');}localStorage.removeItem(KOREAN_METADATA_CACHE_KEY);showSettings();return;}if(e.target.id==='gemini-settings-form'){e.preventDefault();const key=$('#gemini-key').value.trim();setGeminiKey(key);toast(key?'Gemini API 키를 저장했습니다.':'Gemini API 키를 삭제했습니다.');showSettings();return;}if(e.target.id!=='settings-form')return;e.preventDefault();const url=$('#supabase-url').value.trim().replace(/\/$/,''),key=$('#supabase-key').value.trim();if(!url||!key){toast('Project URL과 공개 키를 모두 입력해 주세요.','error');return;}try{new URL(url);}catch{toast('Project URL 형식이 올바르지 않습니다.','error');return;}localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));state.supabase=null;state.user=null;await loadSupabase();if(state.supabase){toast('Supabase 연결 정보를 저장했습니다.');showSettings();}else toast(`연결 실패: ${state.supabaseError||'설정을 확인해 주세요.'}`,'error');};
   root.onclick=e=>{if(e.target.id==='export-all-data'){exportAllData();}if(e.target.id==='import-all-data')$('#import-backup-file')?.click();if(e.target.id==='import-backup-file')return;if(e.target.id==='export-list'){const blob=new Blob([JSON.stringify(state.watchlist,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-watchlist.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='export-collections'){const blob=new Blob([JSON.stringify(state.collections,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-collections.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='clear-local'){if(confirm('이 기기에 저장된 보관함을 삭제할까요? 클라우드 데이터는 삭제하지 않습니다.')){state.watchlist=[];saveLocalList();toast('이 기기의 보관함을 비웠습니다.');root.innerHTML='';if(state.route==='watchlist')renderWatchlist();}}};

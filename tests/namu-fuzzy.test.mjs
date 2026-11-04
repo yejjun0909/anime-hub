@@ -9,6 +9,7 @@ import {
   searchVariants
 } from '../data/fuzzy-search.js';
 import { searchNamuWiki, lookupNamuTitle } from '../data/namu-search.js';
+import { searchKoreanWikipedia, lookupKoreanWikipedia } from '../data/korean-wiki.js';
 
 function withFetch(stub, fn) {
   const real = globalThis.fetch;
@@ -113,4 +114,74 @@ test('lookupNamuTitle: 첫 결과 반환', async () => {
     () => lookupNamuTitle({ title: { native: '鋼の錬金術師' } })
   );
   assert.equal(found?.title, '강철의 연금술사');
+});
+
+test('searchKoreanWikipedia: 검색 결과와 스니펫 HTML 제거', async () => {
+  const results = await withFetch(
+    async () => new Response(JSON.stringify({ query: { search: [
+      { title: '귀멸의 칼날', pageid: 1, snippet: '일본의 <span class="searchmatch">만화</span>다.' }
+    ] } }), { status: 200 }),
+    () => searchKoreanWikipedia('鬼滅の刃')
+  );
+  assert.equal(results.length, 1);
+  assert.equal(results[0].title, '귀멸의 칼날');
+  assert.equal(results[0].snippet, '일본의 만화다.');
+});
+
+test('lookupKoreanWikipedia: 애니메이션 문서 조회', async () => {
+  const found = await withFetch(
+    async (url) => {
+      if (String(url).includes('list=search')) {
+        return new Response(JSON.stringify({ query: { search: [{ title: '귀멸의 칼날', snippet: '일본의 만화' }] } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ query: { pages: [{ title: '귀멸의 칼날', extract: '《귀멸의 칼날》은 일본의 만화다. 애니메이션으로도 제작되었다.' }] } }), { status: 200 });
+    },
+    () => lookupKoreanWikipedia('鬼滅の刃')
+  );
+  assert.equal(found?.title, '귀멸의 칼날');
+  assert.equal(found?.source, '한국어 위키백과');
+  assert.equal(found?.kind, 'wiki');
+  assert.match(found?.url, /^https:\/\/ko\.wikipedia\.org\/wiki\//);
+});
+
+test('lookupKoreanWikipedia: 비애니/동음이의 문서 제외', async () => {
+  const notAnime = await withFetch(
+    async (url) => {
+      if (String(url).includes('list=search')) {
+        return new Response(JSON.stringify({ query: { search: [{ title: '부산광역시', snippet: '대한민국의 도시' }] } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ query: { pages: [{ title: '부산광역시', extract: '부산광역시는 대한민국의 도시이다.' }] } }), { status: 200 });
+    },
+    () => lookupKoreanWikipedia('부산')
+  );
+  assert.equal(notAnime, null);
+
+  const disambiguation = await withFetch(
+    async (url) => {
+      if (String(url).includes('list=search')) {
+        return new Response(JSON.stringify({ query: { search: [{ title: '진격 (동음이의)', snippet: '애니메이션' }] } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ query: { pages: [{ title: '진격 (동음이의)', extract: '진격은 다음을 가리킨다. 애니메이션 진격의 거인.' }] } }), { status: 200 });
+    },
+    () => lookupKoreanWikipedia('진격')
+  );
+  assert.equal(disambiguation, null);
+});
+
+test('lookupKoreanWikipedia: 2자 미만 검색어는 요청하지 않음', async () => {
+  let calls = 0;
+  const found = await withFetch(
+    async () => { calls += 1; return new Response('{}', { status: 200 }); },
+    () => lookupKoreanWikipedia('a')
+  );
+  assert.equal(calls, 0);
+  assert.equal(found, null);
+});
+
+test('lookupKoreanWikipedia: 네트워크 실패는 null', async () => {
+  const found = await withFetch(
+    async () => { throw new Error('network down'); },
+    () => lookupKoreanWikipedia('네트워크실패')
+  );
+  assert.equal(found, null);
 });
