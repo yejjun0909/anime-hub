@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — 나무위키/퍼지 검색 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    h1 { font-size: 20px; }
+    #summary { font-size: 16px; font-weight: 700; padding: 12px 16px; border-radius: 8px; background: #1c2030; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+    th, td { border-bottom: 1px solid #2a3044; padding: 8px; text-align: left; vertical-align: top; }
+    tr.fail td { background: #3a1c22; }
+    code { color: #9fc4ff; }
+  </style>
+</head>
+<body>
+  <h1>나무위키 조회 · 퍼지 검색 테스트</h1>
+  <p>실제 앱이 사용하는 <code>data/fuzzy-search.js</code>, <code>data/namu-search.js</code> 모듈로 실행합니다.</p>
+  <div id="summary">실행 중…</div>
+  <table>
+    <thead><tr><th>#</th><th>케이스</th><th>기대</th><th>실제</th><th>결과</th><th>이유</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script type="module">
+    import { levenshtein, similarity, normalizeForSearch, fuzzyMatch, fuzzyFilter, searchVariants } from '../data/fuzzy-search.js';
+    import { searchNamuWiki, lookupNamuTitle } from '../data/namu-search.js';
+
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+    let index = 0;
+
+    function check(name, expected, actual, why) {
+      index += 1;
+      const passed = JSON.stringify(expected) === JSON.stringify(actual);
+      const tr = document.createElement('tr');
+      if (!passed) tr.className = 'fail';
+      tr.innerHTML = `<td>${index}</td><td>${name}</td><td><code>${JSON.stringify(expected)}</code></td>` +
+        `<td><code>${JSON.stringify(actual)}</code></td><td>${passed ? '통과' : '실패'}</td><td>${why}</td>`;
+      rows.appendChild(tr);
+      if (!passed) failures.push({ name, expected, actual, why });
+    }
+
+    function withFetch(stub, fn) {
+      const real = globalThis.fetch;
+      globalThis.fetch = stub;
+      return Promise.resolve(fn()).finally(() => { globalThis.fetch = real; });
+    }
+
+    try {
+      // ---- 퍼지 검색 ----
+      check('levenshtein 기본 거리', 3, levenshtein('kitten', 'sitting'), '표준 예제 거리.');
+      check('levenshtein 동일 문자열', 0, levenshtein('같음', '같음'), '동일하면 0.');
+      check('similarity 동일 문자열', 1, similarity('abc', 'abc'), '동일하면 1.');
+      check('normalize: 공백/기호 제거', '귀멸의칼날무한성편', normalizeForSearch('귀멸의 칼날: 무한성편'), '검색 비교용 정규화.');
+      check('normalize: 시즌 표기 제거', '귀멸의칼날', normalizeForSearch('귀멸의 칼날 시즌2'), '시즌 숫자는 비교에서 제외.');
+      check('fuzzyMatch: 부분 포함', true, fuzzyMatch('귀멸의칼', '귀멸의 칼날'), '공백 제거 후 포함 관계.');
+      check('fuzzyMatch: 오타 허용', true, fuzzyMatch('진격거인', '진격의 거인'), '유사도 임계값 이상.');
+      check('fuzzyMatch: 무관한 이름', false, fuzzyMatch('주술회전', '진격의 거인'), '임계값 미만은 제외.');
+
+      const pool = [
+        { title: { romaji: 'Kimetsu no Yaiba' } },
+        { title: { romaji: 'Shingeki no Kyojin' } },
+        { title: { native: '呪術廻戦' }, synonyms: ['주술회전'] }
+      ];
+      check('fuzzyFilter: 띄어쓰기 무시', 1, fuzzyFilter(pool, 'kimetsu yaiba').length, '공백 제거 후 매칭.');
+      check('fuzzyFilter: 별칭(synonym) 매칭', 1, fuzzyFilter(pool, '주술회전').length, 'synonyms도 검색 대상.');
+      check('fuzzyFilter: 결과 없음', 0, fuzzyFilter(pool, '전혀무관한작품').length, '무관한 검색어는 빈 배열.');
+      check('fuzzyFilter: 빈 검색어는 원본 유지', 3, fuzzyFilter(pool, '').length, '검색어 없으면 필터하지 않음.');
+      check('searchVariants: 공백 제거 변형', ['귀멸의 칼날', '귀멸의칼날'], searchVariants('귀멸의 칼날'), '호출자용 검색 변형.');
+
+      // ---- 나무위키 조회 (fetch 스텁) ----
+      const mediaWikiBody = { query: { search: { results: [
+        { title: '귀멸의 칼날', snippet: '일본의 만화' },
+        { title: '귀멸의 칼날/등장인물', snippet: '등장인물' }
+      ] } } };
+      const parsed = await withFetch(
+        async () => new Response(JSON.stringify(mediaWikiBody), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+        () => searchNamuWiki('귀멸의 칼날')
+      );
+      check('나무위키: 결과 파싱', 2, parsed.length, 'MediaWiki 형태 응답을 읽어야 함.');
+      check('나무위키: 출처 표기', '나무위키', parsed[0]?.source, '표시 출처는 나무위키.');
+      check('나무위키: 제목', '귀멸의 칼날', parsed[0]?.title, '첫 결과 제목.');
+      check('나무위키: 문서 URL', true, /^https:\/\/namu\.wiki\/wiki\//.test(parsed[0]?.url || ''), '문서 링크 생성.');
+
+      const flat = await withFetch(
+        async () => new Response(JSON.stringify({ results: [{ title: '진격의 거인' }] }), { status: 200 }),
+        () => searchNamuWiki('진격의 거인')
+      );
+      check('나무위키: 평면 results 형태', '진격의 거인', flat[0]?.title, 'results 배열도 지원.');
+
+      const notFound = await withFetch(
+        async () => new Response('not found', { status: 404 }),
+        () => searchNamuWiki('없는문서')
+      );
+      check('나무위키: 404는 빈 배열', [], notFound, '실패해도 예외 없이 빈 배열.');
+
+      const networkFail = await withFetch(
+        async () => { throw new Error('network down'); },
+        () => searchNamuWiki('네트워크실패')
+      );
+      check('나무위키: 네트워크 오류는 빈 배열', [], networkFail, 'best-effort 원칙.');
+
+      const malformed = await withFetch(
+        async () => new Response('<html>not json</html>', { status: 200 }),
+        () => searchNamuWiki('깨진응답')
+      );
+      check('나무위키: 비JSON 응답은 빈 배열', [], malformed, '파싱 실패 시 안전.');
+
+      let fetchCalls = 0;
+      const shortQuery = await withFetch(
+        async () => { fetchCalls += 1; return new Response('{}', { status: 200 }); },
+        () => searchNamuWiki('a')
+      );
+      check('나무위키: 짧은 검색어는 요청 안 함', 0, fetchCalls, '2자 미만은 조회 생략.');
+      check('나무위키: 짧은 검색어 결과', [], shortQuery, '빈 배열 반환.');
+
+      const lookup = await withFetch(
+        async () => new Response(JSON.stringify({ query: { search: { results: [{ title: '강철의 연금술사' }] } } }), { status: 200 }),
+        () => lookupNamuTitle({ title: { native: '鋼の錬金術師' } })
+      );
+      check('lookupNamuTitle: 첫 결과 반환', '강철의 연금술사', lookup?.title, '미디어 제목으로 조회.');
+
+      const failed = failures.length;
+      summary.className = failed ? 'fail' : 'pass';
+      summary.textContent = failed
+        ? `실패 ${failed}건 / 전체 ${index}건`
+        : `통과 ${index}건 / 전체 ${index}건`;
+      window.__NAMU_FUZZY_RESULT__ = { total: index, failed, failures, finishedAt: new Date().toISOString() };
+      document.title = failed ? `FAIL ${failed}/${index}` : `PASS ${index}/${index}`;
+    } catch (error) {
+      summary.className = 'fail';
+      summary.textContent = `실행 오류: ${error.message}`;
+      window.__NAMU_FUZZY_RESULT__ = { total: index, failed: failures.length + 1, failures: [{ name: 'harness', detail: error.message }] };
+      document.title = 'ERROR';
+    }
+  </script>
+</body>
+</html>
