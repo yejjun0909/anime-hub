@@ -4687,6 +4687,7 @@ async function renderHome(){
     main.innerHTML=`<section class="hero">${featured?.bannerImage?`<img class="hero-image" src="${esc(featured.bannerImage)}" alt="" loading="eager" fetchpriority="high" decoding="async" onerror="this.remove()">`:''}<div class="hero-copy"><span class="hero-tag">애니메이션 통합 정보 · ${yr}</span><h1>애니메이션의 모든 순간,<br>한곳에서 발견하다.</h1><p>새로운 작품을 찾고, 방영 일정을 확인하고, 나만의 시청 기록을 관리하세요. 전 세계 애니메이션 데이터베이스를 한 화면에 모았습니다.</p><button class="primary-button" data-route="browse">애니메이션 탐색하기 →</button></div></section>
       <section class="section">${sectionHead('지금 주목받는 작품','실시간 인기','browse')}${gridMarkup(trending.slice(0,5))}</section>
       <section class="section">${sectionHead(`${yr}년 ${seasonLabel(season)} 시즌 신작`,'이번 시즌','airing')}${gridMarkup(seasonal.slice(0,5))}</section>
+      ${(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)?`<section class="section"><div class="empty-state"><div class="empty-icon">📲</div><strong>ANIME HUB를 홈 화면에 추가하세요</strong><span>브라우저 메뉴에서 “홈 화면에 추가”를 선택하면 앱처럼 사용할 수 있습니다.</span><div style="margin-top:12px"><button class="primary-button" id="home-install">설치 안내</button></div></div></section>`:''}
       <section class="feature-strip"><div class="feature-tile"><span class="feature-icon">◷</span><div><b>방영 일정</b><small>요일별 최신 방영작 확인</small></div></div><div class="feature-tile"><span class="feature-icon">♡</span><div><b>나만의 보관함</b><small>시청 상태와 평점 관리</small></div></div><div class="feature-tile"><span class="feature-icon">⌕</span><div><b>인물·제작진 탐색</b><small>성우와 제작사로 작품 찾기</small></div></div></section>
       <section class="section">${sectionHead('인기 극장판','추천 영화','movies')}${gridMarkup(movies.slice(0,5))}</section>
       ${state.recentViews?.length?`<section class="section">${sectionHead('최근 본 작품','최근에 연 작품','browse')}${gridMarkup(state.recentViews.slice(0,5).map(v=>knownMedia(v.id)||v))}</section>`:''}
@@ -5680,6 +5681,9 @@ if(backToTop){
   window.addEventListener('scroll',()=>{backToTop.classList.toggle('show',window.scrollY>400);},{passive:true});
   backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 }
+document.addEventListener('click',e=>{
+  if(e.target?.id==='home-install'){showInstallHelp();}
+});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;});
 function showInstallHelp(){
   const root=$('#modal-root');
