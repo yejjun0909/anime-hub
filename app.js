@@ -1747,6 +1747,8 @@ function showInstallHelp(){
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:480px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">모바일 앱 설치</div><h2>ANIME HUB를 앱처럼 사용하기</h2><p class="detail-desc">${steps}</p><div class="warning-box">설치 메뉴가 나타나려면 공개된 HTTPS 주소에서 접속해야 합니다. PC의 <code>localhost</code> 주소는 스마트폰에서 그대로 사용할 수 없으며, 일반 HTTP 내부 IP 주소는 설치 조건을 충족하지 않습니다.</div><p class="hint">설치하면 홈 화면 아이콘과 독립 실행 화면을 사용할 수 있습니다. 앱을 설치해도 AniList·TMDB 정보 조회에는 인터넷 연결이 필요합니다.</p></div></div></div>`;
 }
 $('#export-data')?.addEventListener('click',()=>exportAllData());
+$('#import-data')?.addEventListener('click',()=>$('#import-file')?.click());
+$('#import-file')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importAllData(file);e.target.value='';});
 $('#install-button').addEventListener('click',async()=>{
   if(state.installPrompt){state.installPrompt.prompt();await state.installPrompt.userChoice;state.installPrompt=null;$('#install-button').hidden=true;return;}
   showInstallHelp();
