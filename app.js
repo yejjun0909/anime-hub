@@ -1751,9 +1751,21 @@ if(backToTop){
   window.addEventListener('scroll',()=>{backToTop.classList.toggle('show',window.scrollY>400);},{passive:true});
   backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 }
+function applyTheme(theme){
+  document.documentElement.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent = theme==='light' ? '◑' : '◐';
+}
+const savedTheme=localStorage.getItem('animehub_theme_v1')||'dark';
+applyTheme(savedTheme);
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
   if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
+  if(e.target?.id==='theme-toggle'){
+    const next=document.documentElement.classList.contains('light')?'dark':'light';
+    localStorage.setItem('animehub_theme_v1',next);
+    applyTheme(next);
+  }
 });
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;toast('애니허브를 홈 화면에 추가할 수 있습니다.','info');});
 function showInstallHelp(){

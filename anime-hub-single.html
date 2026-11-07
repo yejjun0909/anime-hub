@@ -167,6 +167,14 @@ button:active,.pill:active,.mini-action:active{transform:scale(.97);}
 .back-to-top{position:fixed;right:16px;bottom:76px;z-index:35;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(18,20,30,.9);color:#e8eaf2;font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.3);}
 .back-to-top.show{display:flex;}
 
+/* Light theme overrides */
+html.light{color-scheme:light;--bg:#f5f6fa;--panel:#ffffff;--panel2:#f0f1f6;--panel3:#e6e8f0;--line:#d0d3e0;--text:#1a1d29;--muted:#5a6075;--soft:#3a3f55;--accent:#6c5ce7;--accent2:#5a4bd1;--shadow:0 18px 60px #0001;}
+html.light body{background:var(--bg);}
+html.light .topbar{background:#ffffffeb;}
+html.light .sidebar{background:var(--panel2);}
+html.light .empty-state,html.light .modal,html.light .account-status,html.light .feature-tile,html.light .studio-card,html.light .person-card,html.light .schedule-row,html.light .watch-card-shell{background:var(--panel);}
+html.light .field,html.light .filter-panel select,html.light .filter-panel input,html.light .auth-form input,html.light .settings-form input,html.light .settings-form select{background:var(--panel);color:var(--text);border-color:var(--line);}
+
 /* Focus visibility (a11y) */
 :focus-visible{outline:2px solid #5b8cff;outline-offset:2px;border-radius:6px;}
 button:focus-visible,.pill:focus-visible,.mini-action:focus-visible{outline-offset:1px;}
@@ -199,6 +207,7 @@ button:focus-visible,.pill:focus-visible,.mini-action:focus-visible{outline-offs
         <button class="icon-button" id="install-button" title="앱 설치" hidden>⇩</button>
 <button class="icon-button" id="export-data" title="데이터 백업">⤓</button>
 <button class="icon-button" id="import-data" title="데이터 복원">⤒</button>
+<button class="icon-button" id="theme-toggle" title="테마 전환">◐</button>
 <input type="file" id="import-file" accept="application/json" hidden />
         <button class="account-button" id="account-button" title="개인 데이터 및 계정 설정"><span class="avatar">U</span><span id="account-label">로컬 저장</span></button>
       </div>
@@ -5932,9 +5941,21 @@ if(backToTop){
   window.addEventListener('scroll',()=>{backToTop.classList.toggle('show',window.scrollY>400);},{passive:true});
   backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 }
+function applyTheme(theme){
+  document.documentElement.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent = theme==='light' ? '◑' : '◐';
+}
+const savedTheme=localStorage.getItem('animehub_theme_v1')||'dark';
+applyTheme(savedTheme);
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
   if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
+  if(e.target?.id==='theme-toggle'){
+    const next=document.documentElement.classList.contains('light')?'dark':'light';
+    localStorage.setItem('animehub_theme_v1',next);
+    applyTheme(next);
+  }
 });
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;toast('애니허브를 홈 화면에 추가할 수 있습니다.','info');});
 function showInstallHelp(){

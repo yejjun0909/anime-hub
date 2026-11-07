@@ -142,6 +142,14 @@ button:active,.pill:active,.mini-action:active{transform:scale(.97);}
 .back-to-top{position:fixed;right:16px;bottom:76px;z-index:35;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(18,20,30,.9);color:#e8eaf2;font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.3);}
 .back-to-top.show{display:flex;}
 
+/* Light theme overrides */
+html.light{color-scheme:light;--bg:#f5f6fa;--panel:#ffffff;--panel2:#f0f1f6;--panel3:#e6e8f0;--line:#d0d3e0;--text:#1a1d29;--muted:#5a6075;--soft:#3a3f55;--accent:#6c5ce7;--accent2:#5a4bd1;--shadow:0 18px 60px #0001;}
+html.light body{background:var(--bg);}
+html.light .topbar{background:#ffffffeb;}
+html.light .sidebar{background:var(--panel2);}
+html.light .empty-state,html.light .modal,html.light .account-status,html.light .feature-tile,html.light .studio-card,html.light .person-card,html.light .schedule-row,html.light .watch-card-shell{background:var(--panel);}
+html.light .field,html.light .filter-panel select,html.light .filter-panel input,html.light .auth-form input,html.light .settings-form input,html.light .settings-form select{background:var(--panel);color:var(--text);border-color:var(--line);}
+
 /* Focus visibility (a11y) */
 :focus-visible{outline:2px solid #5b8cff;outline-offset:2px;border-radius:6px;}
 button:focus-visible,.pill:focus-visible,.mini-action:focus-visible{outline-offset:1px;}
