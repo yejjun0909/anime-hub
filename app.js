@@ -1691,6 +1691,12 @@ async function refreshCurrentRoute(){
 $('#refresh-data').addEventListener('click',refreshCurrentRoute);
 
 window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1)||'home';if(raw.startsWith('collection:')){const id=raw.slice('collection:'.length);renderCollectionDetail(id);updateContinueBar();return;}const route=raw;if(route!==state.route){state.route=route;renderRoute();updateContinueBar();}});
+
+const backToTop=document.getElementById('back-to-top');
+if(backToTop){
+  window.addEventListener('scroll',()=>{backToTop.classList.toggle('show',window.scrollY>400);},{passive:true});
+  backToTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;});
 function showInstallHelp(){
   const root=$('#modal-root');
