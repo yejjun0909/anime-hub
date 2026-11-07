@@ -5,6 +5,7 @@ import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/sc
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
 import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
+import { lookupCommonKoreanTitle } from './data/korean-common-titles.js';
 import { getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
 import { lookupKoreanSource } from './data/korean-source.js';
 import { searchAliasSuggestions, expandSearchQuery } from './data/search-aliases.js';
@@ -15,7 +16,7 @@ import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
 import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.js';
 import { fuzzyFilter, searchVariants, normalizeForSearch } from './data/fuzzy-search.js';
 
-const APP_VERSION = '4.7.0';
+const APP_VERSION = '4.7.2';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -110,7 +111,7 @@ function currentSeason(){ const m = new Date().getMonth()+1; return (m===12 || m
 function seasonLabel(s){ return ({WINTER:'겨울',SPRING:'봄',SUMMER:'여름',FALL:'가을'}[s] || s || ''); }
 function dateRange(year){ return {startGreater: year*10000, startLesser:(year+1)*10000}; }
 function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;$('#toast-root').append(node);setTimeout(()=>node.remove(),3300); }
-function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state"><div class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><strong>조건에 맞는 작품이 없습니다.</strong><span>검색어나 필터 조건을 바꿔 다시 시도해 보세요.</span><div style="margin-top:12px"><button class="ghost-button" data-clear-recent>최근 검색어 지우기</button></div></div>`; }
+function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state" role="status" aria-live="polite"><div class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><strong>${esc(message)}</strong><span>잠시만 기다려 주세요.</span></div>`; }
 
 // AniList 요청은 직렬화하고 캐시·재시도·시간 제한을 적용합니다.
 let aniQueue = Promise.resolve();
@@ -538,6 +539,7 @@ function koreanTitleInfo(media){
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
   if(cached?.title&&directKind)return {title:cached.title,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
+  const common=lookupCommonKoreanTitle(media);if(common?.title)return common;
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
@@ -559,7 +561,7 @@ function koreanMetadataSourceMarkup(media){
   const titleLine=`제목: ${link(titleInfo)}`;
   const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)': '소개';
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
-  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='common'?'국내에서 널리 쓰이는 표기를 정리한 것으로 국내 플랫폼에서 직접 확인하지 않았습니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
   return `${titleLine}<br>${descLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}
@@ -730,7 +732,7 @@ async function renderHome(){
     main.innerHTML=`<section class="hero">${featured?.bannerImage?`<img class="hero-image" src="${esc(featured.bannerImage)}" alt="" loading="eager" fetchpriority="high" decoding="async" onerror="this.remove()">`:''}<div class="hero-copy"><span class="hero-tag">애니메이션 통합 정보 · ${yr}</span><h1>애니메이션의 모든 순간,<br>한곳에서 발견하다.</h1><p>새로운 작품을 찾고, 방영 일정을 확인하고, 나만의 시청 기록을 관리하세요. 전 세계 애니메이션 데이터베이스를 한 화면에 모았습니다.</p><button class="primary-button" data-route="browse">애니메이션 탐색하기 →</button></div></section>
       <section class="section">${sectionHead('지금 주목받는 작품','실시간 인기','browse')}${gridMarkup(trending.slice(0,5))}</section>
       <section class="section">${sectionHead(`${yr}년 ${seasonLabel(season)} 시즌 신작`,'이번 시즌','airing')}${gridMarkup(seasonal.slice(0,5))}</section>
-      ${(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)?`<section class="section"><div class="empty-state"><div class="empty-icon">📲</div><strong>ANIME HUB를 홈 화면에 추가하세요</strong><span>브라우저 메뉴에서 “홈 화면에 추가”를 선택하면 앱처럼 사용할 수 있습니다.</span><div style="margin-top:12px"><button class="primary-button" id="home-install">설치 안내</button></div></div></section>`:''}
+      ${(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)?`<section class="section"><div class="empty-state"><div class="empty-icon">📲</div><strong>애니허브를 홈 화면에 추가하세요</strong><span>브라우저 메뉴에서 “홈 화면에 추가”를 선택하면 앱처럼 사용할 수 있습니다.</span><div style="margin-top:12px"><button class="primary-button" id="home-install">설치 안내</button></div></div></section>`:''}
       <section class="feature-strip"><div class="feature-tile"><span class="feature-icon">◷</span><div><b>방영 일정</b><small>요일별 최신 방영작 확인</small></div></div><div class="feature-tile"><span class="feature-icon">♡</span><div><b>나만의 보관함</b><small>시청 상태와 평점 관리</small></div></div><div class="feature-tile"><span class="feature-icon">⌕</span><div><b>인물·제작진 탐색</b><small>성우와 제작사로 작품 찾기</small></div></div></section>
       <section class="section">${sectionHead('인기 극장판','추천 영화','movies')}${gridMarkup(movies.slice(0,5))}</section>
       ${state.recentViews?.length?`<section class="section">${sectionHead('최근 본 작품','최근에 연 작품','browse')}${gridMarkup(state.recentViews.slice(0,5).map(v=>knownMedia(v.id)||v))}</section>`:''}
@@ -1198,7 +1200,7 @@ function exportAllData(){
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`anime-hub-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('보관함·컬렉션·검색 조건을 백업했습니다.');
 }
 async function importAllData(file){
-  if(!file)return;try{const data=JSON.parse(await file.text());if(!data||data.app!=='ANIME HUB')throw new Error('ANIME HUB 백업 파일이 아닙니다.');
+  if(!file)return;try{const data=JSON.parse(await file.text());if(!data||data.app!=='ANIME HUB')throw new Error('애니허브 백업 파일이 아닙니다.');
     const watch=Array.isArray(data.watchlist)?data.watchlist:[];const collections=Array.isArray(data.collections)?data.collections:[];const searches=Array.isArray(data.savedSearches)?data.savedSearches:[];
     if(!confirm(`백업 데이터를 불러올까요?\n보관함 ${watch.length}개 · 컬렉션 ${collections.length}개 · 검색 조건 ${searches.length}개\n기존 데이터와 합쳐집니다.`))return;
     const map=new Map(state.watchlist.map(x=>[String(x.media_id),x]));for(const item of watch){if(item?.media_id!=null)map.set(String(item.media_id),item);}state.watchlist=[...map.values()];
@@ -1318,10 +1320,10 @@ async function checkNewReleaseAlerts(initial=false){
   try{
     const data=await fetchAnimeList({page:1,perPage:20,sort:['START_DATE_DESC']});const list=data.media||[];const seen=new Set(JSON.parse(localStorage.getItem(RELEASE_SEEN_KEY)||'[]').map(String));
     const fresh=list.filter(item=>!seen.has(String(item.id)));
-    if(seen.size&&fresh.length){fresh.slice(0,3).forEach(item=>new Notification('ANIME HUB · 새 작품',{body:`${localizedTitle(item)} 작품 정보가 새로 등록되었을 수 있습니다.`,icon:'./assets/icon-192.png'}));}
+    if(seen.size&&fresh.length){fresh.slice(0,3).forEach(item=>new Notification('애니허브 · 새 작품',{body:`${localizedTitle(item)} 작품 정보가 새로 등록되었을 수 있습니다.`,icon:'./assets/icon-192.png'}));}
     const next=[...new Set([...list.map(x=>String(x.id)),...seen])].slice(0,300);localStorage.setItem(RELEASE_SEEN_KEY,JSON.stringify(next));
     const watching=state.watchlist.filter(x=>x.status==='CURRENT'&&Number.isInteger(Number(x.media_id))).map(x=>Number(x.media_id)).slice(0,30);
-    if(watching.length){const now=Math.floor(Date.now()/1000),to=now+7*86400;try{const q=`query MyUpcoming($ids:[Int],$from:Int!,$to:Int!){Page(page:1,perPage:50){airingSchedules(mediaId_in:$ids,airingAt_greater:$from,airingAt_lesser:$to,notYetAired:true,sort:[TIME]){id airingAt episode media{id title{userPreferred english romaji}}}}}`;const schedule=await anilist(q,{ids:watching,from:now,to},{cacheTtl:60*60*1000});const aired=new Set(JSON.parse(localStorage.getItem('animehub_episode_alert_seen')||'[]').map(String));for(const row of schedule.Page?.airingSchedules||[]){const key=String(row.id);if(!aired.has(key)){if(!initial)new Notification('ANIME HUB · 새 회차 예정',{body:`${titleOf(row.media)} · ${row.episode}화 · ${localDate(row.airingAt)}`,icon:'./assets/icon-192.png'});aired.add(key);}}localStorage.setItem('animehub_episode_alert_seen',JSON.stringify([...aired].slice(-500))); }catch(error){console.warn('시청 중 작품 일정 확인 실패:',error);}}
+    if(watching.length){const now=Math.floor(Date.now()/1000),to=now+7*86400;try{const q=`query MyUpcoming($ids:[Int],$from:Int!,$to:Int!){Page(page:1,perPage:50){airingSchedules(mediaId_in:$ids,airingAt_greater:$from,airingAt_lesser:$to,notYetAired:true,sort:[TIME]){id airingAt episode media{id title{userPreferred english romaji}}}}}`;const schedule=await anilist(q,{ids:watching,from:now,to},{cacheTtl:60*60*1000});const aired=new Set(JSON.parse(localStorage.getItem('animehub_episode_alert_seen')||'[]').map(String));for(const row of schedule.Page?.airingSchedules||[]){const key=String(row.id);if(!aired.has(key)){if(!initial)new Notification('애니허브 · 새 회차 예정',{body:`${titleOf(row.media)} · ${row.episode}화 · ${localDate(row.airingAt)}`,icon:'./assets/icon-192.png'});aired.add(key);}}localStorage.setItem('animehub_episode_alert_seen',JSON.stringify([...aired].slice(-500))); }catch(error){console.warn('시청 중 작품 일정 확인 실패:',error);}}
     localStorage.setItem('animehub_release_check_at',String(Date.now()));
   }catch(error){console.warn('새 작품 확인 실패:',error);}
 }
@@ -1594,7 +1596,7 @@ async function loadSupabase(){
 function updateAccountButton(){const label=$('#account-label');if(label){const base=state.user?(state.user.email?.split('@')[0]||'내 계정'):(state.supabase?'계정 동기화':'로컬 저장');const statusSuffix=state.user?(state.syncStatus==='error'?' · 동기화 오류':state.syncStatus==='syncing'?' · 동기화 중':''):'';label.textContent=base+statusSuffix;}const avatar=$('.avatar');if(avatar)avatar.textContent=state.user?(state.user.email?.[0]||'U').toUpperCase():'U';}
 function showAuth(){
   let mode='login';const root=$('#modal-root');
-  const draw=()=>{root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:460px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="auth-wrap"><div class="eyebrow">계정 · 기기 간 동기화</div><h2>${state.user?'계정 정보':'ANIME HUB 계정'}</h2><p class="page-subtitle">로그인하면 PC·모바일에서 보관함, 컬렉션, 저장 검색 조건을 계정별로 동기화합니다.</p>${state.user?`<div class="account-status"><div><b>${esc(state.user.email)}</b><small>클라우드 동기화 사용 중</small></div><span class="live-dot"></span></div><button class="primary-button" id="sign-out" style="width:100%">로그아웃</button>`:`${!state.supabase?`<div class="warning-box">계정 동기화를 시작하려면 먼저 데이터·계정 설정에서 Supabase 프로젝트 URL과 공개 키를 등록해야 합니다. 로컬 보관함은 지금도 사용할 수 있습니다.</div>`:''}<div class="auth-tabs"><button data-auth-mode="login" class="${mode==='login'?'active':''}">로그인</button><button data-auth-mode="signup" class="${mode==='signup'?'active':''}">회원가입</button></div><form class="auth-form" id="auth-form"><label>이메일<input type="email" id="auth-email" required placeholder="you@example.com" autocomplete="email"></label><label>비밀번호<input type="password" id="auth-password" required minlength="6" placeholder="6자 이상" autocomplete="current-password"></label><button class="primary-button" type="submit" ${!state.supabase?'disabled':''}>${mode==='login'?'로그인':'계정 만들기'}</button></form><p class="hint">회원가입 후 이메일 인증이 필요한 경우, 인증을 완료한 다음 로그인하세요. 비밀번호는 이 앱에 저장하지 않고 Supabase 인증 시스템에서 처리합니다.</p>`}</div></div></div>`;};
+  const draw=()=>{root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:460px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="auth-wrap"><div class="eyebrow">계정 · 기기 간 동기화</div><h2>${state.user?'계정 정보':'애니허브 계정'}</h2><p class="page-subtitle">로그인하면 PC·모바일에서 보관함, 컬렉션, 저장 검색 조건을 계정별로 동기화합니다.</p>${state.user?`<div class="account-status"><div><b>${esc(state.user.email)}</b><small>클라우드 동기화 사용 중</small></div><span class="live-dot"></span></div><button class="primary-button" id="sign-out" style="width:100%">로그아웃</button>`:`${!state.supabase?`<div class="warning-box">계정 동기화를 시작하려면 먼저 데이터·계정 설정에서 Supabase 프로젝트 URL과 공개 키를 등록해야 합니다. 로컬 보관함은 지금도 사용할 수 있습니다.</div>`:''}<div class="auth-tabs"><button data-auth-mode="login" class="${mode==='login'?'active':''}">로그인</button><button data-auth-mode="signup" class="${mode==='signup'?'active':''}">회원가입</button></div><form class="auth-form" id="auth-form"><label>이메일<input type="email" id="auth-email" required placeholder="you@example.com" autocomplete="email"></label><label>비밀번호<input type="password" id="auth-password" required minlength="6" placeholder="6자 이상" autocomplete="current-password"></label><button class="primary-button" type="submit" ${!state.supabase?'disabled':''}>${mode==='login'?'로그인':'계정 만들기'}</button></form><p class="hint">회원가입 후 이메일 인증이 필요한 경우, 인증을 완료한 다음 로그인하세요. 비밀번호는 이 앱에 저장하지 않고 Supabase 인증 시스템에서 처리합니다.</p>`}</div></div></div>`;};
   draw();root.dataset.mode=mode;
   root.onclick=async e=>{
     const tab=e.target.closest('[data-auth-mode]');
@@ -1753,13 +1755,13 @@ document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
   if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
 });
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;toast('ANIME HUB를 홈 화면에 추가할 수 있습니다.','info');});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;toast('애니허브를 홈 화면에 추가할 수 있습니다.','info');});
 function showInstallHelp(){
   const root=$('#modal-root');
   const ua=navigator.userAgent||'';const isIOS=/iPhone|iPad|iPod/i.test(ua);const isAndroid=/Android/i.test(ua);
   let steps=isIOS?'Safari 하단의 공유 버튼을 누른 뒤 <b>홈 화면에 추가</b>를 선택하세요.':'Chrome 또는 Edge 메뉴에서 <b>앱 설치</b>나 <b>홈 화면에 추가</b>를 선택하세요.';
   if(isAndroid)steps='Android Chrome에서 우측 상단 메뉴(⋮)를 열고 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 선택하세요.';
-  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:480px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">모바일 앱 설치</div><h2>ANIME HUB를 앱처럼 사용하기</h2><p class="detail-desc">${steps}</p><div class="warning-box">설치 메뉴가 나타나려면 공개된 HTTPS 주소에서 접속해야 합니다. PC의 <code>localhost</code> 주소는 스마트폰에서 그대로 사용할 수 없으며, 일반 HTTP 내부 IP 주소는 설치 조건을 충족하지 않습니다.</div><p class="hint">설치하면 홈 화면 아이콘과 독립 실행 화면을 사용할 수 있습니다. 앱을 설치해도 AniList·TMDB 정보 조회에는 인터넷 연결이 필요합니다.</p></div></div></div>`;
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:480px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">모바일 앱 설치</div><h2>애니허브를 앱처럼 사용하기</h2><p class="detail-desc">${steps}</p><div class="warning-box">설치 메뉴가 나타나려면 공개된 HTTPS 주소에서 접속해야 합니다. PC의 <code>localhost</code> 주소는 스마트폰에서 그대로 사용할 수 없으며, 일반 HTTP 내부 IP 주소는 설치 조건을 충족하지 않습니다.</div><p class="hint">설치하면 홈 화면 아이콘과 독립 실행 화면을 사용할 수 있습니다. 앱을 설치해도 AniList·TMDB 정보 조회에는 인터넷 연결이 필요합니다.</p></div></div></div>`;
 }
 $('#export-data')?.addEventListener('click',()=>exportAllData());
 $('#import-data')?.addEventListener('click',()=>$('#import-file')?.click());
@@ -1770,7 +1772,7 @@ $('#install-button').addEventListener('click',async()=>{
 });
 window.addEventListener('offline',()=>toast('오프라인 상태입니다. 일부 기능이 제한됩니다.','error'));
 window.addEventListener('online',()=>toast('온라인으로 복구되었습니다.'));
-window.addEventListener('appinstalled',()=>{state.installPrompt=null;$('#install-button').hidden=true;toast('ANIME HUB를 설치했습니다.');});
+window.addEventListener('appinstalled',()=>{state.installPrompt=null;$('#install-button').hidden=true;toast('애니허브를 설치했습니다.');});
 if(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone){$('#install-button').hidden=false;}
 
 

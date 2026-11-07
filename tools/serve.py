@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ANIME HUB 로컬 개발 서버.
+"""애니허브 로컬 개발 서버.
 
 일반 사이트처럼 `index.html`을 브라우저에서 열어 확인할 때 사용합니다.
 앱 코드는 캐시하지 않도록 `Cache-Control: no-store`를 보냅니다.
@@ -39,7 +39,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="ANIME HUB 로컬 정적 서버")
+    parser = argparse.ArgumentParser(description="애니허브 로컬 정적 서버")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8123)
     args = parser.parse_args()
@@ -47,7 +47,7 @@ def main() -> int:
     handler = functools.partial(Handler, directory=str(ROOT))
     with socketserver.ThreadingTCPServer((args.host, args.port), handler) as httpd:
         httpd.allow_reuse_address = True
-        print(f"ANIME HUB: http://{args.host}:{args.port}/")
+        print(f"애니허브: http://{args.host}:{args.port}/")
         print(f"루트: {ROOT}")
         print("종료: Ctrl+C")
         try:

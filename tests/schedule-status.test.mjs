@@ -64,6 +64,8 @@ test('classify: 결방 의심 (HIATUS)', () => {
   assert.equal(r.state, AIRING_STATE.HIATUS);
   assert.equal(r.label, '결방 의심');
 });
+
+test('baseline: 기록 후 읽기', () => {
   const storage = fakeStorage();
   const items = [{ media: { id: 1 }, nextAiringEpisode: { airingAt: 100, episode: 2 } }];
   assert.equal(writeAiringBaseline(items, storage, now), true);

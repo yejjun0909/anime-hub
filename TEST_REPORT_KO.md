@@ -1,4 +1,4 @@
-# ANIME HUB 검사 보고서
+# 애니허브 검사 보고서
 
 ####### v4.9 추천 v2 (2차)
 - `data/recommend-eval.js`에 `avgScore` 필드 추가, 추천 UI footnote에 다양성·평균 점수 표시.
@@ -55,7 +55,7 @@
 ### 백업/복원 리허설
 - `tools/check_backup.py` — 양성(`backup-valid.json`) 통과, 음성(`backup-invalid.json`) 6건 실패(의도된 동작).
 - 브라우저 E2E: export → 다운로드 → 검사기 통과 → localStorage 초기화 → import → confirm → 정확히 복원(보관함 2, 컬렉션 1, 검색 1), 토스트 "백업 데이터를 복원했습니다."
-- 음성 경로: 잘못된 파일 → "ANIME HUB 백업 파일이 아닙니다", 기존 데이터 보존.
+- 음성 경로: 잘못된 파일 → "애니허브 백업 파일이 아닙니다", 기존 데이터 보존.
 
 ### 방영 일정 스냅샷
 - `tools/schedule_probe.py` 실행, 7일 117건 수집, 3페이지. `data/schedule-snapshots/schedule-*.json` 저장.

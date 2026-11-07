@@ -1,14 +1,19 @@
-// Google Gemini 무료 API 번역 (실험적, 비공식) — v4.9+
+// Google Gemini 보조 호출 (실험적, 비공식)
 //
 // Google AI Studio (aistudio.google.com)에서 무료 API 키 발급.
 // 무료 tier: 15 req/min, 1M tokens/day.
-// 모델: gemini-1.5-flash (빠르고 무료, 한국어 품질 우수)
+// 모델: 기본 gemini-2.5-flash. localStorage 'animehub_gemini_model_v1'로 바꿀 수 있습니다.
 //
 // Google Translate보다 자연스러운 한국어 번역을 제공합니다.
 // API 키가 없으면 Google Translate로 폴백합니다.
 
 const CACHE_KEY = 'animehub_gemini_translate_v1';
-const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+function endpoint(storage) {
+  let model = DEFAULT_MODEL;
+  try { model = String(storage?.getItem('animehub_gemini_model_v1') || '').trim() || DEFAULT_MODEL; } catch (error) { /* 기본값 사용 */ }
+  return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+}
 
 function readCache(storage) {
   if (!storage) return {};
@@ -90,7 +95,7 @@ Re:Zero → Re:제로부터 시작하는 이세계 생활
 번역할 제목: ${value}`
       : `다음 일본어 텍스트를 자연스러운 한국어로 번역하세요. 애니메이션 소개일 수 있습니다. 번역 결과만 출력하세요:\n\n${value}`;
 
-    const response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
+    const response = await fetch(`${endpoint(storage)}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

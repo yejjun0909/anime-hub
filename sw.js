@@ -1,10 +1,10 @@
-// ANIME HUB 서비스 워커 (v4.7+)
+// 애니허브 서비스 워커 (v4.7+)
 //
 // 앱 코드(HTML/JS/CSS/JSON)는 네트워크 우선으로 가져와 새 배포가 즉시 반영되게 합니다.
 // 이미지·아이콘 같은 정적 자산만 캐시 우선으로 처리합니다.
 // 오프라인일 때는 마지막으로 캐시된 앱 셸을 사용합니다.
 
-const CACHE_NAME = 'anime-hub-shell-v4-7-0';
+const CACHE_NAME = 'anime-hub-shell-v4-7-2';
 const SHELL = [
   './',
   './index.html',
@@ -28,6 +28,7 @@ const SHELL = [
   './data/machine-translate.js',
   './data/gemini-translate.js',
   './data/korean-titles-db.js',
+  './data/korean-common-titles.js',
   './data/korean-titles-db.json',
   './data/fuzzy-search.js',
   './data/namu-search.js',

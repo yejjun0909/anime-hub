@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ANIME HUB 단일 HTML 생성기.
+"""애니허브 단일 HTML 생성기.
 
 `index.html` + `styles.css` + `app.js` + `data/*.js`를 하나의
 `anime-hub-single.html`로 묶습니다. 일반 사이트는 `index.html`을 그대로
@@ -36,6 +36,7 @@ MODULES = [
     "data/machine-translate.js",
     "data/gemini-translate.js",
     "data/korean-titles-db.js",
+    "data/korean-common-titles.js",
     "data/korean-query.js",
     "data/fuzzy-search.js",
     "data/namu-search.js",
@@ -121,15 +122,15 @@ def build() -> str:
     )
     html = html.replace('<link rel="manifest" href="manifest.webmanifest" />', '')
     html = html.replace(
-        "<title>ANIME HUB — 애니메이션 통합 정보</title>",
-        "<title>ANIME HUB — 애니메이션 통합 정보 (단일 파일)</title>",
+        "<title>애니허브 — 애니메이션 통합 정보</title>",
+        "<title>애니허브 — 애니메이션 통합 정보 (단일 파일)</title>",
     )
     # 파일 끝 개행을 보장해 diff를 안정적으로 유지합니다.
     return html if html.endswith("\n") else f"{html}\n"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="ANIME HUB 단일 HTML 생성/검사")
+    parser = argparse.ArgumentParser(description="애니허브 단일 HTML 생성/검사")
     parser.add_argument("--out", default=str(DEFAULT_OUT), help="출력 파일 경로")
     parser.add_argument("--check", action="store_true", help="생성 파일이 최신인지 검사")
     args = parser.parse_args()

@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "ANIME HUB — 애니메이션 통합 정보",
-  "short_name": "ANIME HUB",
+  "name": "애니허브 — 애니메이션 통합 정보",
+  "short_name": "애니허브",
   "description": "한국어 우선 애니메이션 검색, 취향 추천, 개인 보관함과 컬렉션",
   "start_url": "./",
   "scope": "./",
