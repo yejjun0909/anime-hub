@@ -7,6 +7,7 @@ import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-kore
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
 import { lookupKoreanSource } from './data/korean-source.js';
+import { searchAliasSuggestions } from './data/search-aliases.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
@@ -1679,7 +1680,7 @@ $('#modal-root').addEventListener('click',async e=>{
 });
 function readRecentSearches(){try{return JSON.parse(localStorage.getItem('animehub_recent_searches')||'[]');}catch{return [];}}
 function saveRecentSearch(q){q=String(q||'').trim();if(q.length<2)return;const list=readRecentSearches().filter(x=>x!==q);list.unshift(q);localStorage.setItem('animehub_recent_searches',JSON.stringify(list.slice(0,8)));updateSearchSuggestions();}
-function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;dl.innerHTML=readRecentSearches().map(q=>`<option value="${esc(q)}"></option>`).join('');}
+function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;const recent=readRecentSearches();const q=document.getElementById('global-search')?.value||'';const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));dl.innerHTML=[...recent,...aliases].map(v=>`<option value="${esc(v)}"></option>`).join('');}
 $('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});
 $('#global-search').addEventListener('input',()=>updateSearchSuggestions());
 updateSearchSuggestions();
