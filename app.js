@@ -109,7 +109,7 @@ function currentSeason(){ const m = new Date().getMonth()+1; return (m===12 || m
 function seasonLabel(s){ return ({WINTER:'겨울',SPRING:'봄',SUMMER:'여름',FALL:'가을'}[s] || s || ''); }
 function dateRange(year){ return {startGreater: year*10000, startLesser:(year+1)*10000}; }
 function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;$('#toast-root').append(node);setTimeout(()=>node.remove(),3300); }
-function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍◌</div><strong>${esc(message)}</strong><span>외부 데이터베이스에서 정보를 가져오고 있습니다.</span></div>`; }
+function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><strong>조건에 맞는 작품이 없습니다.</strong><span>검색어나 필터 조건을 바꿔 다시 시도해 보세요.</span><div style="margin-top:12px"><button class="ghost-button" data-clear-recent>최근 검색어 지우기</button></div></div>`; }
 
 // AniList 요청은 직렬화하고 캐시·재시도·시간 제한을 적용합니다.
 let aniQueue = Promise.resolve();
@@ -713,7 +713,7 @@ async function hydrateKoreanCardTitles(items,root,maxItems=8){
     const titleNode=card?.querySelector('.card-title,.schedule-name');if(titleNode&&title)titleNode.textContent=title;
   }
 }
-function gridMarkup(items, showActions=false, recommendation=false){return items?.length?`<div class="anime-grid ${recommendation?'recommendation-grid':''}">${items.map(m=>cardMarkup(m,showActions,recommendation)).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">🔍⌕</div><strong>표시할 작품이 없습니다.</strong><span>검색어나 필터 조건을 바꿔 다시 시도해 보세요.</span></div>`;}
+function gridMarkup(items, showActions=false, recommendation=false){return items?.length?`<div class="anime-grid ${recommendation?'recommendation-grid':''}">${items.map(m=>cardMarkup(m,showActions,recommendation)).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">🔍</div><strong>조건에 맞는 작품이 없습니다.</strong><span>검색어나 필터 조건을 바꿔 다시 시도해 보세요.</span><div style="margin-top:12px"><button class="ghost-button" data-clear-recent>최근 검색어 지우기</button></div></div>`;}
 
 async function renderHome(){
   const main=$('#main-content');
@@ -1247,7 +1247,7 @@ function deleteCollectionById(id){
   state.collections=state.collections.filter(x=>x.id!==id);saveCollections();renderCollections();toast('컬렉션을 삭제했습니다.');
 }
 function renderCollections(){
-  const main=$('#main-content');main.innerHTML=`${pageHead('나만의 컬렉션','주제나 취향에 맞게 작품을 모아 나만의 목록을 만드세요.','개인 컬렉션')}<div class="collection-toolbar"><span>총 ${state.collections.length}개 컬렉션</span><button class="primary-button" id="create-collection">＋ 새 컬렉션</button></div>${state.collections.length?`<div class="collection-grid">${state.collections.map(collection=>{const first=(collection.items||[])[0]||collection.mediaIds.map(id=>knownMedia(id)).find(Boolean);return `<article class="collection-card" data-open-collection="${esc(collection.id)}"><div class="collection-cover">${first&&posterOf(first)?`<img src="${esc(posterOf(first))}" alt="">`:`<div class="poster-placeholder">▣</div>`}</div><div><b>${esc(collection.name)}</b><small>${(collection.mediaIds||[]).length}개 작품</small></div><button class="ghost-button danger-button" data-delete-collection="${esc(collection.id)}">삭제</button></article>`;}).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">🔍▣</div><strong>아직 컬렉션이 없습니다.</strong><span>새 컬렉션을 만들고 작품 상세 화면에서 작품을 담아보세요.</span></div>`}`;
+  const main=$('#main-content');main.innerHTML=`${pageHead('나만의 컬렉션','주제나 취향에 맞게 작품을 모아 나만의 목록을 만드세요.','개인 컬렉션')}<div class="collection-toolbar"><span>총 ${state.collections.length}개 컬렉션</span><button class="primary-button" id="create-collection">＋ 새 컬렉션</button></div>${state.collections.length?`<div class="collection-grid">${state.collections.map(collection=>{const first=(collection.items||[])[0]||collection.mediaIds.map(id=>knownMedia(id)).find(Boolean);return `<article class="collection-card" data-open-collection="${esc(collection.id)}"><div class="collection-cover">${first&&posterOf(first)?`<img src="${esc(posterOf(first))}" alt="">`:`<div class="poster-placeholder">▣</div>`}</div><div><b>${esc(collection.name)}</b><small>${(collection.mediaIds||[]).length}개 작품</small></div><button class="ghost-button danger-button" data-delete-collection="${esc(collection.id)}">삭제</button></article>`;}).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">🔍</div><strong>조건에 맞는 작품이 없습니다.</strong><span>검색어나 필터 조건을 바꿔 다시 시도해 보세요.</span></div>`}`;
 }
 function renderCollectionDetail(id){
   state.currentCollectionId=id;const collection=state.collections.find(x=>x.id===id);if(!collection){renderCollections();return;}
@@ -1690,6 +1690,7 @@ $('#modal-root').addEventListener('click',async e=>{
   const relation=e.target.closest('[data-open]');if(relation){e.stopPropagation();openAnime(relation.dataset.open);}
 });
 function readRecentSearches(){try{return JSON.parse(localStorage.getItem('animehub_recent_searches')||'[]');}catch{return [];}}
+function clearRecentSearches(){localStorage.removeItem('animehub_recent_searches');updateSearchSuggestions();toast('최근 검색어를 지웠습니다.');}
 function saveRecentSearch(q){q=String(q||'').trim();if(q.length<2)return;const list=readRecentSearches().filter(x=>x!==q);list.unshift(q);localStorage.setItem('animehub_recent_searches',JSON.stringify(list.slice(0,8)));updateSearchSuggestions();}
 function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;const recent=readRecentSearches();const q=document.getElementById('global-search')?.value||'';const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));dl.innerHTML=[...recent,...aliases].map(v=>`<option value="${esc(v)}"></option>`).join('');}
 $('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});
@@ -1734,6 +1735,7 @@ if(backToTop){
 }
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
+  if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
 });
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;});
 function showInstallHelp(){
