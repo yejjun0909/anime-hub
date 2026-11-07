@@ -15,6 +15,7 @@ const SHELL = [
   './data/korean-query.js',
   './data/korean-source.js',
   './data/search-aliases.js',
+  './data/korean-josa.js',
   './data/api-vars.js',
   './data/schedule-merge.js',
   './data/schedule-cache.js',
