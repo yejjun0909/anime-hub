@@ -5712,6 +5712,8 @@ $('#install-button').addEventListener('click',async()=>{
   if(state.installPrompt){state.installPrompt.prompt();await state.installPrompt.userChoice;state.installPrompt=null;$('#install-button').hidden=true;return;}
   showInstallHelp();
 });
+window.addEventListener('offline',()=>toast('오프라인 상태입니다. 일부 기능이 제한됩니다.','error'));
+window.addEventListener('online',()=>toast('온라인으로 복구되었습니다.'));
 window.addEventListener('appinstalled',()=>{state.installPrompt=null;$('#install-button').hidden=true;toast('ANIME HUB를 설치했습니다.');});
 if(!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone){$('#install-button').hidden=false;}
 
