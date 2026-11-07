@@ -5656,6 +5656,15 @@ $('#refresh-data').addEventListener('click',refreshCurrentRoute);
 
 window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1)||'home';if(raw.startsWith('collection:')){const id=raw.slice('collection:'.length);renderCollectionDetail(id);updateContinueBar();return;}const route=raw;if(route!==state.route){state.route=route;renderRoute();updateContinueBar();}});
 
+document.addEventListener('keydown',e=>{
+  if(e.key==='/' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){
+    e.preventDefault();$('#global-search')?.focus();return;
+  }
+  if(e.key==='Escape'){
+    const modal=$('#modal-root');if(modal?.innerHTML){modal.innerHTML='';return;}
+  }
+});
+
 const backToTop=document.getElementById('back-to-top');
 if(backToTop){
   window.addEventListener('scroll',()=>{backToTop.classList.toggle('show',window.scrollY>400);},{passive:true});
