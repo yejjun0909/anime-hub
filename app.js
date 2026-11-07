@@ -679,7 +679,7 @@ function cardMarkup(m, showActions=false, recommendation=false){
   const id=m.id ?? `mal:${m.mal_id}`;
   state.mediaIndex.set(String(id),m);
   return `<article class="anime-card" data-open="${esc(id)}" tabindex="0" role="button" aria-label="${esc(sourceTitle)} 상세 정보">
-    <div class="poster-wrap">${poster?`<img class="poster" src="${esc(poster)}" alt="${esc(title)} 포스터" loading="lazy" onerror="this.style.display='none'">`:`<div class="poster-placeholder">✦</div>`}<div class="poster-gradient"></div>${score?`<span class="poster-score">★ ${esc((score/10).toFixed(1))}</span>`:''}<span class="poster-format">${esc(formatOf(m))}</span><span class="poster-year">${esc(yearOf(m))}</span></div>
+    <div class="poster-wrap">${poster?`<img class="poster" src="${esc(poster)}" alt="${esc(title)} 포스터" loading="lazy" decoding="async" onerror="this.style.display='none'">`:`<div class="poster-placeholder">✦</div>`}<div class="poster-gradient"></div>${score?`<span class="poster-score">★ ${esc((score/10).toFixed(1))}</span>`:''}<span class="poster-format">${esc(formatOf(m))}</span><span class="poster-year">${esc(yearOf(m))}</span></div>
     <div class="card-title">${esc(title)}</div><div class="card-meta">${esc((m.genres||[]).slice(0,2).map(g=>GENRE_LABELS[g]||g).join(' · ') || statusOf(m.status))}</div>${recommendation?`<div class="recommendation-match"><b>취향 적합도 ${Math.round(m._recommendScore||0)}점</b><span>${esc((m._recommendReasons||[]).join(' · ')||'평점과 인기도를 함께 고려했습니다.')}</span></div>`:''}
     ${showActions?`<div class="card-actions"><button class="mini-action" data-open="${esc(id)}">상세 정보</button>${status?`<span class="mini-action">${esc(STATUSES.find(s=>s[0]===status.status)?.[1]||'보관 중')}</span>`:`<button class="mini-action" data-add="${esc(id)}">＋ 담기</button>`}</div>`:''}
   </article>`;
@@ -724,7 +724,7 @@ async function renderHome(){
     const trending=data.trending.media, seasonal=data.seasonal.media, movies=data.movies.media;
     state.homeMedia=[...trending,...seasonal,...movies];
     const featured=trending[0]||seasonal[0];
-    main.innerHTML=`<section class="hero">${featured?.bannerImage?`<img class="hero-image" src="${esc(featured.bannerImage)}" alt="" onerror="this.remove()">`:''}<div class="hero-copy"><span class="hero-tag">애니메이션 통합 정보 · ${yr}</span><h1>애니메이션의 모든 순간,<br>한곳에서 발견하다.</h1><p>새로운 작품을 찾고, 방영 일정을 확인하고, 나만의 시청 기록을 관리하세요. 전 세계 애니메이션 데이터베이스를 한 화면에 모았습니다.</p><button class="primary-button" data-route="browse">애니메이션 탐색하기 →</button></div></section>
+    main.innerHTML=`<section class="hero">${featured?.bannerImage?`<img class="hero-image" src="${esc(featured.bannerImage)}" alt="" loading="eager" fetchpriority="high" decoding="async" onerror="this.remove()">`:''}<div class="hero-copy"><span class="hero-tag">애니메이션 통합 정보 · ${yr}</span><h1>애니메이션의 모든 순간,<br>한곳에서 발견하다.</h1><p>새로운 작품을 찾고, 방영 일정을 확인하고, 나만의 시청 기록을 관리하세요. 전 세계 애니메이션 데이터베이스를 한 화면에 모았습니다.</p><button class="primary-button" data-route="browse">애니메이션 탐색하기 →</button></div></section>
       <section class="section">${sectionHead('지금 주목받는 작품','실시간 인기','browse')}${gridMarkup(trending.slice(0,5))}</section>
       <section class="section">${sectionHead(`${yr}년 ${seasonLabel(season)} 시즌 신작`,'이번 시즌','airing')}${gridMarkup(seasonal.slice(0,5))}</section>
       <section class="feature-strip"><div class="feature-tile"><span class="feature-icon">◷</span><div><b>방영 일정</b><small>요일별 최신 방영작 확인</small></div></div><div class="feature-tile"><span class="feature-icon">♡</span><div><b>나만의 보관함</b><small>시청 상태와 평점 관리</small></div></div><div class="feature-tile"><span class="feature-icon">⌕</span><div><b>인물·제작진 탐색</b><small>성우와 제작사로 작품 찾기</small></div></div></section>
@@ -1237,9 +1237,9 @@ function renderCollections(){
   const main=$('#main-content');main.innerHTML=`${pageHead('나만의 컬렉션','주제나 취향에 맞게 작품을 모아 나만의 목록을 만드세요.','개인 컬렉션')}<div class="collection-toolbar"><span>총 ${state.collections.length}개 컬렉션</span><button class="primary-button" id="create-collection">＋ 새 컬렉션</button></div>${state.collections.length?`<div class="collection-grid">${state.collections.map(collection=>{const first=(collection.items||[])[0]||collection.mediaIds.map(id=>knownMedia(id)).find(Boolean);return `<article class="collection-card" data-open-collection="${esc(collection.id)}"><div class="collection-cover">${first&&posterOf(first)?`<img src="${esc(posterOf(first))}" alt="">`:`<div class="poster-placeholder">▣</div>`}</div><div><b>${esc(collection.name)}</b><small>${(collection.mediaIds||[]).length}개 작품</small></div><button class="ghost-button danger-button" data-delete-collection="${esc(collection.id)}">삭제</button></article>`;}).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">▣</div><strong>아직 컬렉션이 없습니다.</strong><span>새 컬렉션을 만들고 작품 상세 화면에서 작품을 담아보세요.</span></div>`}`;
 }
 function renderCollectionDetail(id){
-  const collection=state.collections.find(x=>x.id===id);if(!collection){renderCollections();return;}
+  state.currentCollectionId=id;const collection=state.collections.find(x=>x.id===id);if(!collection){renderCollections();return;}
   const items=(collection.items?.length?collection.items:collection.mediaIds.map(mediaId=>knownMedia(mediaId))).filter(Boolean);
-  const main=$('#main-content');main.innerHTML=`<div class="page-head"><div><div class="eyebrow">나만의 컬렉션</div><h1 class="page-title">${esc(collection.name)}</h1><p class="page-subtitle">${items.length}개 작품을 모았습니다.</p></div><button class="ghost-button" id="back-collections">← 컬렉션 목록</button></div>${items.length?`<div class="collection-items-grid">${items.map(media=>`<div class="watch-card-shell">${cardMarkup(media,false)}<button class="ghost-button danger-button" data-remove-collection-item="${esc(collection.id)}" data-media-id="${esc(media.id)}">컬렉션에서 제거</button></div>`).join('')}</div>`:`<div class="empty-state"><strong>이 컬렉션은 비어 있습니다.</strong><span>작품 상세 화면에서 이 컬렉션에 추가할 수 있습니다.</span><button class="ghost-button" data-route="browse">작품 찾기</button></div>`}`;
+  const main=$('#main-content');main.innerHTML=`<div class="page-head"><div><div class="eyebrow">나만의 컬렉션</div><h1 class="page-title">${esc(collection.name)}</h1><p class="page-subtitle">${items.length}개 작품을 모았습니다.</p></div><button class="ghost-button" id="share-collection">공유 링크</button><button class="ghost-button" id="back-collections">← 컬렉션 목록</button></div>${items.length?`<div class="collection-items-grid">${items.map(media=>`<div class="watch-card-shell">${cardMarkup(media,false)}<button class="ghost-button danger-button" data-remove-collection-item="${esc(collection.id)}" data-media-id="${esc(media.id)}">컬렉션에서 제거</button></div>`).join('')}</div>`:`<div class="empty-state"><strong>이 컬렉션은 비어 있습니다.</strong><span>작품 상세 화면에서 이 컬렉션에 추가할 수 있습니다.</span><button class="ghost-button" data-route="browse">작품 찾기</button></div>`}`;
   localizeMarked(main);hydrateKoreanCardTitles(items,main,8);
 }
 function removeWatchlistItem(id){
@@ -1326,7 +1326,23 @@ async function renderRoute(){
   if(state.route==='stats')return renderStats();
   state.route='home';return renderHome();
 }
-function navigate(route){state.route=route;state.watchStatusFilter='';history.replaceState(null,'',`#${route}`);renderRoute();window.scrollTo({top:0,behavior:'smooth'});}
+function continueCandidate(){
+  const items=(state.watchlist||[]).filter(x=>x.status==='CURRENT');
+  if(!items.length)return null;
+  items.sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0));
+  return items[0];
+}
+function updateContinueBar(){
+  let bar=document.getElementById('continue-bar');
+  const item=continueCandidate();
+  if(!item){ if(bar)bar.remove(); return;}
+  const media=item.media_snapshot||{title:{userPreferred:`작품 #${item.media_id}`}};
+  const title=localizedTitle?localizedTitle(media): (media.title?.userPreferred||media.title?.english||'작품');
+  const progress=item.progress?`${item.progress}/${media.episodes||'?'}`:'이어서 보기';
+  if(!bar){ bar=document.createElement('div'); bar.id='continue-bar'; bar.className='continue-bar'; document.body.appendChild(bar);}
+  bar.innerHTML=`<span>▶</span><div><b>${esc(title)}</b><br><small>${esc(progress)} · ${esc(statusOf?statusOf('CURRENT'):'시청 중')}</small></div><button class="primary-button" data-open="${esc(item.media_id)}">이어서 보기</button>`;
+}
+function navigate(route){state.route=route;state.watchStatusFilter='';history.replaceState(null,'',`#${route}`);renderRoute();updateContinueBar();window.scrollTo({top:0,behavior:'smooth'});}
 
 async function openAnime(id){
   const root=$('#modal-root');
@@ -1421,7 +1437,7 @@ function renderDetailModal(m,mal=null,options={}){
   const originalNames=[native,english,romaji].filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
   const relationMarkup=detailRelationsMarkup(m);
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal"><div class="modal-top"><button class="close-button" data-close-modal aria-label="닫기">×</button></div>
-  <div class="detail-hero"><img class="detail-cover" src="${esc(posterOf(m))}" alt="${esc(originalTitle)}" onerror="this.style.opacity='.2'"><div><div class="eyebrow">${esc(formatOf(m))} · ${esc(yearOf(m))}</div><h2 class="detail-title" data-translate-title>${esc(koreanTitle)}</h2><div class="detail-native">원제: ${esc(originalNames||originalTitle)}</div><div class="detail-stats"><span class="stat-chip"><strong>★ ${((m.averageScore||0)/10).toFixed(1)}</strong>AniList</span><span data-detail-mal></span><span class="stat-chip">${esc(statusOf(m.status))}</span>${m.episodes?`<span class="stat-chip">${m.episodes}화</span>`:''}<span class="stat-chip">인기 ${Number(m.popularity||0).toLocaleString('ko-KR')}</span></div><div class="tag-list">${(m.genres||[]).map(g=>`<span class="genre-tag">${esc(GENRE_LABELS[g]||g)}</span>`).join('')}</div><div class="card-meta">제작사: ${detailStudiosMarkup(m)}</div><div class="detail-actions"><select class="status-select" id="detail-status"><option value="">시청 상태 선택</option>${STATUSES.map(([s,l])=>`<option value="${s}" ${saved?.status===s?'selected':''}>${l}</option>`).join('')}</select><button class="secondary-button" data-save-anime="${esc(id)}">${saved?'목록 업데이트':'내 보관함에 추가'}</button><select class="status-select" id="detail-collection-select"><option value="">컬렉션 선택</option>${state.collections.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="ghost-button" data-add-collection="${esc(id)}">컬렉션에 담기</button><button class="ghost-button" data-create-collection-detail="${esc(id)}">새 컬렉션 만들기</button><a class="secondary-button" href="${esc(m.siteUrl||'#')}" target="_blank" rel="noopener">원본 정보 ↗</a></div></div></div>
+  <div class="detail-hero"><img class="detail-cover" src="${esc(posterOf(m))}" alt="${esc(originalTitle)}" loading="lazy" decoding="async" onerror="this.style.opacity='.2'"><div><div class="eyebrow">${esc(formatOf(m))} · ${esc(yearOf(m))}</div><h2 class="detail-title" data-translate-title>${esc(koreanTitle)}</h2><div class="detail-native">원제: ${esc(originalNames||originalTitle)}</div><div class="detail-stats"><span class="stat-chip"><strong>★ ${((m.averageScore||0)/10).toFixed(1)}</strong>AniList</span><span data-detail-mal></span><span class="stat-chip">${esc(statusOf(m.status))}</span>${m.episodes?`<span class="stat-chip">${m.episodes}화</span>`:''}<span class="stat-chip">인기 ${Number(m.popularity||0).toLocaleString('ko-KR')}</span></div><div class="tag-list">${(m.genres||[]).map(g=>`<span class="genre-tag">${esc(GENRE_LABELS[g]||g)}</span>`).join('')}</div><div class="card-meta">제작사: ${detailStudiosMarkup(m)}</div><div class="detail-actions"><select class="status-select" id="detail-status"><option value="">시청 상태 선택</option>${STATUSES.map(([s,l])=>`<option value="${s}" ${saved?.status===s?'selected':''}>${l}</option>`).join('')}</select><button class="secondary-button" data-save-anime="${esc(id)}">${saved?'목록 업데이트':'내 보관함에 추가'}</button><select class="status-select" id="detail-collection-select"><option value="">컬렉션 선택</option>${state.collections.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="ghost-button" data-add-collection="${esc(id)}">컬렉션에 담기</button><button class="ghost-button" data-create-collection-detail="${esc(id)}">새 컬렉션 만들기</button><a class="secondary-button" href="${esc(m.siteUrl||'#')}" target="_blank" rel="noopener">원본 정보 ↗</a><a class="ghost-button" href="https://www.google.com/search?q=${encodeURIComponent((koreanTitle||originalTitle||'')+' 굿즈 피규어')}" target="_blank" rel="noopener">굿즈 검색 ↗원본 정보 ↗</a></div></div></div>
   <div class="detail-body"><section class="detail-section"><h3>작품 소개 <span class="translation-badge">${esc(descriptionBadge)}</span></h3><div class="detail-desc" data-translate-description>${esc(displayedDesc)}</div><details class="translation-original"><summary>${koreanDesc?'원문 보기':'원문 정보'}</summary><div class="detail-desc" data-translation-original-content>${esc(originalDesc.slice(0,5000))}${originalDesc.length>5000?'…':''}</div></details><p class="translation-note" data-korean-metadata-source>${koreanMetadataSourceMarkup(m)}</p><button class="ghost-button" id="retry-korean-translation" type="button">한국어 등록 정보 다시 조회</button> <button class="ghost-button" id="user-korean-input" type="button">한국어 제목 직접 입력</button></section>
   <section class="detail-section"><h3>방영 · 제작 정보</h3><div class="detail-desc" data-detail-production-info>${detailProductionMarkup(m)}</div></section>
   <section class="detail-section similar-section"><h3>비슷한 작품</h3><button class="ghost-button" id="load-similar-works">비슷한 작품 찾기</button><div id="similar-works-results"></div></section><div data-detail-relations>${relationMarkup}</div>${options.extrasLoading?`<section class="detail-section" data-detail-extras><h3>등장인물 · 제작진</h3><p class="muted">기본 정보를 표시했습니다. 인물 및 제작진 정보를 이어서 불러오고 있습니다...</p></section>`:detailExtrasMarkup(m)}
@@ -1616,6 +1632,14 @@ $('#main-content').addEventListener('click',async e=>{
   const deleteCollection=e.target.closest('[data-delete-collection]');if(deleteCollection){deleteCollectionById(deleteCollection.dataset.deleteCollection);return;}
   const openCollection=e.target.closest('[data-open-collection]');if(openCollection){state.activeCollectionId=openCollection.dataset.openCollection;renderCollectionDetail(state.activeCollectionId);return;}
   if(e.target.id==='back-collections'){renderCollections();return;}
+if(e.target.id==='share-collection'){
+  const id=new URLSearchParams(location.hash.includes('?')?location.hash.split('?')[1]:'').get('c')||state.currentCollectionId;
+  const collection=state.collections.find(x=>x.id===id)||state.collections[0];
+  if(!collection){toast('공유할 컬렉션이 없습니다.','error');return;}
+  const url=`${location.origin}${location.pathname}#collection:${collection.id}`;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>toast('공유 링크를 복사했습니다.'));}else{prompt('공유 링크',url);}
+  return;
+}
   const removeCollection=e.target.closest('[data-remove-collection-item]');if(removeCollection){removeMediaFromCollection(removeCollection.dataset.removeCollectionItem,removeCollection.dataset.mediaId);return;}
   const removeWatch=e.target.closest('[data-remove-watch]');if(removeWatch){removeWatchlistItem(removeWatch.dataset.removeWatch);return;}
   const saveWatch=e.target.closest('[data-save-watch-edit]');if(saveWatch){updateWatchlistItem(saveWatch.dataset.saveWatchEdit);return;}
@@ -1648,7 +1672,12 @@ $('#modal-root').addEventListener('click',async e=>{
   if(createCollection){const collection=createCollectionPrompt();if(collection&&state.currentModal?.media){addMediaToCollection(collection.id,state.currentModal.media);const select=$('#detail-collection-select');if(select)select.value=collection.id;}return;}
   const relation=e.target.closest('[data-open]');if(relation){e.stopPropagation();openAnime(relation.dataset.open);}
 });
-$('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){state.query=e.target.value.trim();state.filters=defaultFilters();navigate('browse');}});
+function readRecentSearches(){try{return JSON.parse(localStorage.getItem('animehub_recent_searches')||'[]');}catch{return [];}}
+function saveRecentSearch(q){q=String(q||'').trim();if(q.length<2)return;const list=readRecentSearches().filter(x=>x!==q);list.unshift(q);localStorage.setItem('animehub_recent_searches',JSON.stringify(list.slice(0,8)));updateSearchSuggestions();}
+function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;dl.innerHTML=readRecentSearches().map(q=>`<option value="${esc(q)}"></option>`).join('');}
+$('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});
+$('#global-search').addEventListener('input',()=>updateSearchSuggestions());
+updateSearchSuggestions();
 $('#global-search').addEventListener('search',e=>{if(!e.target.value){state.query='';}});
 $('#account-button').addEventListener('click',()=>state.supabase?showAuth():showSettings());
 $('#settings-open').addEventListener('click',showSettings);
@@ -1661,7 +1690,7 @@ async function refreshCurrentRoute(){
 }
 $('#refresh-data').addEventListener('click',refreshCurrentRoute);
 
-window.addEventListener('hashchange',()=>{const route=location.hash.slice(1)||'home';if(route!==state.route){state.route=route;renderRoute();}});
+window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1)||'home';if(raw.startsWith('collection:')){const id=raw.slice('collection:'.length);renderCollectionDetail(id);updateContinueBar();return;}const route=raw;if(route!==state.route){state.route=route;renderRoute();updateContinueBar();}});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;});
 function showInstallHelp(){
   const root=$('#modal-root');
@@ -1709,4 +1738,4 @@ async function replayQueuedMutations(){
 
 setInterval(()=>{if(document.visibilityState==='visible')checkNewReleaseAlerts(false);},30*60*1000);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker registration failed',err)));}
-await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});renderRoute();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);
+await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});const initialHash=location.hash.slice(1)||'home';if(initialHash.startsWith('collection:')){renderCollectionDetail(initialHash.slice('collection:'.length));}else{state.route=initialHash;renderRoute();}updateContinueBar();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);

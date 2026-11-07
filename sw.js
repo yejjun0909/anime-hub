@@ -31,6 +31,8 @@ const SHELL = [
   './data/namu-search.js',
   './data/korean-wiki.js',
   './manifest.webmanifest',
+  './robots.txt',
+  './sitemap.xml',
   './assets/icon.svg',
   './assets/icon-192.png',
   './assets/icon-512.png'

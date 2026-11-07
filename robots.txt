@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+Sitemap: /sitemap.xml
+""", "path">
+E:\다운로드\anime-hub\robots.txt
