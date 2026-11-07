@@ -1239,7 +1239,7 @@ function addMediaToCollection(collectionId,media){
   if(!media||media.id==null){toast('작품 정보를 찾을 수 없습니다.','error');return;}
   const collection=state.collections.find(x=>x.id===collectionId);if(!collection)return;
   const key=String(media.id);if(collection.mediaIds.some(x=>String(x)===key)){toast('이미 이 컬렉션에 담긴 작품입니다.');return;}
-  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==key);collection.mediaIds.unshift(media.id);collection.items=collection.items||[];collection.items=collection.items.filter(x=>String(x.id)!==key);collection.items.unshift(compactMediaSnapshot(media));collection.updatedAt=new Date().toISOString();state.mediaIndex.set(key,media);saveCollections();toast(`'${collection.name}' 컬렉션에 추가했습니다.`);
+  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==key);collection.mediaIds.unshift(media.id);collection.items=collection.items||[];collection.items=collection.items.filter(x=>String(x.id)!==key);collection.items.unshift(compactMediaSnapshot(media));collection.updatedAt=new Date().toISOString();state.mediaIndex.set(key,media);saveCollections();toast(`${josa(localizedTitle(media),'object')} '${collection.name}' 컬렉션에 추가했습니다.`);
   if(state.route==='collections')renderCollectionDetail(collection.id);
 }
 function removeMediaFromCollection(collectionId,mediaId){
@@ -1263,7 +1263,7 @@ function removeWatchlistItem(id){
   const old=state.watchlist.find(x=>String(x.media_id)===String(id));if(!old)return;
   state.watchlist=state.watchlist.filter(x=>String(x.media_id)!==String(id));saveLocalList();
   if(state.supabase&&state.user&&Number.isInteger(Number(id))&&!String(id).startsWith('mal:'))syncDelete(id).catch(e=>toast(`기기에서는 삭제했지만 계정 삭제는 실패했습니다: ${e.message}`,'error'));
-  renderWatchlist();toast('보관함에서 제거했습니다.');
+  const removedTitle=localizedTitle(old.media_snapshot||{id});renderWatchlist();toast(`${josa(removedTitle,'object')} 보관함에서 제거했습니다.`);
 }
 function updateWatchlistItem(id){
   const item=state.watchlist.find(x=>String(x.media_id)===String(id));if(!item)return;

@@ -149,6 +149,13 @@ html.light .topbar{background:#ffffffeb;}
 html.light .sidebar{background:var(--panel2);}
 html.light .empty-state,html.light .modal,html.light .account-status,html.light .feature-tile,html.light .studio-card,html.light .person-card,html.light .schedule-row,html.light .watch-card-shell{background:var(--panel);}
 html.light .field,html.light .filter-panel select,html.light .filter-panel input,html.light .auth-form input,html.light .settings-form input,html.light .settings-form select{background:var(--panel);color:var(--text);border-color:var(--line);}
+html.light .card-title,html.light .detail-title,html.light .page-title,html.light .section-title{color:var(--text);}
+html.light .card-meta,html.light .detail-native,html.light .page-subtitle,html.light .muted{color:var(--muted);}
+html.light .poster-wrap,html.light .poster-placeholder{background:var(--panel2);}
+html.light .toast{background:var(--panel);color:var(--text);border-color:var(--line);}
+html.light .modal{background:var(--panel);}
+html.light .modal-top{background:var(--panel);border-color:var(--line);}
+html.light .back-to-top{background:var(--panel);color:var(--text);border-color:var(--line);}
 
 /* Focus visibility (a11y) */
 :focus-visible{outline:2px solid #5b8cff;outline-offset:2px;border-radius:6px;}
