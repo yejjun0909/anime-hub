@@ -18,7 +18,18 @@ export const POPULAR_SEARCHES = [
   "센과 치히로의 행방불명",
   "귀멸의 칼날: 무한열차편",
   "스즈메의 문단속",
-  "날씨의 아이"
+  "날씨의 아이",
+  "전생했더니 슬라임이었던 건",
+  "리제로",
+  "코노스바",
+  "오버로드",
+  "무직전생",
+  "귀멸의 칼날: 상현집결",
+  "주술회전: 회옥옥折",
+  "블루 록 vs U-20",
+  "하이큐!! TO THE TOP",
+  "스파이 패밀리 Season 2",
+  "체인소 맨: 레제편"
 ];
 
 export const SEARCH_SYNONYMS = {
@@ -38,7 +49,12 @@ export const SEARCH_SYNONYMS = {
   "슬램덩크": "Slam Dunk",
   "너의 이름은": "Your Name",
   "센과 치히로의 행방불명": "Spirited Away",
-  "스즈메의 문단속": "Suzume"
+  "스즈메의 문단속": "Suzume",
+  "전생했더니 슬라임이었던 건": "That Time I Got Reincarnated as a Slime",
+  "리제로": "Re:Zero",
+  "코노스바": "KonoSuba",
+  "오버로드": "Overlord",
+  "무직전생": "Mushoku Tensei"
 };
 
 export function expandSearchQuery(query) {

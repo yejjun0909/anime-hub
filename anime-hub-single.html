@@ -3982,6 +3982,7 @@ setKoreanTitlesDb({
 
 
 
+
 const APP_VERSION = '4.7.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
@@ -5177,7 +5178,7 @@ async function importAllData(file){
         for(const item of state.watchlist){if(Number.isInteger(Number(item.media_id))&&!String(item.media_id).startsWith('mal:'))await syncUpsert(item);}
         await syncUserData();toast('백업 데이터를 복원하고 계정에 동기화했습니다.');
       }catch(error){toast(`기기에는 복원했지만 클라우드 동기화에 실패했습니다: ${error.message}`,'error');}
-    }else toast('백업 데이터를 복원했습니다.');
+    }else toast(`${josa(localizedTitle(media), 'object')} 보관함에 추가했습니다.`);
     if(state.route==='watchlist')renderWatchlist();
   }catch(error){toast(`백업을 불러오지 못했습니다: ${error.message}`,'error');}
 }
@@ -5221,7 +5222,7 @@ function renderCollections(){
 function renderCollectionDetail(id){
   state.currentCollectionId=id;const collection=state.collections.find(x=>x.id===id);if(!collection){renderCollections();return;}
   const items=(collection.items?.length?collection.items:collection.mediaIds.map(mediaId=>knownMedia(mediaId))).filter(Boolean);
-  const main=$('#main-content');main.innerHTML=`<div class="page-head"><div><div class="eyebrow">나만의 컬렉션</div><h1 class="page-title">${esc(collection.name)}</h1><p class="page-subtitle">${items.length}개 작품을 모았습니다.</p></div><button class="ghost-button" id="share-collection">공유 링크</button><button class="ghost-button" id="back-collections">← 컬렉션 목록</button></div>${items.length?`<div class="collection-items-grid">${items.map(media=>`<div class="watch-card-shell">${cardMarkup(media,false)}<button class="ghost-button danger-button" data-remove-collection-item="${esc(collection.id)}" data-media-id="${esc(media.id)}">컬렉션에서 제거</button></div>`).join('')}</div>`:`<div class="empty-state"><strong>이 컬렉션은 비어 있습니다.</strong><span>작품 상세 화면에서 이 컬렉션에 추가할 수 있습니다.</span><button class="ghost-button" data-route="browse">작품 찾기</button></div>`}`;
+  const main=$('#main-content');main.innerHTML=`<div class="page-head"><div><div class="eyebrow">나만의 컬렉션</div><h1 class="page-title">${esc(collection.name)}</h1><p class="page-subtitle">${items.length}개 작품을 모았습니다.</p></div><button class="ghost-button" id="share-collection">공유 링크</button><button class="ghost-button" id="qr-collection">QR 코드</button><button class="ghost-button" id="back-collections">← 컬렉션 목록</button></div>${items.length?`<div class="collection-items-grid">${items.map(media=>`<div class="watch-card-shell">${cardMarkup(media,false)}<button class="ghost-button danger-button" data-remove-collection-item="${esc(collection.id)}" data-media-id="${esc(media.id)}">컬렉션에서 제거</button></div>`).join('')}</div>`:`<div class="empty-state"><strong>이 컬렉션은 비어 있습니다.</strong><span>작품 상세 화면에서 이 컬렉션에 추가할 수 있습니다.</span><button class="ghost-button" data-route="browse">작품 찾기</button></div>`}`;
   localizeMarked(main);hydrateKoreanCardTitles(items,main,8);
 }
 function removeWatchlistItem(id){
@@ -5623,6 +5624,15 @@ $('#main-content').addEventListener('click',async e=>{
   const deleteCollection=e.target.closest('[data-delete-collection]');if(deleteCollection){deleteCollectionById(deleteCollection.dataset.deleteCollection);return;}
   const openCollection=e.target.closest('[data-open-collection]');if(openCollection){state.activeCollectionId=openCollection.dataset.openCollection;renderCollectionDetail(state.activeCollectionId);return;}
   if(e.target.id==='back-collections'){renderCollections();return;}
+if(e.target.id==='qr-collection'){
+  const collection=state.collections.find(x=>x.id===state.currentCollectionId);
+  if(!collection){toast('QR을 생성할 컬렉션이 없습니다.','error');return;}
+  const url=`${location.origin}${location.pathname}#c/${collection.id}`;
+  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`;
+  const root=$('#modal-root');
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:320px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div style="padding:20px;text-align:center"><h3>${esc(collection.name)}</h3><img src="${esc(qr)}" alt="QR 코드" style="margin:12px auto;display:block" /><p class="hint">${esc(url)}</p></div></div></div>`;
+  return;
+}
 if(e.target.id==='share-collection'){
   const id=new URLSearchParams(location.hash.includes('?')?location.hash.split('?')[1]:'').get('c')||state.currentCollectionId;
   const collection=state.collections.find(x=>x.id===id)||state.collections[0];
