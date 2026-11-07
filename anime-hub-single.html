@@ -192,6 +192,11 @@ button:focus-visible,.pill:focus-visible,.mini-action:focus-visible{outline-offs
 .continue-bar small{opacity:.7;font-size:12px;}
 .continue-bar button{margin-left:auto;}
 
+/* Empty state actions */
+.empty-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;}
+.empty-actions .ghost-button{text-decoration:none;display:inline-flex;align-items:center;}
+html.light .empty-actions .ghost-button{background:var(--panel);color:var(--text);border-color:var(--line);}
+
 </style>
   <!-- Analytics (optional): set data-website-id to enable Umami -->
   <!-- <script defer src="https://analytics.example.com/script.js" data-website-id="REPLACE_ME"></script> -->
@@ -1218,6 +1223,197 @@ function allUserKorean(storage) {
 return { allUserKorean, deleteUserKorean, getUserKorean, setUserKorean };
 })();
 const { allUserKorean, deleteUserKorean, getUserKorean, setUserKorean } = __ns_data_user_korean_js;
+// ===== data/search-aliases.js =====
+const __ns_data_search_aliases_js = (function() {
+// 인기 검색어/별칭 (v4.7+)
+const POPULAR_SEARCHES = [
+  "귀멸의 칼날",
+  "진격의 거인",
+  "주술회전",
+  "원피스",
+  "나루토",
+  "블리치",
+  "드래곤볼",
+  "스파이 패밀리",
+  "체인소 맨",
+  "약속의 네버랜드",
+  "하이큐",
+  "블루 록",
+  "봇치 더 록",
+  "슬램덩크",
+  "너의 이름은",
+  "센과 치히로의 행방불명",
+  "귀멸의 칼날: 무한열차편",
+  "스즈메의 문단속",
+  "날씨의 아이",
+  "전생했더니 슬라임이었던 건",
+  "리제로",
+  "코노스바",
+  "오버로드",
+  "무직전생",
+  "귀멸의 칼날: 상현집결",
+  "주술회전: 회옥·옥절",
+  "블루 록 vs U-20",
+  "하이큐!! TO THE TOP",
+  "스파이 패밀리 Season 2",
+  "체인소 맨: 레제편",
+  "데스노트",
+  "강철의 연금술사",
+  "헌터×헌터",
+  "은혼",
+  "소드 아트 온라인",
+  "도쿄 구울",
+  "슈타인즈 게이트",
+  "약사의 혼잣말",
+  "던전밥",
+  "나 혼자만 레벨업",
+  "단다단",
+  "빈란드 사가",
+  "바이올렛 에버가든",
+  "원령공주",
+  "명탐정 코난",
+  "카우보이 비밥",
+  "트라이건",
+  "몬스터",
+  "신세기 에반게리온",
+  "베르세르크",
+  "바람의 검심",
+  "카드캡터 체리",
+  "이누야샤",
+  "하울의 움직이는 성",
+  "마녀 배달부 키키",
+  "천공의 성 라퓨타",
+  "이웃집 토토로",
+  "드래곤볼 Z",
+  "블랙 라군"
+];
+
+const SEARCH_SYNONYMS = {
+  "귀멸의 칼날": "Demon Slayer",
+  "진격의 거인": "Attack on Titan",
+  "주술회전": "Jujutsu Kaisen",
+  "원피스": "One Piece",
+  "나루토": "Naruto",
+  "블리치": "Bleach",
+  "드래곤볼": "Dragon Ball",
+  "스파이 패밀리": "Spy x Family",
+  "체인소 맨": "Chainsaw Man",
+  "약속의 네버랜드": "The Promised Neverland",
+  "하이큐": "Haikyuu",
+  "블루 록": "Blue Lock",
+  "봇치 더 록": "Bocchi the Rock",
+  "슬램덩크": "Slam Dunk",
+  "너의 이름은": "Your Name",
+  "센과 치히로의 행방불명": "Spirited Away",
+  "스즈메의 문단속": "Suzume",
+  "전생했더니 슬라임이었던 건": "That Time I Got Reincarnated as a Slime",
+  "리제로": "Re:Zero",
+  "코노스바": "KonoSuba",
+  "오버로드": "Overlord",
+  "무직전생": "Mushoku Tensei",
+  "카우보이 비밥": "Cowboy Bebop",
+  "베르세르크": "Berserk",
+  "신세기 에반게리온": "Neon Genesis Evangelion",
+  "에반게리온": "Evangelion",
+  "강철의 연금술사": "Fullmetal Alchemist",
+  "원령공주": "Princess Mononoke",
+  "카드캡터 체리": "Cardcaptor Sakura",
+  "명탐정 코난": "Detective Conan",
+  "이누야샤": "Inuyasha",
+  "하울의 움직이는 성": "Howl's Moving Castle",
+  "마녀 배달부 키키": "Kiki's Delivery Service",
+  "천공의 성 라퓨타": "Castle in the Sky",
+  "이웃집 토토로": "My Neighbor Totoro",
+  "블랙 라군": "Black Lagoon",
+  "은혼": "Gintama",
+  "디그레이맨": "D.Gray-man",
+  "데스노트": "Death Note",
+  "코드 기아스": "Code Geass",
+  "나루토 질풍전": "Naruto Shippuden",
+  "천원돌파 그렌라간": "Gurren Lagann",
+  "클라나드": "Clannad",
+  "소울 이터": "Soul Eater",
+  "토라도라": "Toradora",
+  "페어리 테일": "Fairy Tail",
+  "슈타인즈 게이트": "Steins;Gate",
+  "청의 엑소시스트": "Blue Exorcist",
+  "헌터×헌터": "Hunter x Hunter",
+  "헌터헌터": "Hunter x Hunter",
+  "어나더": "Another",
+  "소드 아트 온라인": "Sword Art Online",
+  "바람이 분다": "The Wind Rises",
+  "아카메가 벤다": "Akame ga Kill",
+  "도쿄 구울": "Tokyo Ghoul",
+  "기생수": "Parasyte",
+  "4월은 너의 거짓말": "Your Lie in April",
+  "식극의 소마": "Food Wars",
+  "목소리의 형태": "A Silent Voice",
+  "모브사이코 100": "Mob Psycho 100",
+  "바이올렛 에버가든": "Violet Evergarden",
+  "블랙 클로버": "Black Clover",
+  "빈란드 사가": "Vinland Saga",
+  "닥터 스톤": "Dr. Stone",
+  "날씨의 아이": "Weathering with You",
+  "블리치 천년혈전": "Bleach Thousand-Year Blood War",
+  "나 혼자만 레벨업": "Solo Leveling",
+  "괴수 8호": "Kaiju No. 8",
+  "던전밥": "Delicious in Dungeon",
+  "약사의 혼잣말": "The Apothecary Diaries",
+  "단다단": "Dandadan",
+  "바람의 검심": "Rurouni Kenshin",
+  "트라이건": "Trigun",
+  "몬스터": "Monster",
+  "귀멸의 칼날: 상현집결": "Demon Slayer: Swordsmith Village",
+  "귀멸의 칼날: 무한열차편": "Demon Slayer: Mugen Train",
+  "주술회전: 회옥·옥절": "Jujutsu Kaisen: Hidden Inventory",
+  "스파이 패밀리 Season 2": "Spy x Family Season 2",
+  "체인소 맨: 레제편": "Chainsaw Man: Reze Arc"
+};
+
+function expandSearchQuery(query) {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  const out = [q];
+  if (SEARCH_SYNONYMS[q]) out.push(SEARCH_SYNONYMS[q]);
+  for (const [ko, en] of Object.entries(SEARCH_SYNONYMS)) {
+    if (en.toLowerCase() === q.toLowerCase()) { out.push(ko); break; }
+  }
+  return [...new Set(out)];
+}
+
+function searchAliasSuggestions(query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return POPULAR_SEARCHES.slice(0, 8);
+  return POPULAR_SEARCHES.filter((item) => item.toLowerCase().includes(q)).slice(0, 8);
+}
+
+return { POPULAR_SEARCHES, SEARCH_SYNONYMS, expandSearchQuery, searchAliasSuggestions };
+})();
+const { POPULAR_SEARCHES, SEARCH_SYNONYMS, expandSearchQuery, searchAliasSuggestions } = __ns_data_search_aliases_js;
+// ===== data/korean-josa.js =====
+const __ns_data_korean_josa_js = (function() {
+// 한국어 조사 자동 선택 유틸리티 (v4.7+)
+function hasBatchim(word) {
+  const last = String(word || "").charCodeAt(String(word || "").length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return false;
+  return (last - 0xac00) % 28 !== 0;
+}
+function attachJosa(word, pair) {
+  const w = String(word || "");
+  if (!w) return w;
+  const last = w.charCodeAt(w.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return w + String(pair || "").split("/")[1];
+  const parts = String(pair || "").split("/");
+  return w + (hasBatchim(w) ? parts[0] : parts[1]);
+}
+function josa(word, type) {
+  const pairs = { subject: "이/가", topic: "은/는", object: "을/를", with: "과/와" };
+  return attachJosa(word, pairs[type] || "이/가");
+}
+
+return { attachJosa, hasBatchim, josa };
+})();
+const { attachJosa, hasBatchim, josa } = __ns_data_korean_josa_js;
 // ===== data/machine-translate.js =====
 const __ns_data_machine_translate_js = (function() {
 // 자동 번역 (실험적, 비공식) — v4.9+
@@ -1622,7 +1818,7 @@ return { VERIFIED_KOREAN_SOURCES, filterVerifiedDb, getKoreanTitlesDb, getKorean
 const { VERIFIED_KOREAN_SOURCES, filterVerifiedDb, getKoreanTitlesDb, getKoreanTitlesDbStats, isDbLoaded, isVerifiedKoreanSource, loadKoreanTitlesDb, lookupKoreanTitle, setKoreanTitlesDb } = __ns_data_korean_titles_db_js;
 // ===== data/korean-common-titles.js =====
 const __ns_data_korean_common_titles_js = (function() {
-// 국내 통용 한국어 제목 시드 (v4.7.2)
+// 국내 통용 한국어 제목 시드 (v4.7.3)
 //
 // 국내에서 널리 쓰이는 대표작의 한국어 표기를 MyAnimeList ID 기준으로 정리한 목록입니다.
 // - 국내 플랫폼 페이지를 하나하나 확인한 자료가 아닙니다. 그래서 화면에는
@@ -1635,154 +1831,184 @@ const __ns_data_korean_common_titles_js = (function() {
 const COMMON_TITLE_SOURCE = '국내 통용 표기(자체 정리·플랫폼 미확인)';
 
 const COMMON_KOREAN_TITLES = Object.freeze({
-  1: '카우보이 비밥',
-  6: '트라이건',
-  19: '몬스터',
-  30: '신세기 에반게리온',
-  33: '베르세르크',
-  45: '바람의 검심',
-  121: '강철의 연금술사',
-  164: '원령공주',
-  199: '센과 치히로의 행방불명',
-  223: '드래곤볼',
-  232: '카드캡터 체리',
-  235: '명탐정 코난',
-  249: '이누야샤',
-  269: '블리치',
-  431: '하울의 움직이는 성',
-  512: '마녀 배달부 키키',
-  513: '천공의 성 라퓨타',
-  523: '이웃집 토토로',
-  813: '드래곤볼 Z',
-  889: '블랙 라군',
-  918: '은혼',
-  1482: '디그레이맨',
-  1535: '데스노트',
-  1575: '코드 기아스 반역의 를르슈',
-  1735: '나루토 질풍전',
-  2001: '천원돌파 그렌라간',
-  2167: '클라나드',
-  2904: '코드 기아스 반역의 를르슈 R2',
-  3588: '소울 이터',
-  4181: '클라나드 ~After Story~',
-  4224: '토라도라!',
-  5114: '강철의 연금술사 BROTHERHOOD',
-  6702: '페어리 테일',
-  9253: '슈타인즈 게이트',
-  9919: '청의 엑소시스트',
-  11061: '헌터×헌터',
-  11111: '어나더',
-  11757: '소드 아트 온라인',
-  16662: '바람이 분다',
-  22199: '아카메가 벤다!',
-  22319: '도쿄 구울',
-  22535: '기생수 -세이의 격률-',
-  23273: '4월은 너의 거짓말',
-  28171: '식극의 소마',
-  28851: '목소리의 형태',
-  29803: '오버로드',
-  30831: '이 멋진 세계에 축복을!',
-  31240: 'Re:제로부터 시작하는 이세계 생활',
-  32182: '모브사이코 100',
-  32281: '너의 이름은.',
-  33352: '바이올렛 에버가든',
-  34572: '블랙 클로버',
-  37430: '전생했더니 슬라임이었던 건에 대하여',
-  37521: '빈란드 사가',
-  38691: '닥터 스톤',
-  38826: '날씨의 아이',
-  39535: '무직전생 ~이세계에 갔으면 최선을 다한다~',
-  41467: '블리치 천년혈전편',
-  47917: '봇치 더 록!',
-  50594: '스즈메의 문단속',
-  52299: '나 혼자만 레벨업',
-  52588: '괴수 8호',
-  52701: '던전밥',
-  54492: '약사의 혼잣말',
-  57334: '단다단',
-  4898: "흑집사 1기",
-  5680: "케이온!",
-  12189: "빙과",
-  33486: "나의 히어로 아카데미아 2기",
-  39195: "비스타즈",
-  39534: "지박소년 하나코 군",
-  39587: "Re: 제로부터 시작하는 이세계 생활 2기",
-  40028: "진격의 거인 더 파이널 시즌",
-  40221: "신의 탑",
-  40456: "극장판 귀멸의 칼날: 무한열차편",
-  40852: "닥터 스톤 STONE WARS",
-  41025: "불멸의 그대에게",
-  41353: "갓 오브 하이스쿨",
-  42203: "Re: 제로부터 시작하는 이세계 생활 2기 파트 2",
-  42361: "괴롭히지 말아요, 나가토로 양",
-  47778: "귀멸의 칼날: 환락의 거리편",
-  49926: "귀멸의 칼날: 무한열차편",
-  50602: "스파이 패밀리",
-  53887: "스파이 패밀리",
-  58567: "나 혼자만 레벨업 2",
-  58939: "사카모토 데이즈",
-  59978: "장송의 프리렌 2기",
+  1: "카우보이 비밥",
+  6: "트라이건",
+  19: "몬스터",
+  30: "신세기 에반게리온",
+  33: "베르세르크",
+  45: "바람의 검심",
+  50: "오! 나의 여신님",
+  121: "강철의 연금술사",
+  135: "히카루의 바둑",
+  164: "원령공주",
+  170: "슬램덩크",
+  199: "센과 치히로의 행방불명",
+  223: "드래곤볼",
+  232: "카드캡터 체리",
+  235: "명탐정 코난",
+  249: "이누야샤",
+  269: "블리치",
+  416: "붉은 돼지",
+  417: "마법신화 라그나로크",
+  431: "하울의 움직이는 성",
+  512: "마녀 배달부 키키",
+  513: "천공의 성 라퓨타",
+  523: "이웃집 토토로",
+  813: "드래곤볼 Z",
+  889: "블랙 라군",
+  918: "은혼",
   934: "쓰르라미 울 적에",
+  937: "애플시드",
+  1004: "그녀와 그녀의 고양이",
+  1107: "요수도시",
+  1482: "디그레이맨",
+  1516: "라라의 스타일기",
+  1535: "데스노트",
+  1565: "포켓몬스터 DP",
+  1575: "코드 기아스 반역의 를르슈",
+  1735: "나루토 질풍전",
   1889: "쓰르라미 울 적에 해",
+  2001: "천원돌파 그렌라간",
+  2150: "무민 잉글리시",
+  2167: "클라나드",
+  2904: "코드 기아스 반역의 를르슈 R2",
+  3167: "이브의 시간",
+  3588: "소울 이터",
+  3652: "쓰르라미 울 적에 례",
   4081: "나츠메 우인장",
+  4181: "클라나드 ~After Story~",
+  4224: "토라도라!",
   4898: "흑집사 1기",
+  5114: "강철의 연금술사 BROTHERHOOD",
   5680: "케이온!",
+  6702: "페어리 테일",
   6707: "흑집사 2기",
+  6811: "이누야샤 완결편",
   6956: "워킹!!",
   7311: "스즈미야 하루히의 소실",
   7791: "케이온!!",
   8676: "아마가미 SS",
+  9253: "슈타인즈 게이트",
+  9379: "전파녀와 청춘남",
+  9919: "청의 엑소시스트",
+  10779: "에로 게임！야한 짓도 게임도 개발 삼매경",
+  11061: "헌터×헌터",
+  11111: "어나더",
+  11757: "소드 아트 온라인",
   12189: "빙과",
   15315: "문제아들이 이세계에서 온다는 모양인데요?",
+  16157: "초차원 게임 넵튠 : The Animation",
+  16662: "바람이 분다",
+  16700: "쓰르라미 울 적에 확 -아웃브레이크-",
+  17115: "포켓몬스터 베스트위시2 에피소드 N",
   22145: "흑집사 Book of Circus",
+  22199: "아카메가 벤다!",
+  22319: "도쿄 구울",
+  22535: "기생수 -세이의 격률-",
+  23273: "4월은 너의 거짓말",
+  28171: "식극의 소마",
+  28851: "목소리의 형태",
+  29803: "오버로드",
+  30831: "이 멋진 세계에 축복을!",
+  31240: "Re:제로부터 시작하는 이세계 생활",
+  32182: "모브사이코 100",
+  32281: "너의 이름은.",
+  32924: "우라라 미로첩",
+  33352: "바이올렛 에버가든",
   33486: "나의 히어로 아카데미아 2기",
+  34176: "제로부터 시작하는 마법의 서",
+  34572: "블랙 클로버",
+  36699: "그대들은 어떻게 살 것인가",
+  37208: "마도조사",
+  37320: "달콤한 징벌 ~ 나는 간수 전용 애완동물",
+  37430: "전생했더니 슬라임이었던 건에 대하여",
+  37521: "빈란드 사가",
+  38691: "닥터 스톤",
+  38826: "날씨의 아이",
+  38903: "문라이즈",
   39195: "비스타즈",
   39534: "지박소년 하나코 군",
+  39535: "무직전생 ~이세계에 갔으면 최선을 다한다~",
   39587: "Re: 제로부터 시작하는 이세계 생활 2기",
+  40024: "극장판 미소녀 전사 세일러 문 이터널",
   40028: "진격의 거인 더 파이널 시즌",
   40221: "신의 탑",
   40456: "극장판 귀멸의 칼날: 무한열차편",
   40571: "마녀의 여행",
+  40679: "2.43 세인고교 남자 배구부",
+  40746: "오버플로우",
   40852: "닥터 스톤 STONE WARS",
   41025: "불멸의 그대에게",
+  41261: "형수는 양마마 수유중",
   41353: "갓 오브 하이스쿨",
   41433: "아쿠다마 드라이브",
+  41467: "블리치 천년혈전편",
   42203: "Re: 제로부터 시작하는 이세계 생활 2기 파트 2",
   42361: "괴롭히지 말아요, 나가토로 양",
   47778: "귀멸의 칼날: 환락의 거리편",
+  47917: "봇치 더 록!",
+  49210: "그림 동화 변주곡",
   49818: "신비의 제왕",
   49926: "귀멸의 칼날: 무한열차편",
+  49938: "표류단지",
+  50183: "블루 자이언트",
   50273: "친구게임",
+  50594: "스즈메의 문단속",
   50602: "스파이 패밀리",
-  52578: "내 마음의 위험한 녀석",
-  52635: "신의 탑 2",
-  53887: "스파이 패밀리",
-  55866: "손끝과 연연",
-  56009: "용사형에 처함",
-  57181: "푸른 상자",
-  58567: "나 혼자만 레벨업 2",
-  58913: "히카루가 죽은 여름",
-  58939: "사카모토 데이즈",
-  59452: "촌구석 아저씨, 검성이 되다",
-  59978: "장송의 프리렌 2기",
-  60371: "정반대의 너와 나",
-  170: "슬램덩크",
-  416: "붉은 돼지",
-  6811: "이누야샤 완결편",
-  9379: "전파녀와 청춘남",
-  34176: "제로부터 시작하는 마법의 서",
-  36699: "그대들은 어떻게 살 것인가",
-  37208: "마도조사",
   51678: "오빠는 끝!",
+  51995: "극장판 울려라! 유포니엄: 앙상블 콘테스트",
+  52031: "이토 준지: 매니악",
+  52107: "극장판 모노노케: 우중망령",
+  52299: "나 혼자만 레벨업",
   52308: "그녀가 공작저로 가야 했던 사정",
+  52578: "내 마음의 위험한 녀석",
+  52588: "괴수 8호",
+  52635: "신의 탑 2",
+  52701: "던전밥",
+  53881: "명일방주: 서리 속의 죽음",
+  53887: "스파이 패밀리",
+  54492: "약사의 혼잣말",
+  54632: "외과의사 엘리제",
+  54846: "이두나!",
   54852: "귀환자의 마법은 특별해야 합니다",
   55102: "걸즈 밴드 크라이",
+  55578: "4컷용사",
+  55866: "손끝과 연연",
+  56009: "용사형에 처함",
+  56146: "굿 나이트 월드",
+  57181: "푸른 상자",
+  57334: "단다단",
+  57353: "어느 날 공주가 되어버렸다",
+  57360: "주식회사 마지루미에",
+  57487: "라이징 임팩트",
+  57612: "귀환자의 마법은 특별해야 합니다",
+  58080: "싸움독학",
+  58449: "좋아해도 싫어하는",
+  58510: "한마 바키 VS 켄간 아슈라",
+  58567: "나 혼자만 레벨업 2",
   58788: "위국일기",
+  58913: "히카루가 죽은 여름",
+  58939: "사카모토 데이즈",
   59145: "란마1/2",
+  59230: "전지적 독자 시점",
+  59390: "터미네이터 제로",
+  59452: "촌구석 아저씨, 검성이 되다",
   59711: "사망 유희로 밥을 먹는다.",
+  59841: "나 혼자만 레벨업 -ReAwakening-",
+  59853: "DARK MOON: 달의 제단",
+  59978: "장송의 프리렌 2기",
+  60130: "빠졌어, 너에게",
+  60223: "카야는 무섭지 않아",
+  60371: "정반대의 너와 나",
+  60377: "수수께끼 풀이는 저녁식사 후에",
   61128: "용사 파티에서 쫓겨난 다재무능",
+  61159: "토지마 탄자부로는 가면라이더가 되고 싶어",
+  61269: "디지몬 비트브레이크",
+  61274: "은하 특급 밀키★서브웨이",
   62896: "초(超) 가구야 공주!",
+  63019: "프리즘 윤무곡",
   64340: "템빨",
+  64950: "SSS급 죽어야 사는 헌터",
 });
 
 function malIdOf(media) {
@@ -1808,6 +2034,265 @@ function lookupCommonKoreanTitle(media) {
 return { COMMON_KOREAN_TITLES, COMMON_TITLE_SOURCE, lookupCommonKoreanTitle };
 })();
 const { COMMON_KOREAN_TITLES, COMMON_TITLE_SOURCE, lookupCommonKoreanTitle } = __ns_data_korean_common_titles_js;
+// ===== data/korean-title-index.js =====
+const __ns_data_korean_title_index_js = (function() {
+// 자동 생성 파일입니다. 직접 수정하지 마세요.
+// 생성: py tools/build_title_index.py
+//
+// 한국어 공통/검증 제목을 AniList 로마자·영어 제목과 연결합니다.
+// 검색 시 한국어 제목을 네트워크 질의어로 변환하는 용도로만 사용합니다.
+
+const KOREAN_TITLE_INDEX = Object.freeze({
+  "2.43 세인고교 남자 배구부": { malId: 40679, anilistId: "113231", romaji: "2.43: Seiin Koukou Danshi Volley-bu", english: "2.43: Seiin High School Boys Volleyball Team", searchTerm: "2.43: Seiin High School Boys Volleyball Team" },
+  "4월은 너의 거짓말": { malId: 23273, anilistId: "20665", romaji: "Shigatsu wa Kimi no Uso", english: "Your lie in April", searchTerm: "Your lie in April" },
+  "4컷용사": { malId: 55578, anilistId: "156096", romaji: "Si Ge Yongzhe", english: "4 CUT HERO", searchTerm: "4 CUT HERO" },
+  "DARK MOON: 달의 제단": { malId: 59853, anilistId: "181443", romaji: "DARK MOON: Kuro no Tsuki - Tsuki no Saidan", english: "DARK MOON: THE BLOOD ALTAR", searchTerm: "DARK MOON: THE BLOOD ALTAR" },
+  "Re: 제로부터 시작하는 이세계 생활 2기": { malId: 39587, anilistId: "108632", romaji: "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season", english: "Re:ZERO -Starting Life in Another World- Season 2", searchTerm: "Re:ZERO -Starting Life in Another World- Season 2" },
+  "Re: 제로부터 시작하는 이세계 생활 2기 파트 2": { malId: 42203, anilistId: "119661", romaji: "Re:Zero kara Hajimeru Isekai Seikatsu 2nd Season Part 2", english: "Re:ZERO -Starting Life in Another World- Season 2 Part 2", searchTerm: "Re:ZERO -Starting Life in Another World- Season 2 Part 2" },
+  "Re:제로부터 시작하는 이세계 생활": { malId: 31240, anilistId: "21355", romaji: "Re:Zero kara Hajimeru Isekai Seikatsu", english: "Re:ZERO -Starting Life in Another World-", searchTerm: "Re:ZERO -Starting Life in Another World-" },
+  "SSS급 죽어야 사는 헌터": { malId: 64950, anilistId: "216624", romaji: "Shishite Ikiru SSS-kyuu Hunter", english: "SSS-Class Revival Hunter", searchTerm: "SSS-Class Revival Hunter" },
+  "[최애의 아이]": { malId: 52034, anilistId: "150672", romaji: "[Oshi no Ko]", english: "OSHI NO KO", searchTerm: "OSHI NO KO" },
+  "갓 오브 하이스쿨": { malId: 41353, anilistId: "116006", romaji: "THE GOD OF HIGH SCHOOL", english: "The God of High School", searchTerm: "The God of High School" },
+  "강철의 연금술사": { malId: 121, anilistId: "121", romaji: "Hagane no Renkinjutsushi", english: "Fullmetal Alchemist", searchTerm: "Fullmetal Alchemist" },
+  "강철의 연금술사 BROTHERHOOD": { malId: 5114, anilistId: "5114", romaji: "Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST", english: "Fullmetal Alchemist: Brotherhood", searchTerm: "Fullmetal Alchemist: Brotherhood" },
+  "걸즈 밴드 크라이": { malId: 55102, anilistId: "164212", romaji: "GIRLS BAND CRY", english: "Girls Band Cry", searchTerm: "Girls Band Cry" },
+  "괴롭히지 말아요, 나가토로 양": { malId: 42361, anilistId: "120697", romaji: "Ijiranaide, Nagatoro-san", english: "DON'T TOY WITH ME, MISS NAGATORO", searchTerm: "DON'T TOY WITH ME, MISS NAGATORO" },
+  "괴수 8호": { malId: 52588, anilistId: "153288", romaji: "Kaijuu 8-gou", english: "Kaiju No. 8", searchTerm: "Kaiju No. 8" },
+  "굿 나이트 월드": { malId: 56146, anilistId: "167820", romaji: "Good Night World", english: "GOOD NIGHT WORLD", searchTerm: "GOOD NIGHT WORLD" },
+  "귀멸의 칼날": { malId: 38000, anilistId: "101922", romaji: "Kimetsu no Yaiba", english: "Demon Slayer: Kimetsu no Yaiba", searchTerm: "Demon Slayer: Kimetsu no Yaiba" },
+  "귀멸의 칼날: 무한열차편": { malId: 49926, anilistId: "129874", romaji: "Kimetsu no Yaiba: Mugen Ressha-hen (TV)", english: "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc", searchTerm: "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc" },
+  "귀멸의 칼날: 환락의 거리편": { malId: 47778, anilistId: "142329", romaji: "Kimetsu no Yaiba: Yuukaku-hen", english: "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc", searchTerm: "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc" },
+  "귀환자의 마법은 특별해야 합니다": { malId: 57612, anilistId: "172192", romaji: "Kikansha no Mahou wa Tokubetsu desu 2nd Season", english: "A Returner's Magic Should be Special Season 2", searchTerm: "A Returner's Magic Should be Special Season 2" },
+  "그녀가 공작저로 가야 했던 사정": { malId: 52308, anilistId: "151847", romaji: "Kanojo ga Koushaku-tei ni Itta Riyuu", english: "Why Raeliana Ended Up at the Duke’s Mansion", searchTerm: "Why Raeliana Ended Up at the Duke’s Mansion" },
+  "그녀와 그녀의 고양이": { malId: 1004, anilistId: "1004", romaji: "Kanojo to Kanojo no Neko", english: "She and Her Cat: Their Standing Points", searchTerm: "She and Her Cat: Their Standing Points" },
+  "그대들은 어떻게 살 것인가": { malId: 36699, anilistId: "109979", romaji: "Kimitachi wa Dou Ikiru ka", english: "The Boy and the Heron", searchTerm: "The Boy and the Heron" },
+  "그림 동화 변주곡": { malId: 49210, anilistId: "135643", romaji: "Grimm Kumikyoku", english: "The Grimm Variations", searchTerm: "The Grimm Variations" },
+  "극장판 귀멸의 칼날: 무한열차편": { malId: 40456, anilistId: "112151", romaji: "Kimetsu no Yaiba: Mugen Ressha-hen", english: "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train", searchTerm: "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train" },
+  "극장판 모노노케: 우중망령": { malId: 52107, anilistId: "151117", romaji: "Mononoke: Karakasa", english: "Mononoke The Movie: The Phantom in the Rain", searchTerm: "Mononoke The Movie: The Phantom in the Rain" },
+  "극장판 미소녀 전사 세일러 문 이터널": { malId: 40024, anilistId: "103713", romaji: "Bishoujo Senshi Sailor Moon: Eternal - Zenpen", english: "Pretty Guardian Sailor Moon Eternal The Movie Part 1", searchTerm: "Pretty Guardian Sailor Moon Eternal The Movie Part 1" },
+  "극장판 울려라! 유포니엄: 앙상블 콘테스트": { malId: 51995, anilistId: "150429", romaji: "Tokubetsu-hen Hibike! Euphonium: Ensemble Contest", english: "Sound! Euphonium: Ensemble Contest", searchTerm: "Sound! Euphonium: Ensemble Contest" },
+  "기생수 -세이의 격률-": { malId: 22535, anilistId: "20623", romaji: "Kiseijuu: Sei no Kakuritsu", english: "Parasyte -the maxim-", searchTerm: "Parasyte -the maxim-" },
+  "나 혼자만 레벨업": { malId: 52299, anilistId: "151807", romaji: "Ore dake Level Up na Ken", english: "Solo Leveling", searchTerm: "Solo Leveling" },
+  "나 혼자만 레벨업 -ReAwakening-": { malId: 59841, anilistId: "184694", romaji: "Ore dake Level Up na Ken: ReAwakening", english: "Solo Leveling -ReAwakening-", searchTerm: "Solo Leveling -ReAwakening-" },
+  "나 혼자만 레벨업 2": { malId: 58567, anilistId: "176496", romaji: "Ore dake Level Up na Ken: Season 2 - Arise from the Shadow", english: "Solo Leveling Season 2 -Arise from the Shadow-", searchTerm: "Solo Leveling Season 2 -Arise from the Shadow-" },
+  "나루토": { malId: 20, anilistId: "20", romaji: "NARUTO", english: "Naruto", searchTerm: "Naruto" },
+  "나루토 질풍전": { malId: 1735, anilistId: "1735", romaji: "NARUTO: Shippuuden", english: "Naruto: Shippuden", searchTerm: "Naruto: Shippuden" },
+  "나의 히어로 아카데미아": { malId: 31964, anilistId: "21459", romaji: "Boku no Hero Academia", english: "My Hero Academia", searchTerm: "My Hero Academia" },
+  "나의 히어로 아카데미아 2기": { malId: 33486, anilistId: "21856", romaji: "Boku no Hero Academia 2", english: "My Hero Academia Season 2", searchTerm: "My Hero Academia Season 2" },
+  "나츠메 우인장": { malId: 4081, anilistId: "4081", romaji: "Natsume Yuujinchou", english: "Natsume's Book of Friends Season 1", searchTerm: "Natsume's Book of Friends Season 1" },
+  "날씨의 아이": { malId: 38826, anilistId: "106286", romaji: "Tenki no Ko", english: "Weathering With You", searchTerm: "Weathering With You" },
+  "내 마음의 위험한 녀석": { malId: 52578, anilistId: "153152", romaji: "Boku no Kokoro no Yabai Yatsu", english: "The Dangers in My Heart", searchTerm: "The Dangers in My Heart" },
+  "너의 이름은.": { malId: 32281, anilistId: "21519", romaji: "Kimi no Na wa.", english: "Your Name.", searchTerm: "Your Name." },
+  "닥터 스톤": { malId: 38691, anilistId: "105333", romaji: "Dr. STONE", english: "Dr. STONE", searchTerm: "Dr. STONE" },
+  "닥터 스톤 STONE WARS": { malId: 40852, anilistId: "113936", romaji: "Dr. STONE: STONE WARS", english: "Dr. STONE: STONE WARS", searchTerm: "Dr. STONE: STONE WARS" },
+  "단다단": { malId: 57334, anilistId: "171018", romaji: "Dandadan", english: "DAN DA DAN", searchTerm: "DAN DA DAN" },
+  "달콤한 징벌 ~ 나는 간수 전용 애완동물": { malId: 37320, anilistId: "101160", romaji: "Amai Choubatsu: Watashi wa Kanshu Senyou Pet", english: "Sweet Punishment -I'm the Guard's Personal Pet-", searchTerm: "Sweet Punishment -I'm the Guard's Personal Pet-" },
+  "던전밥": { malId: 52701, anilistId: "153518", romaji: "Dungeon Meshi", english: "Delicious in Dungeon", searchTerm: "Delicious in Dungeon" },
+  "데스노트": { malId: 1535, anilistId: "1535", romaji: "DEATH NOTE", english: "Death Note", searchTerm: "Death Note" },
+  "도쿄 구울": { malId: 22319, anilistId: "20605", romaji: "Tokyo Ghoul", english: "Tokyo Ghoul", searchTerm: "Tokyo Ghoul" },
+  "드래곤볼": { malId: 223, anilistId: "223", romaji: "Dragon Ball", english: "Dragon Ball", searchTerm: "Dragon Ball" },
+  "드래곤볼 Z": { malId: 813, anilistId: "813", romaji: "Dragon Ball Z", english: "Dragon Ball Z", searchTerm: "Dragon Ball Z" },
+  "디그레이맨": { malId: 1482, anilistId: "1482", romaji: "D.Gray-man", english: "D.Gray-man", searchTerm: "D.Gray-man" },
+  "디지몬 비트브레이크": { malId: 61269, anilistId: "188388", romaji: "DIGIMON BEATBREAK", english: "DIGIMON BEATBREAK", searchTerm: "DIGIMON BEATBREAK" },
+  "라라의 스타일기": { malId: 1516, anilistId: "1516", romaji: "Kirarin☆Revolution", english: "Kirarin Revolution", searchTerm: "Kirarin Revolution" },
+  "라이징 임팩트": { malId: 57487, anilistId: "171115", romaji: "Rising Impact", english: "Rising Impact", searchTerm: "Rising Impact" },
+  "란마1/2": { malId: 59145, anilistId: "178533", romaji: "Ranma 1/2 (2024)", english: "Ranma1/2 (2024)", searchTerm: "Ranma1/2 (2024)" },
+  "마녀 배달부 키키": { malId: 512, anilistId: "512", romaji: "Majo no Takkyuubin", english: "Kiki's Delivery Service", searchTerm: "Kiki's Delivery Service" },
+  "마녀의 여행": { malId: 40571, anilistId: "112609", romaji: "Majo no Tabitabi", english: "Wandering Witch: The Journey of Elaina", searchTerm: "Wandering Witch: The Journey of Elaina" },
+  "마도조사": { malId: 37208, anilistId: "101972", romaji: "Modao Zushi", english: "The Founder of Diabolism", searchTerm: "The Founder of Diabolism" },
+  "마법신화 라그나로크": { malId: 417, anilistId: "417", romaji: "RAGNAROK THE ANIMATION", english: "Ragnarok the Animation", searchTerm: "Ragnarok the Animation" },
+  "명일방주: 서리 속의 죽음": { malId: 53881, anilistId: "158895", romaji: "Arknights: Touin Kiro", english: "Arknights: PERISH IN FROST", searchTerm: "Arknights: PERISH IN FROST" },
+  "명탐정 코난": { malId: 235, anilistId: "235", romaji: "Meitantei Conan", english: "Detective Conan", searchTerm: "Detective Conan" },
+  "모브사이코 100": { malId: 32182, anilistId: "21507", romaji: "Mob Psycho 100", english: "Mob Psycho 100", searchTerm: "Mob Psycho 100" },
+  "목소리의 형태": { malId: 28851, anilistId: "20954", romaji: "Koe no Katachi", english: "A Silent Voice", searchTerm: "A Silent Voice" },
+  "몬스터": { malId: 19, anilistId: "19", romaji: "MONSTER", english: "Monster", searchTerm: "Monster" },
+  "무민 잉글리시": { malId: 2150, anilistId: "2150", romaji: "Tanoshii Moomin Ikka", english: "Moomin", searchTerm: "Moomin" },
+  "무직전생 ~이세계에 갔으면 최선을 다한다~": { malId: 39535, anilistId: "108465", romaji: "Mushoku Tensei: Isekai Ittara Honki Dasu", english: "Mushoku Tensei: Jobless Reincarnation", searchTerm: "Mushoku Tensei: Jobless Reincarnation" },
+  "문라이즈": { malId: 38903, anilistId: "150654", romaji: "MOONRISE", english: "Moonrise", searchTerm: "Moonrise" },
+  "문제아들이 이세계에서 온다는 모양인데요?": { malId: 15315, anilistId: "15315", romaji: "Mondaiji-tachi ga Isekai kara Kuru Sou desu yo?", english: "Problem Children Are Coming From Another World, Aren't They?", searchTerm: "Problem Children Are Coming From Another World, Aren't They?" },
+  "바람의 검심": { malId: 45, anilistId: "45", romaji: "Rurouni Kenshin: Meiji Kenkaku Romantan", english: "Rurouni Kenshin", searchTerm: "Rurouni Kenshin" },
+  "바람이 분다": { malId: 16662, anilistId: "16662", romaji: "Kaze Tachinu", english: "The Wind Rises", searchTerm: "The Wind Rises" },
+  "바이올렛 에버가든": { malId: 33352, anilistId: "21827", romaji: "Violet Evergarden", english: "Violet Evergarden", searchTerm: "Violet Evergarden" },
+  "베르세르크": { malId: 33, anilistId: "33", romaji: "Kenpuu Denki Berserk", english: "Berserk", searchTerm: "Berserk" },
+  "봇치 더 록!": { malId: 47917, anilistId: "130003", romaji: "Bocchi the Rock!", english: "BOCCHI THE ROCK!", searchTerm: "BOCCHI THE ROCK!" },
+  "불멸의 그대에게": { malId: 41025, anilistId: "114535", romaji: "Fumetsu no Anata e", english: "To Your Eternity", searchTerm: "To Your Eternity" },
+  "붉은 돼지": { malId: 416, anilistId: "416", romaji: "Kurenai no Buta", english: "Porco Rosso", searchTerm: "Porco Rosso" },
+  "블랙 라군": { malId: 889, anilistId: "889", romaji: "BLACK LAGOON", english: "Black Lagoon", searchTerm: "Black Lagoon" },
+  "블랙 클로버": { malId: 34572, anilistId: "97940", romaji: "Black Clover", english: "Black Clover", searchTerm: "Black Clover" },
+  "블루 록": { malId: 49596, anilistId: "137822", romaji: "Blue Lock", english: "BLUE LOCK", searchTerm: "BLUE LOCK" },
+  "블루 자이언트": { malId: 50183, anilistId: "140499", romaji: "BLUE GIANT", english: "Blue Giant", searchTerm: "Blue Giant" },
+  "블리치": { malId: 269, anilistId: "269", romaji: "BLEACH", english: "Bleach", searchTerm: "Bleach" },
+  "블리치 천년혈전편": { malId: 41467, anilistId: "116674", romaji: "BLEACH: Sennen Kessen-hen", english: "BLEACH: Thousand-Year Blood War", searchTerm: "BLEACH: Thousand-Year Blood War" },
+  "비스타즈": { malId: 39195, anilistId: "107660", romaji: "BEASTARS", english: "BEASTARS", searchTerm: "BEASTARS" },
+  "빈란드 사가": { malId: 37521, anilistId: "101348", romaji: "VINLAND SAGA", english: "Vinland Saga", searchTerm: "Vinland Saga" },
+  "빙과": { malId: 12189, anilistId: "12189", romaji: "Hyouka", english: "Hyouka", searchTerm: "Hyouka" },
+  "빠졌어, 너에게": { malId: 60130, anilistId: "183128", romaji: "Muchuu sa, Kimi ni.", english: "Captivated, By You", searchTerm: "Captivated, By You" },
+  "사망 유희로 밥을 먹는다.": { malId: 59711, anilistId: "180746", romaji: "Shibou Yuugi de Meshi wo Kuu.", english: "SHIBOYUGI: Playing Death Games to Put Food on the Table", searchTerm: "SHIBOYUGI: Playing Death Games to Put Food on the Table" },
+  "사카모토 데이즈": { malId: 58939, anilistId: "177709", romaji: "SAKAMOTO DAYS", english: "SAKAMOTO DAYS", searchTerm: "SAKAMOTO DAYS" },
+  "센과 치히로의 행방불명": { malId: 199, anilistId: "199", romaji: "Sen to Chihiro no Kamikakushi", english: "Spirited Away", searchTerm: "Spirited Away" },
+  "소드 아트 온라인": { malId: 11757, anilistId: "11757", romaji: "Sword Art Online", english: "Sword Art Online", searchTerm: "Sword Art Online" },
+  "소울 이터": { malId: 3588, anilistId: "3588", romaji: "Soul Eater", english: "Soul Eater", searchTerm: "Soul Eater" },
+  "손끝과 연연": { malId: 55866, anilistId: "166794", romaji: "Yubisaki to Renren", english: "A Sign of Affection", searchTerm: "A Sign of Affection" },
+  "수수께끼 풀이는 저녁식사 후에": { malId: 60377, anilistId: "184989", romaji: "Nazotoki wa Dinner no Ato de", english: "The Dinner Table Detective", searchTerm: "The Dinner Table Detective" },
+  "슈타인즈 게이트": { malId: 9253, anilistId: "9253", romaji: "Steins;Gate", english: "Steins;Gate", searchTerm: "Steins;Gate" },
+  "스즈메의 문단속": { malId: 50594, anilistId: "142770", romaji: "Suzume no Tojimari", english: "Suzume", searchTerm: "Suzume" },
+  "스즈미야 하루히의 소실": { malId: 7311, anilistId: "7311", romaji: "Suzumiya Haruhi no Shoushitsu", english: "The Disappearance of Haruhi Suzumiya", searchTerm: "The Disappearance of Haruhi Suzumiya" },
+  "스파이 패밀리": { malId: 53887, anilistId: "158927", romaji: "SPY×FAMILY Season 2", english: "SPY x FAMILY Season 2", searchTerm: "SPY x FAMILY Season 2" },
+  "슬램덩크": { malId: 170, anilistId: "170", romaji: "SLAM DUNK", english: "Slam Dunk", searchTerm: "Slam Dunk" },
+  "식극의 소마": { malId: 28171, anilistId: "20923", romaji: "Shokugeki no Souma", english: "Food Wars!", searchTerm: "Food Wars!" },
+  "신비의 제왕": { malId: 49818, anilistId: "137667", romaji: "Guimi Zhi Zhu: Xiaochou Pian", english: "Lord of Mysteries", searchTerm: "Lord of Mysteries" },
+  "신세기 에반게리온": { malId: 30, anilistId: "30", romaji: "Shin Seiki Evangelion", english: "Neon Genesis Evangelion", searchTerm: "Neon Genesis Evangelion" },
+  "신의 탑": { malId: 40221, anilistId: "115230", romaji: "Kami no Tou: Tower of God", english: "Tower of God", searchTerm: "Tower of God" },
+  "신의 탑 2": { malId: 52635, anilistId: "153406", romaji: "Kami no Tou: Tower of God 2nd Season", english: "Tower of God Season 2", searchTerm: "Tower of God Season 2" },
+  "싸움독학": { malId: 58080, anilistId: "174653", romaji: "Kenka Dokugaku", english: "Viral Hit", searchTerm: "Viral Hit" },
+  "쓰르라미 울 적에": { malId: 934, anilistId: "934", romaji: "Higurashi no Naku Koro ni", english: "When They Cry", searchTerm: "When They Cry" },
+  "쓰르라미 울 적에 례": { malId: 3652, anilistId: "3652", romaji: "Higurashi no Naku Koro ni Rei", english: "When They Cry Rei", searchTerm: "When They Cry Rei" },
+  "쓰르라미 울 적에 해": { malId: 1889, anilistId: "1889", romaji: "Higurashi no Naku Koro ni Kai", english: "When They Cry Kai", searchTerm: "When They Cry Kai" },
+  "쓰르라미 울 적에 확 -아웃브레이크-": { malId: 16700, anilistId: "16700", romaji: "Higurashi no Naku Koro ni Kaku: Outbreak", english: "", searchTerm: "Higurashi no Naku Koro ni Kaku: Outbreak" },
+  "아마가미 SS": { malId: 8676, anilistId: "8676", romaji: "Amagami SS", english: "Amagami SS", searchTerm: "Amagami SS" },
+  "아카메가 벤다!": { malId: 22199, anilistId: "20613", romaji: "Akame ga Kill!", english: "Akame ga Kill!", searchTerm: "Akame ga Kill!" },
+  "아쿠다마 드라이브": { malId: 41433, anilistId: "116566", romaji: "Akudama Drive", english: "Akudama Drive", searchTerm: "Akudama Drive" },
+  "애플시드": { malId: 937, anilistId: "937", romaji: "Appleseed", english: "Appleseed", searchTerm: "Appleseed" },
+  "약사의 혼잣말": { malId: 54492, anilistId: "161645", romaji: "Kusuriya no Hitorigoto", english: "The Apothecary Diaries", searchTerm: "The Apothecary Diaries" },
+  "어나더": { malId: 11111, anilistId: "11111", romaji: "Another", english: "Another", searchTerm: "Another" },
+  "어느 날 공주가 되어버렸다": { malId: 57353, anilistId: "165530", romaji: "Mofa Gongzhu De Xiao Fannao", english: "The Fated Magical Princess: Who Made Me a Princess", searchTerm: "The Fated Magical Princess: Who Made Me a Princess" },
+  "에로 게임！야한 짓도 게임도 개발 삼매경": { malId: 10779, anilistId: "10779", romaji: "Eroge!: H mo Game mo Kaihatsu Zanmai", english: "Eroge! Sex and Gamedev", searchTerm: "Eroge! Sex and Gamedev" },
+  "오! 나의 여신님": { malId: 50, anilistId: "50", romaji: "Aa! Megami-sama! (TV)", english: "Oh! My Goddess (TV)", searchTerm: "Oh! My Goddess (TV)" },
+  "오버로드": { malId: 29803, anilistId: "20832", romaji: "Overlord", english: "Overlord", searchTerm: "Overlord" },
+  "오버플로우": { malId: 40746, anilistId: "113417", romaji: "Overflow", english: "Overflow", searchTerm: "Overflow" },
+  "오빠는 끝!": { malId: 51678, anilistId: "147864", romaji: "Onii-chan wa Oshimai!", english: "ONIMAI: I'm Now Your Sister!", searchTerm: "ONIMAI: I'm Now Your Sister!" },
+  "외과의사 엘리제": { malId: 54632, anilistId: "162144", romaji: "Gekai Elise", english: "Doctor Elise: The Royal Lady with the Lamp", searchTerm: "Doctor Elise: The Royal Lady with the Lamp" },
+  "요수도시": { malId: 1107, anilistId: "1107", romaji: "Youjuu Toshi", english: "Wicked City", searchTerm: "Wicked City" },
+  "용사 파티에서 쫓겨난 다재무능": { malId: 61128, anilistId: "187264", romaji: "Yuusha Party wo Oidasareta Kiyou Binbou", english: "Jack-of-All-Trades, Party of None", searchTerm: "Jack-of-All-Trades, Party of None" },
+  "용사형에 처함": { malId: 56009, anilistId: "167152", romaji: "Yuusha Kei ni Shosu: Choubatsu Yuusha 9004-tai Keimu Kiroku", english: "Sentenced to Be a Hero", searchTerm: "Sentenced to Be a Hero" },
+  "우라라 미로첩": { malId: 32924, anilistId: "21696", romaji: "Urara Meirochou", english: "Urara Meirocho", searchTerm: "Urara Meirocho" },
+  "워킹!!": { malId: 6956, anilistId: "6956", romaji: "WORKING!!", english: "Wagnaria!!", searchTerm: "Wagnaria!!" },
+  "원령공주": { malId: 164, anilistId: "164", romaji: "Mononoke-hime", english: "Princess Mononoke", searchTerm: "Princess Mononoke" },
+  "원펀맨": { malId: 30276, anilistId: "21087", romaji: "One Punch Man", english: "One-Punch Man", searchTerm: "One-Punch Man" },
+  "원피스": { malId: 21, anilistId: "21", romaji: "ONE PIECE", english: "ONE PIECE", searchTerm: "ONE PIECE" },
+  "위국일기": { malId: 58788, anilistId: "177385", romaji: "Ikoku Nikki", english: "Journal with Witch", searchTerm: "Journal with Witch" },
+  "은하 특급 밀키★서브웨이": { malId: 61274, anilistId: "189069", romaji: "Ginga Tokkyuu Milky☆Subway", english: "Milky☆Subway: The Galactic Limited Express", searchTerm: "Milky☆Subway: The Galactic Limited Express" },
+  "은혼": { malId: 918, anilistId: "918", romaji: "Gintama", english: "Gintama", searchTerm: "Gintama" },
+  "이 멋진 세계에 축복을!": { malId: 30831, anilistId: "21202", romaji: "Kono Subarashii Sekai ni Shukufuku wo!", english: "KONOSUBA -God's blessing on this wonderful world!", searchTerm: "KONOSUBA -God's blessing on this wonderful world!" },
+  "이누야샤": { malId: 249, anilistId: "249", romaji: "Inuyasha", english: "InuYasha", searchTerm: "InuYasha" },
+  "이누야샤 완결편": { malId: 6811, anilistId: "6811", romaji: "Inuyasha: Kanketsu-hen", english: "InuYasha: The Final Act", searchTerm: "InuYasha: The Final Act" },
+  "이두나!": { malId: 54846, anilistId: "156111", romaji: "Aishang Ta De Liyou", english: "The Girl Downstairs", searchTerm: "The Girl Downstairs" },
+  "이브의 시간": { malId: 3167, anilistId: "3167", romaji: "Eve no Jikan: Are you enjoying the time of EVE?", english: "Time of Eve", searchTerm: "Time of Eve" },
+  "이웃집 토토로": { malId: 523, anilistId: "523", romaji: "Tonari no Totoro", english: "My Neighbor Totoro", searchTerm: "My Neighbor Totoro" },
+  "이토 준지: 매니악": { malId: 52031, anilistId: "150653", romaji: "Itou Junji: Maniac", english: "Junji Ito Maniac: Japanese Tales of the Macabre", searchTerm: "Junji Ito Maniac: Japanese Tales of the Macabre" },
+  "장송의 프리렌": { malId: 52991, anilistId: "154587", romaji: "Sousou no Frieren", english: "Frieren: Beyond Journey’s End", searchTerm: "Frieren: Beyond Journey’s End" },
+  "장송의 프리렌 2기": { malId: 59978, anilistId: "182255", romaji: "Sousou no Frieren 2nd Season", english: "Frieren: Beyond Journey’s End Season 2", searchTerm: "Frieren: Beyond Journey’s End Season 2" },
+  "전생했더니 슬라임이었던 건에 대하여": { malId: 37430, anilistId: "101280", romaji: "Tensei Shitara Slime Datta Ken", english: "That Time I Got Reincarnated as a Slime", searchTerm: "That Time I Got Reincarnated as a Slime" },
+  "전지적 독자 시점": { malId: 59230, anilistId: "179068", romaji: "Zenchiteki na Dokusha no Shiten kara", english: "Omniscient Reader", searchTerm: "Omniscient Reader" },
+  "전파녀와 청춘남": { malId: 9379, anilistId: "9379", romaji: "Denpa Onna to Seishun Otoko", english: "Ground Control to Psychoelectric Girl", searchTerm: "Ground Control to Psychoelectric Girl" },
+  "정반대의 너와 나": { malId: 60371, anilistId: "184951", romaji: "Seihantai na Kimi to Boku", english: "You and I Are Polar Opposites", searchTerm: "You and I Are Polar Opposites" },
+  "제로부터 시작하는 마법의 서": { malId: 34176, anilistId: "97682", romaji: "Zero kara Hajimeru Mahou no Sho", english: "Grimoire of Zero", searchTerm: "Grimoire of Zero" },
+  "좋아해도 싫어하는": { malId: 58449, anilistId: "148080", romaji: "Suki demo Kirai na Amanojaku", english: "My Oni Girl", searchTerm: "My Oni Girl" },
+  "주술회전": { malId: 40748, anilistId: "113415", romaji: "Jujutsu Kaisen", english: "JUJUTSU KAISEN", searchTerm: "JUJUTSU KAISEN" },
+  "주식회사 마지루미에": { malId: 57360, anilistId: "171025", romaji: "Kabushiki Gaisha Magi Lumiere", english: "Magilumiere Magical Girls Inc.", searchTerm: "Magilumiere Magical Girls Inc." },
+  "지박소년 하나코 군": { malId: 39534, anilistId: "108463", romaji: "Jibaku Shounen Hanako-kun", english: "Toilet-bound Hanako-kun", searchTerm: "Toilet-bound Hanako-kun" },
+  "진격의 거인": { malId: 16498, anilistId: "16498", romaji: "Shingeki no Kyojin", english: "Attack on Titan", searchTerm: "Attack on Titan" },
+  "진격의 거인 더 파이널 시즌": { malId: 40028, anilistId: "110277", romaji: "Shingeki no Kyojin: The Final Season", english: "Attack on Titan Final Season", searchTerm: "Attack on Titan Final Season" },
+  "천공의 성 라퓨타": { malId: 513, anilistId: "513", romaji: "Tenkuu no Shiro Laputa", english: "Castle in the Sky", searchTerm: "Castle in the Sky" },
+  "천원돌파 그렌라간": { malId: 2001, anilistId: "2001", romaji: "Tengen Toppa Gurren Lagann", english: "Gurren Lagann", searchTerm: "Gurren Lagann" },
+  "청의 엑소시스트": { malId: 9919, anilistId: "9919", romaji: "Ao no Exorcist", english: "Blue Exorcist", searchTerm: "Blue Exorcist" },
+  "체인소 맨": { malId: 44511, anilistId: "127230", romaji: "Chainsaw Man", english: "Chainsaw Man", searchTerm: "Chainsaw Man" },
+  "초(超) 가구야 공주!": { malId: 62896, anilistId: "201903", romaji: "Chou Kaguya-hime!", english: "Cosmic Princess Kaguya!", searchTerm: "Cosmic Princess Kaguya!" },
+  "초차원 게임 넵튠 : The Animation": { malId: 16157, anilistId: "16157", romaji: "Choujigen Game Neptune THE ANIMATION", english: "Hyperdimension Neptunia", searchTerm: "Hyperdimension Neptunia" },
+  "촌구석 아저씨, 검성이 되다": { malId: 59452, anilistId: "179955", romaji: "Katainaka no Ossan, Kensei ni Naru", english: "From Old Country Bumpkin to Master Swordsman", searchTerm: "From Old Country Bumpkin to Master Swordsman" },
+  "친구게임": { malId: 50273, anilistId: "141014", romaji: "Tomodachi Game", english: "Tomodachi Game", searchTerm: "Tomodachi Game" },
+  "카드캡터 체리": { malId: 232, anilistId: "232", romaji: "Cardcaptor Sakura", english: "Cardcaptor Sakura", searchTerm: "Cardcaptor Sakura" },
+  "카야는 무섭지 않아": { malId: 60223, anilistId: "183660", romaji: "Kaya-chan wa Kowakunai", english: "Kaya-chan Isn't Scary", searchTerm: "Kaya-chan Isn't Scary" },
+  "카우보이 비밥": { malId: 1, anilistId: "1", romaji: "Cowboy Bebop", english: "Cowboy Bebop", searchTerm: "Cowboy Bebop" },
+  "케이온!": { malId: 5680, anilistId: "5680", romaji: "K-ON!", english: "K-ON!", searchTerm: "K-ON!" },
+  "케이온!!": { malId: 7791, anilistId: "7791", romaji: "K-ON!!", english: "K-ON! Season 2", searchTerm: "K-ON! Season 2" },
+  "코드 기아스 반역의 를르슈": { malId: 1575, anilistId: "1575", romaji: "Code Geass: Hangyaku no Lelouch", english: "Code Geass: Lelouch of the Rebellion", searchTerm: "Code Geass: Lelouch of the Rebellion" },
+  "코드 기아스 반역의 를르슈 R2": { malId: 2904, anilistId: "2904", romaji: "Code Geass: Hangyaku no Lelouch R2", english: "Code Geass: Lelouch of the Rebellion R2", searchTerm: "Code Geass: Lelouch of the Rebellion R2" },
+  "클라나드": { malId: 2167, anilistId: "2167", romaji: "CLANNAD", english: "Clannad", searchTerm: "Clannad" },
+  "클라나드 ~After Story~": { malId: 4181, anilistId: "4181", romaji: "CLANNAD: After Story", english: "Clannad: After Story", searchTerm: "Clannad: After Story" },
+  "터미네이터 제로": { malId: 59390, anilistId: "177814", romaji: "Terminator 0", english: "TERMINATOR ZERO", searchTerm: "TERMINATOR ZERO" },
+  "템빨": { malId: 64340, anilistId: "212888", romaji: "Tempal: Item no Chikara", english: "Overgeared", searchTerm: "Overgeared" },
+  "토라도라!": { malId: 4224, anilistId: "4224", romaji: "Toradora!", english: "Toradora!", searchTerm: "Toradora!" },
+  "토지마 탄자부로는 가면라이더가 되고 싶어": { malId: 61159, anilistId: "187464", romaji: "Toujima Tanzaburou wa Kamen Rider ni Naritai", english: "Tojima Wants to Be a Kamen Rider", searchTerm: "Tojima Wants to Be a Kamen Rider" },
+  "트라이건": { malId: 6, anilistId: "6", romaji: "TRIGUN", english: "Trigun", searchTerm: "Trigun" },
+  "페어리 테일": { malId: 6702, anilistId: "6702", romaji: "FAIRY TAIL", english: "Fairy Tail", searchTerm: "Fairy Tail" },
+  "포켓몬스터 DP": { malId: 1565, anilistId: "1565", romaji: "Pocket Monsters Diamond & Pearl", english: "Pokémon the Series: Diamond and Pearl", searchTerm: "Pokémon the Series: Diamond and Pearl" },
+  "포켓몬스터 베스트위시2 에피소드 N": { malId: 17115, anilistId: "17115", romaji: "Pocket Monsters Best Wishes! Season 2: Episode N", english: "Pokémon BW: Adventures in Unova", searchTerm: "Pokémon BW: Adventures in Unova" },
+  "표류단지": { malId: 49938, anilistId: "139643", romaji: "Ame wo Tsugeru Hyouryuu Danchi", english: "Drifting Home", searchTerm: "Drifting Home" },
+  "푸른 상자": { malId: 57181, anilistId: "170942", romaji: "Ao no Hako", english: "Blue Box", searchTerm: "Blue Box" },
+  "프리즘 윤무곡": { malId: 63019, anilistId: "202955", romaji: "Prism Rondo", english: "Love Through A Prism", searchTerm: "Love Through A Prism" },
+  "하울의 움직이는 성": { malId: 431, anilistId: "431", romaji: "Howl no Ugoku Shiro", english: "Howl‘s Moving Castle", searchTerm: "Howl‘s Moving Castle" },
+  "하이큐!!": { malId: 20583, anilistId: "20464", romaji: "Haikyuu!!", english: "HAIKYU!!", searchTerm: "HAIKYU!!" },
+  "한마 바키 VS 켄간 아슈라": { malId: 58510, anilistId: "176287", romaji: "Hanma Baki VS Kengan Ashura", english: "Baki Hanma VS Kengan Ashura", searchTerm: "Baki Hanma VS Kengan Ashura" },
+  "헌터×헌터": { malId: 11061, anilistId: "11061", romaji: "HUNTER×HUNTER (2011)", english: "Hunter x Hunter (2011)", searchTerm: "Hunter x Hunter (2011)" },
+  "형수는 양마마 수유중": { malId: 41261, anilistId: "115138", romaji: "Ane wa Yanmama Junyuu-chuu", english: "", searchTerm: "Ane wa Yanmama Junyuu-chuu" },
+  "흑집사 1기": { malId: 4898, anilistId: "4898", romaji: "Kuroshitsuji", english: "Black Butler", searchTerm: "Black Butler" },
+  "흑집사 2기": { malId: 6707, anilistId: "6707", romaji: "Kuroshitsuji II", english: "Black Butler II", searchTerm: "Black Butler II" },
+  "흑집사 Book of Circus": { malId: 22145, anilistId: "20606", romaji: "Kuroshitsuji: Book of Circus", english: "Black Butler: Book of Circus", searchTerm: "Black Butler: Book of Circus" },
+  "히카루가 죽은 여름": { malId: 58913, anilistId: "177689", romaji: "Hikaru ga Shinda Natsu", english: "The Summer Hikaru Died", searchTerm: "The Summer Hikaru Died" },
+  "히카루의 바둑": { malId: 135, anilistId: "135", romaji: "Hikaru no Go", english: "Hikaru no Go", searchTerm: "Hikaru no Go" },
+});
+
+const NORMALIZED = new Map();
+for (const [title, entry] of Object.entries(KOREAN_TITLE_INDEX)) {
+  NORMALIZED.set(normalizeTitleKey(title), { title, ...entry });
+}
+const KEYS = [...NORMALIZED.keys()];
+
+function normalizeTitleKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+    .replace(/시즌\d+|season\d+/g, '');
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+function similarity(a, b) {
+  const maxLen = Math.max(a.length, b.length);
+  if (!maxLen) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+/**
+ * 한국어 제목으로 인덱스 항목을 찾습니다.
+ * @returns object|null 인덱스 항목 (title, malId, anilistId, romaji, english, searchTerm)
+ */
+function findKoreanTitleEntry(query, threshold = 0.72) {
+  const normalized = normalizeTitleKey(query);
+  if (!normalized || !KEYS.length) return null;
+  const exact = NORMALIZED.get(normalized);
+  if (exact) return exact;
+  let best = null;
+  let bestScore = 0;
+  for (const key of KEYS) {
+    const score = similarity(normalized, key);
+    if (score > bestScore) {
+      bestScore = score;
+      best = NORMALIZED.get(key) || null;
+    }
+  }
+  return bestScore >= threshold ? best : null;
+}
+
+return { KOREAN_TITLE_INDEX, findKoreanTitleEntry, normalizeTitleKey };
+})();
+const { KOREAN_TITLE_INDEX, findKoreanTitleEntry, normalizeTitleKey } = __ns_data_korean_title_index_js;
 // ===== data/korean-query.js =====
 const __ns_data_korean_query_js = (function() {
 // AI 한국어 검색 후보 생성 (v4.7+)
@@ -2322,16 +2807,9 @@ const { KOREAN_SOURCE_ORDER, createKoreanSourceResolver, lookupKoreanSource } = 
 // ===== korean-titles-db (inlined) =====
 setKoreanTitlesDb({
   "version": 2,
-  "generatedAt": "2026-11-04",
-  "count": 200,
+  "generatedAt": "2026-11-07",
+  "count": 180,
   "entries": {
-    "16498": {
-      "anilistId": 16498,
-      "malId": 16498,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
     "101922": {
       "anilistId": 101922,
       "malId": 38000,
@@ -2346,13 +2824,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "confidence": 1.0
     },
-    "1535": {
-      "anilistId": 1535,
-      "malId": 1535,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
     "21459": {
       "anilistId": 21459,
       "malId": 31964,
@@ -2360,82 +2831,12 @@ setKoreanTitlesDb({
       "source": "anilist",
       "confidence": 1.0
     },
-    "11061": {
-      "anilistId": 11061,
-      "malId": 11061,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "21087": {
-      "anilistId": 21087,
-      "malId": 30276,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "21": {
-      "anilistId": 21,
-      "malId": 21,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20605": {
-      "anilistId": 20605,
-      "malId": 22319,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20958": {
-      "anilistId": 20958,
-      "malId": 25777,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "5114": {
-      "anilistId": 5114,
-      "malId": 5114,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20": {
-      "anilistId": 20,
-      "malId": 20,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "11757": {
-      "anilistId": 11757,
-      "malId": 11757,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20954": {
-      "anilistId": 20954,
-      "malId": 28851,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
     "21519": {
       "anilistId": 21519,
       "malId": 32281,
       "title": "너의 이름은.",
       "source": "anilist",
       "confidence": 1.0
-    },
-    "99147": {
-      "anilistId": 99147,
-      "malId": 35760,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
     },
     "21856": {
       "anilistId": 21856,
@@ -2458,101 +2859,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "confidence": 1.0
     },
-    "101759": {
-      "anilistId": 101759,
-      "malId": 37779,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20755": {
-      "anilistId": 20755,
-      "malId": 24833,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "21507": {
-      "anilistId": 21507,
-      "malId": 32182,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "21355": {
-      "anilistId": 21355,
-      "malId": 31240,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20665": {
-      "anilistId": 20665,
-      "malId": 23273,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "104578": {
-      "anilistId": 104578,
-      "malId": 38524,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "1735": {
-      "anilistId": 1735,
-      "malId": 1735,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "21234": {
-      "anilistId": 21234,
-      "malId": 31043,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "100166": {
-      "anilistId": 100166,
-      "malId": 36456,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "9253": {
-      "anilistId": 9253,
-      "malId": 9253,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "97940": {
-      "anilistId": 97940,
-      "malId": 34572,
-      "title": null,
-      "source": "none",
-      "confidence": 0.0
-    },
-    "20464": {
-      "anilistId": 20464,
-      "malId": 20583,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "101291": {
-      "anilistId": 101291,
-      "malId": 37450,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "140960": {
       "anilistId": 140960,
       "malId": 50265,
@@ -2562,123 +2868,6 @@ setKoreanTitlesDb({
       "overviewSource": "none",
       "confidence": 1.0
     },
-    "101921": {
-      "anilistId": 101921,
-      "malId": 37999,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "105333": {
-      "anilistId": 105333,
-      "malId": 38691,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "101348": {
-      "anilistId": 101348,
-      "malId": 37521,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21827": {
-      "anilistId": 21827,
-      "malId": 33352,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "124080": {
-      "anilistId": 124080,
-      "malId": 42897,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "4224": {
-      "anilistId": 4224,
-      "malId": 4224,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "19815": {
-      "anilistId": 19815,
-      "malId": 19815,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20613": {
-      "anilistId": 20613,
-      "malId": 22199,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20447": {
-      "anilistId": 20447,
-      "malId": 20507,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "104276": {
-      "anilistId": 104276,
-      "malId": 38408,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20789": {
-      "anilistId": 20789,
-      "malId": 23755,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "269": {
-      "anilistId": 269,
-      "malId": 269,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21202": {
-      "anilistId": 21202,
-      "malId": 30831,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "112151": {
       "anilistId": 112151,
       "malId": 40456,
@@ -2687,51 +2876,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "overviewSource": "none",
       "confidence": 1.0
-    },
-    "1575": {
-      "anilistId": 1575,
-      "malId": 1575,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "99423": {
-      "anilistId": 99423,
-      "malId": 35849,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20623": {
-      "anilistId": 20623,
-      "malId": 22535,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "145064": {
-      "anilistId": 145064,
-      "malId": 51009,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "30": {
-      "anilistId": 30,
-      "malId": 30,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "154587": {
       "anilistId": 154587,
@@ -2751,33 +2895,6 @@ setKoreanTitlesDb({
       "overviewSource": "none",
       "confidence": 1.0
     },
-    "105310": {
-      "anilistId": 105310,
-      "malId": 38671,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "199": {
-      "anilistId": 199,
-      "malId": 199,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "14719": {
-      "anilistId": 14719,
-      "malId": 14719,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "1": {
       "anilistId": 1,
       "malId": 1,
@@ -2786,69 +2903,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "overviewSource": "none",
       "confidence": 1.0
-    },
-    "97668": {
-      "anilistId": 97668,
-      "malId": 34134,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "101280": {
-      "anilistId": 101280,
-      "malId": 37430,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20931": {
-      "anilistId": 20931,
-      "malId": 28223,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "108465": {
-      "anilistId": 108465,
-      "malId": 39535,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "99263": {
-      "anilistId": 99263,
-      "malId": 35790,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "9919": {
-      "anilistId": 9919,
-      "malId": 9919,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "98314": {
-      "anilistId": 98314,
-      "malId": 34933,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "151807": {
       "anilistId": 151807,
@@ -2859,240 +2913,6 @@ setKoreanTitlesDb({
       "overviewSource": "none",
       "confidence": 1.0
     },
-    "20594": {
-      "anilistId": 20594,
-      "malId": 21881,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "98659": {
-      "anilistId": 98659,
-      "malId": 35507,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "101338": {
-      "anilistId": 101338,
-      "malId": 37510,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "120120": {
-      "anilistId": 120120,
-      "malId": 42249,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "131681": {
-      "anilistId": 131681,
-      "malId": 48583,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "6547": {
-      "anilistId": 6547,
-      "malId": 6547,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "131573": {
-      "anilistId": 131573,
-      "malId": 48561,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "112641": {
-      "anilistId": 112641,
-      "malId": 40591,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "132405": {
-      "anilistId": 132405,
-      "malId": 48736,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20997": {
-      "anilistId": 20997,
-      "malId": 28999,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "10620": {
-      "anilistId": 10620,
-      "malId": 10620,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21311": {
-      "anilistId": 21311,
-      "malId": 31478,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "117193": {
-      "anilistId": 117193,
-      "malId": 41587,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "18679": {
-      "anilistId": 18679,
-      "malId": 18679,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20850": {
-      "anilistId": 20850,
-      "malId": 27899,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20832": {
-      "anilistId": 20832,
-      "malId": 29803,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "97986": {
-      "anilistId": 97986,
-      "malId": 34599,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20923": {
-      "anilistId": 20923,
-      "malId": 28171,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "120377": {
-      "anilistId": 120377,
-      "malId": 42310,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20992": {
-      "anilistId": 20992,
-      "malId": 28891,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "20920": {
-      "anilistId": 20920,
-      "malId": 28121,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "15809": {
-      "anilistId": 15809,
-      "malId": 15809,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "3588": {
-      "anilistId": 3588,
-      "malId": 3588,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "9989": {
-      "anilistId": 9989,
-      "malId": 9989,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "171018": {
-      "anilistId": 171018,
-      "malId": 57334,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "11111": {
-      "anilistId": 11111,
-      "malId": 11111,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "108632": {
       "anilistId": 108632,
       "malId": 39587,
@@ -3102,105 +2922,6 @@ setKoreanTitlesDb({
       "overviewSource": "none",
       "confidence": 1.0
     },
-    "14813": {
-      "anilistId": 14813,
-      "malId": 14813,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "2001": {
-      "anilistId": 2001,
-      "malId": 2001,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "6702": {
-      "anilistId": 6702,
-      "malId": 6702,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21699": {
-      "anilistId": 21699,
-      "malId": 32937,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "99750": {
-      "anilistId": 99750,
-      "malId": 36098,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "145139": {
-      "anilistId": 145139,
-      "malId": 51019,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "101347": {
-      "anilistId": 101347,
-      "malId": 37520,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21170": {
-      "anilistId": 21170,
-      "malId": 30654,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "128893": {
-      "anilistId": 128893,
-      "malId": 46569,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "2904": {
-      "anilistId": 2904,
-      "malId": 2904,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "431": {
-      "anilistId": 431,
-      "malId": 431,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "129874": {
       "anilistId": 129874,
       "malId": 49926,
@@ -3209,24 +2930,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "overviewSource": "none",
       "confidence": 1.0
-    },
-    "21698": {
-      "anilistId": 21698,
-      "malId": 32935,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
-    "21804": {
-      "anilistId": 21804,
-      "malId": 33255,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "106286": {
       "anilistId": 106286,
@@ -3261,15 +2964,6 @@ setKoreanTitlesDb({
       "withheldTitle": "중이병에서도 사랑하고 싶다!",
       "withheld": "machine-translation"
     },
-    "98460": {
-      "anilistId": 98460,
-      "malId": 35120,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "12189": {
       "anilistId": 12189,
       "malId": 12189,
@@ -3278,15 +2972,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "overviewSource": "none",
       "confidence": 1.0
-    },
-    "10087": {
-      "anilistId": 10087,
-      "malId": 10087,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "20474": {
       "anilistId": 20474,
@@ -3568,15 +3253,6 @@ setKoreanTitlesDb({
       "confidence": 0.0,
       "withheldTitle": "노라가미 ARAGOTO",
       "withheld": "machine-translation"
-    },
-    "100388": {
-      "anilistId": 100388,
-      "malId": 36649,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "113813": {
       "anilistId": 113813,
@@ -4061,15 +3737,6 @@ setKoreanTitlesDb({
       "withheldTitle": "몹 사이코 100 Ⅲ",
       "withheld": "machine-translation"
     },
-    "19603": {
-      "anilistId": 19603,
-      "malId": 22297,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
-    },
     "145545": {
       "anilistId": 145545,
       "malId": 51096,
@@ -4122,15 +3789,6 @@ setKoreanTitlesDb({
       "source": "anilist",
       "overviewSource": "none",
       "confidence": 1.0
-    },
-    "21049": {
-      "anilistId": 21049,
-      "malId": 30015,
-      "title": null,
-      "overview": null,
-      "source": "none",
-      "overviewSource": "none",
-      "confidence": 0.0
     },
     "813": {
       "anilistId": 813,
@@ -4206,11 +3864,704 @@ setKoreanTitlesDb({
       "confidence": 0.0,
       "withheldTitle": "하이큐!! TO THE TOP 2",
       "withheld": "machine-translation"
+    },
+    "158927": {
+      "anilistId": 158927,
+      "malId": 53887,
+      "title": "스파이 패밀리",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "108463": {
+      "anilistId": 108463,
+      "malId": 39534,
+      "title": "지박소년 하나코 군",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "182255": {
+      "anilistId": 182255,
+      "malId": 59978,
+      "title": "장송의 프리렌 2기",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "153518": {
+      "anilistId": 153518,
+      "malId": 52701,
+      "title": "던전밥",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "177709": {
+      "anilistId": 177709,
+      "malId": 58939,
+      "title": "사카모토 데이즈",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "934": {
+      "anilistId": 934,
+      "malId": 934,
+      "title": "쓰르라미 울 적에",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "249": {
+      "anilistId": 249,
+      "malId": 249,
+      "title": "이누야샤",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "141014": {
+      "anilistId": 141014,
+      "malId": 50273,
+      "title": "친구게임",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "7791": {
+      "anilistId": 7791,
+      "malId": 7791,
+      "title": "케이온!!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "167152": {
+      "anilistId": 167152,
+      "malId": 56009,
+      "title": "용사형에 처함",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "116566": {
+      "anilistId": 116566,
+      "malId": 41433,
+      "title": "아쿠다마 드라이브",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "153152": {
+      "anilistId": 153152,
+      "malId": 52578,
+      "title": "내 마음의 위험한 녀석",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "170942": {
+      "anilistId": 170942,
+      "malId": 57181,
+      "title": "푸른 상자",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "112609": {
+      "anilistId": 112609,
+      "malId": 40571,
+      "title": "마녀의 여행",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "7311": {
+      "anilistId": 7311,
+      "malId": 7311,
+      "title": "스즈미야 하루히의 소실",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "177689": {
+      "anilistId": 177689,
+      "malId": 58913,
+      "title": "히카루가 죽은 여름",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "166794": {
+      "anilistId": 166794,
+      "malId": 55866,
+      "title": "손끝과 연연",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "184951": {
+      "anilistId": 184951,
+      "malId": 60371,
+      "title": "정반대의 너와 나",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "4081": {
+      "anilistId": 4081,
+      "malId": 4081,
+      "title": "나츠메 우인장",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "153406": {
+      "anilistId": 153406,
+      "malId": 52635,
+      "title": "신의 탑 2",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "15315": {
+      "anilistId": 15315,
+      "malId": 15315,
+      "title": "문제아들이 이세계에서 온다는 모양인데요?",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "137667": {
+      "anilistId": 137667,
+      "malId": 49818,
+      "title": "신비의 제왕",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "16662": {
+      "anilistId": 16662,
+      "malId": 16662,
+      "title": "바람은 분다",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "232": {
+      "anilistId": 232,
+      "malId": 232,
+      "title": "카드캡터 체리",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "6707": {
+      "anilistId": 6707,
+      "malId": 6707,
+      "title": "흑집사 2기",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "6956": {
+      "anilistId": 6956,
+      "malId": 6956,
+      "title": "워킹!!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "1889": {
+      "anilistId": 1889,
+      "malId": 1889,
+      "title": "쓰르라미 울 적에 해",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "8676": {
+      "anilistId": 8676,
+      "malId": 8676,
+      "title": "아마가미 SS",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "179955": {
+      "anilistId": 179955,
+      "malId": 59452,
+      "title": "촌구석 아저씨, 검성이 되다",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "20606": {
+      "anilistId": 20606,
+      "malId": 22145,
+      "title": "흑집사 Book of Circus",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "416": {
+      "anilistId": 416,
+      "malId": 416,
+      "title": "붉은 돼지",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "163142": {
+      "anilistId": 163142,
+      "malId": 54852,
+      "title": "귀환자의 마법은 특별해야 합니다",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "147864": {
+      "anilistId": 147864,
+      "malId": 51678,
+      "title": "오빠는 끝!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "170": {
+      "anilistId": 170,
+      "malId": 170,
+      "title": "슬램덩크",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "187264": {
+      "anilistId": 187264,
+      "malId": 61128,
+      "title": "용사 파티에서 쫓겨난 다재무능",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "151847": {
+      "anilistId": 151847,
+      "malId": 52308,
+      "title": "그녀가 공작저로 가야 했던 사정",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "9379": {
+      "anilistId": 9379,
+      "malId": 9379,
+      "title": "전파녀와 청춘남",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "97682": {
+      "anilistId": 97682,
+      "malId": 34176,
+      "title": "제로부터 시작하는 마법의 서",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "101972": {
+      "anilistId": 101972,
+      "malId": 37208,
+      "title": "마도조사",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "178533": {
+      "anilistId": 178533,
+      "malId": 59145,
+      "title": "란마1/2",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "164212": {
+      "anilistId": 164212,
+      "malId": 55102,
+      "title": "걸즈 밴드 크라이",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "109979": {
+      "anilistId": 109979,
+      "malId": 36699,
+      "title": "그대들은 어떻게 살 것인가",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "201903": {
+      "anilistId": 201903,
+      "malId": 62896,
+      "title": "초(超) 가구야 공주!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "212888": {
+      "anilistId": 212888,
+      "malId": 64340,
+      "title": "템빨",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "177385": {
+      "anilistId": 177385,
+      "malId": 58788,
+      "title": "위국일기",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "180746": {
+      "anilistId": 180746,
+      "malId": 59711,
+      "title": "사망 유희로 밥을 먹는다.",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "6811": {
+      "anilistId": 6811,
+      "malId": 6811,
+      "title": "이누야샤 완결편",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "158539": {
+      "anilistId": 158539,
+      "malId": 53149,
+      "title": "외모지상주의",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "113231": {
+      "anilistId": 113231,
+      "malId": 40679,
+      "title": "2.43 세인고교 남자 배구부",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "3652": {
+      "anilistId": 3652,
+      "malId": 3652,
+      "title": "쓰르라미 울 적에 례",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "162144": {
+      "anilistId": 162144,
+      "malId": 54632,
+      "title": "외과의사 엘리제",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "1565": {
+      "anilistId": 1565,
+      "malId": 1565,
+      "title": "포켓몬스터 DP",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "184356": {
+      "anilistId": 184356,
+      "malId": 63316,
+      "title": "도굴왕",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "202955": {
+      "anilistId": 202955,
+      "malId": 63019,
+      "title": "프리즘 윤무곡",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "3167": {
+      "anilistId": 3167,
+      "malId": 3167,
+      "title": "이브의 시간",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "174653": {
+      "anilistId": 174653,
+      "malId": 58080,
+      "title": "싸움독학",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "16157": {
+      "anilistId": 16157,
+      "malId": 16157,
+      "title": "초차원 게임 넵튠 : The Animation",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "21696": {
+      "anilistId": 21696,
+      "malId": 32924,
+      "title": "우라라 미로첩",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "113417": {
+      "anilistId": 113417,
+      "malId": 40746,
+      "title": "오버플로우",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "170206": {
+      "anilistId": 170206,
+      "malId": null,
+      "title": "스콧 필그림, 날아오르다!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "139643": {
+      "anilistId": 139643,
+      "malId": 49938,
+      "title": "표류단지",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "172192": {
+      "anilistId": 172192,
+      "malId": 57612,
+      "title": "귀환자의 마법은 특별해야 합니다",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "184694": {
+      "anilistId": 184694,
+      "malId": 59841,
+      "title": "나 혼자만 레벨업 -ReAwakening-",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "179068": {
+      "anilistId": 179068,
+      "malId": 59230,
+      "title": "전지적 독자 시점",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "165530": {
+      "anilistId": 165530,
+      "malId": 57353,
+      "title": "어느 날 공주가 되어버렸다",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "150653": {
+      "anilistId": 150653,
+      "malId": 52031,
+      "title": "이토 준지: 매니악",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "135": {
+      "anilistId": 135,
+      "malId": 135,
+      "title": "히카루의 바둑",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "167820": {
+      "anilistId": 167820,
+      "malId": 56146,
+      "title": "굿 나이트 월드",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "187464": {
+      "anilistId": 187464,
+      "malId": 61159,
+      "title": "토지마 탄자부로는 가면라이더가 되고 싶어",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "156111": {
+      "anilistId": 156111,
+      "malId": 54846,
+      "title": "이두나!",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "50": {
+      "anilistId": 50,
+      "malId": 50,
+      "title": "오! 나의 여신님",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "140499": {
+      "anilistId": 140499,
+      "malId": 50183,
+      "title": "블루 자이언트",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "183660": {
+      "anilistId": 183660,
+      "malId": 60223,
+      "title": "카야는 무섭지 않아",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "150654": {
+      "anilistId": 150654,
+      "malId": 38903,
+      "title": "문라이즈",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "151117": {
+      "anilistId": 151117,
+      "malId": 52107,
+      "title": "극장판 모노노케: 우중망령",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "1004": {
+      "anilistId": 1004,
+      "malId": 1004,
+      "title": "그녀와 그녀의 고양이",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
+    },
+    "158895": {
+      "anilistId": 158895,
+      "malId": 53881,
+      "title": "명일방주: 서리 속의 죽음",
+      "overview": null,
+      "source": "anilist",
+      "overviewSource": "none",
+      "confidence": 1.0
     }
   },
   "policy": "verified-only",
   "sanitizedAt": "2026-11-04",
-  "verifiedCount": 32
+  "verifiedCount": 109
 });
 // ===== app.js =====
 
@@ -4230,7 +4581,8 @@ setKoreanTitlesDb({
 
 
 
-const APP_VERSION = '4.7.2';
+
+const APP_VERSION = '4.7.3';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -4324,7 +4676,7 @@ function localDate(unix){ if(!unix) return '일정 미정'; return new Intl.Date
 function currentSeason(){ const m = new Date().getMonth()+1; return (m===12 || m<=2)?'WINTER':m<=5?'SPRING':m<=8?'SUMMER':'FALL'; }
 function seasonLabel(s){ return ({WINTER:'겨울',SPRING:'봄',SUMMER:'여름',FALL:'가을'}[s] || s || ''); }
 function dateRange(year){ return {startGreater: year*10000, startLesser:(year+1)*10000}; }
-function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;$('#toast-root').append(node);setTimeout(()=>node.remove(),3300); }
+function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;node.setAttribute('role', type==='error'?'alert':'status');node.setAttribute('aria-live', type==='error'?'assertive':'polite');node.setAttribute('aria-atomic','true');$('#toast-root').append(node);setTimeout(()=>node.remove(), type==='error'?5000:3300); }
 function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state" role="status" aria-live="polite"><div class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><strong>${esc(message)}</strong><span>잠시만 기다려 주세요.</span></div>`; }
 
 // AniList 요청은 직렬화하고 캐시·재시도·시간 제한을 적용합니다.
@@ -5055,6 +5407,17 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
   try{
     data=await fetchAnimeList(requestFilters);
   }catch(error){lastError=error;}
+  // 한국어 공통/검증 제목 인덱스: "원령공주"처럼 한국어 제목을 AniList 질의어로 변환합니다.
+  if((!data||!data.media?.length)&&query&&hasHangul(query)){
+    const entry=findKoreanTitleEntry(query);
+    if(entry?.searchTerm){
+      try{
+        const retry=await fetchAnimeListSimple({page,perPage:50,search:entry.searchTerm,sort:requestFilters.sort,forceRefresh:true});
+        const filtered=filterClientMedia(retry.media,f);
+        if(filtered.length){data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;}
+      }catch(error){if(!lastError)lastError=error;}
+    }
+  }
   // If the complex filter query fails or returns no matches, retry with a minimal query and apply filters locally.
   if((!data||!data.media?.length)&&query&&hasHangul(query)){
     try{
@@ -5110,7 +5473,13 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
     }catch(error){if(!lastError)lastError=error;}
   }
   if(!data){target.innerHTML=`<div class="empty-state"><strong>검색에 실패했습니다.</strong><span>${esc(lastError?.message||'데이터 제공처에 연결할 수 없습니다.')}</span><br><button class="ghost-button" data-retry="browse">다시 시도</button></div>`;return;}
-  if(!data.media.length){target.innerHTML=`<div class="empty-state"><strong>검색 결과가 없습니다.</strong><span>한국어·영어·일본어 제목을 바꾸거나 다른 검색어를 입력해 보세요.</span></div>`;state.results=[];state.hasNext=false;return;}
+  if(!data.media.length){
+    const q=esc(query||'');
+    const namuUrl=`https://namu.wiki/search/${encodeURIComponent(query||'')}`;
+    const googleUrl=`https://www.google.com/search?q=${encodeURIComponent(`${query||''} 애니`)}`;
+    target.innerHTML=`<div class="empty-state"><strong>검색 결과가 없습니다.</strong><span>한국어·영어·일본어 제목을 바꾸거나 다른 검색어를 입력해 보세요.</span>${q?`<div class="empty-actions"><a class="ghost-button" href="${esc(namuUrl)}" target="_blank" rel="noopener">나무위키에서 “${q}” 검색</a><a class="ghost-button" href="${esc(googleUrl)}" target="_blank" rel="noopener">구글에서 검색</a></div>`:''}</div>`;
+    state.results=[];state.hasNext=false;return;
+  }
   state.hasNext=!!data.pageInfo.hasNextPage;state.page=page;state.results=append?[...state.results,...data.media]:data.media;
   const sortLabel=SORT_OPTIONS.find(x=>x[0]===(f.sort||'POPULARITY_DESC'))?.[1]||'인기순';
   const statusLabel=RELEASE_FILTERS.find(x=>x[0]===(f.status||''))?.[1]||'전체';
@@ -5458,7 +5827,8 @@ function addMediaToCollection(collectionId,media){
 }
 function removeMediaFromCollection(collectionId,mediaId){
   const collection=state.collections.find(x=>x.id===collectionId);if(!collection)return;
-  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==String(mediaId));collection.items=(collection.items||[]).filter(x=>String(x.id)!==String(mediaId));collection.updatedAt=new Date().toISOString();saveCollections();renderCollectionDetail(collectionId);toast('컬렉션에서 작품을 제거했습니다.');
+  const removed=(collection.items||[]).find(x=>String(x.id)===String(mediaId));
+  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==String(mediaId));collection.items=(collection.items||[]).filter(x=>String(x.id)!==String(mediaId));collection.updatedAt=new Date().toISOString();saveCollections();renderCollectionDetail(collectionId);toast(`${josa(localizedTitle(removed||{id:mediaId}),'object')} 컬렉션에서 제거했습니다.`);
 }
 function deleteCollectionById(id){
   const collection=state.collections.find(x=>x.id===id);if(!collection||!confirm(`'${collection.name}' 컬렉션을 삭제할까요? 보관함 작품은 삭제되지 않습니다.`))return;
@@ -5484,7 +5854,7 @@ function updateWatchlistItem(id){
   const status=$(`[data-watch-status="${CSS.escape(String(id))}"]`);const score=$(`[data-watch-score="${CSS.escape(String(id))}"]`);
   if(status)item.status=status.value;
   if(score&&score.value!==''){const value=Number(score.value);if(!Number.isFinite(value)||value<0||value>10){toast('개인 평점은 0~10 사이로 입력해 주세요.','error');return;}item.score=Math.round(value*10);}else if(score)item.score=null;
-  item.updated_at=new Date().toISOString();saveLocalList();if(state.supabase&&state.user&&!String(id).startsWith('mal:'))syncUpsert(item).catch(e=>toast(`이 기기에는 저장했지만 계정 동기화는 실패했습니다: ${e.message}`,'error'));toast('시청 기록을 저장했습니다.');renderWatchlist();
+  item.updated_at=new Date().toISOString();saveLocalList();if(state.supabase&&state.user&&!String(id).startsWith('mal:'))syncUpsert(item).catch(e=>toast(`이 기기에는 저장했지만 계정 동기화는 실패했습니다: ${e.message}`,'error'));toast(`${josa(localizedTitle(item.media_snapshot||{id}),'object')} 시청 기록에 저장했습니다.`);renderWatchlist();
 }
 function renderStats(){
   const main=$('#main-content');const total=state.watchlist.length;const counts=Object.fromEntries(STATUSES.map(([key])=>[key,state.watchlist.filter(x=>x.status===key).length]));
@@ -5924,7 +6294,16 @@ $('#modal-root').addEventListener('click',async e=>{
 function readRecentSearches(){try{return JSON.parse(localStorage.getItem('animehub_recent_searches')||'[]');}catch{return [];}}
 function clearRecentSearches(){localStorage.removeItem('animehub_recent_searches');updateSearchSuggestions();toast('최근 검색어를 지웠습니다.');}
 function saveRecentSearch(q){q=String(q||'').trim();if(q.length<2)return;const list=readRecentSearches().filter(x=>x!==q);list.unshift(q);localStorage.setItem('animehub_recent_searches',JSON.stringify(list.slice(0,8)));updateSearchSuggestions();}
-function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;const recent=readRecentSearches();const q=document.getElementById('global-search')?.value||'';const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));dl.innerHTML=[...recent,...aliases].map(v=>`<option value="${esc(v)}"></option>`).join('');}
+function updateSearchSuggestions(){
+  const dl=document.getElementById('search-suggestions');if(!dl)return;
+  const recent=readRecentSearches();
+  const q=document.getElementById('global-search')?.value||'';
+  const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));
+  const needle=normalizeForSearch(q);
+  const common=needle?Object.keys(KOREAN_TITLE_INDEX).filter(title=>normalizeForSearch(title).includes(needle)).slice(0,6):[];
+  const values=[...new Set([...recent,...aliases,...common])];
+  dl.innerHTML=values.map(v=>`<option value="${esc(v)}"></option>`).join('');
+}
 $('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});
 $('#global-search').addEventListener('input',()=>updateSearchSuggestions());
 updateSearchSuggestions();
@@ -5968,9 +6347,13 @@ if(backToTop){
 function applyTheme(theme){
   document.documentElement.classList.toggle('light', theme==='light');
   const btn=document.getElementById('theme-toggle');
-  if(btn) btn.textContent = theme==='light' ? '◑' : '◐';
+  if(btn){btn.textContent = theme==='light' ? '◑' : '◐';btn.setAttribute('aria-label', theme==='light' ? '다크 테마로 전환' : '라이트 테마로 전환');btn.title = theme==='light' ? '다크 테마로 전환' : '라이트 테마로 전환';}
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', theme==='light' ? '#f5f6fa' : '#11131b');
 }
-const savedTheme=localStorage.getItem('animehub_theme_v1')||'dark';
+const storedTheme=localStorage.getItem('animehub_theme_v1');
+const prefersLight=typeof window.matchMedia==='function' && window.matchMedia('(prefers-color-scheme: light)').matches;
+const savedTheme=storedTheme || (prefersLight ? 'light' : 'dark');
 applyTheme(savedTheme);
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}

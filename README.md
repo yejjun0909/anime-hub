@@ -1,4 +1,4 @@
-# 애니허브 v4.7.2
+# 애니허브 v4.7.3
 
 PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 관리 웹앱입니다. 작품 검색, 한국어 메타데이터, 개인 취향 추천, 보관함과 컬렉션을 한 곳에서 관리합니다.
 
@@ -60,6 +60,7 @@ npm run serve
 - AI 후보로 나무위키를 재검색했더라도, 실제 문서가 확인된 경우에만 해당 문서의 제목·소개를 사용합니다.
 - 사전 DB에 남아 있는 기계 번역 항목은 `data/korean-titles-db.js`의 검증 필터에서 제외됩니다. 원본 JSON에는 감사·재검토용으로 `withheldTitle`만 남기고 표시용 `title`은 비웁니다.
 - 검색은 정확히 같은 이름이 아니어도 유사한 이름을 찾도록 퍼지 매칭을 사용합니다.
+- 한국어 제목 인덱스(`data/korean-title-index.js`)는 한국어 제목을 AniList 영어/로마자 제목으로 바꿔 조회합니다. 이 인덱스는 검색 질의 변환에만 쓰이며 표시 출처가 아닙니다.
 
 자세한 기준은 `KOREAN_DATA_POLICY_KO.md`, 구현 배경은 `TRANSLATION_IMPROVEMENT_KO.md`를 참고하세요.
 
@@ -90,6 +91,8 @@ anime-hub/
 │   ├── korean-match.js         # ID 기반 카탈로그 매칭
 │   ├── korean-titles-db.json   # 사전 계산 한국어 제목 DB
 │   ├── korean-titles-db.js     # 검증된 출처만 노출
+│   ├── korean-common-titles.js # MAL ID 기준 국내 통용 표기 시드
+│   ├── korean-title-index.js   # 한국어 제목 → AniList 검색어 인덱스(생성 파일)
 │   ├── korean-query.js         # AI 검색 후보 생성 (표시용 아님)
 │   ├── korean-source.js        # 나무위키 → 위키백과 통합 리졸버
 │   ├── namu-search.js
@@ -100,6 +103,9 @@ anime-hub/
 │   ├── build_single.py         # 단일 HTML 생성/검사
 │   ├── build_korean_catalog.py
 │   ├── build_korean_titles_db.py
+│   ├── build_title_index.py    # 한국어 제목 인덱스 생성
+│   ├── merge_common_titles.py  # 수확 JSON → 공통 제목 병합
+│   ├── build_deploy_zip.py     # 배포용 ZIP 생성
 │   ├── check_korean_catalog.py
 │   └── ...
 ├── tests/
@@ -121,6 +127,21 @@ py tools/build_korean_catalog.py
 
 # 사전 제목 DB 재수집 (확인된 출처만)
 py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
+
+# Jikan이 차단된 환경에서 AniList만으로 재수집
+py tools/build_korean_titles_db.py --limit 3000 --no-jikan --resume
+
+# AniList 수확 JSON 병합 → 공통 제목 확장
+py tools/merge_common_titles.py data/korean-common-titles.harvest*.json
+
+# 한국어 제목 → AniList 검색어 인덱스 재생성
+py tools/build_title_index.py
+
+# 사전 DB에서 빈 항목 정리
+py tools/prune_korean_titles_db.py
+
+# 배포용 ZIP 생성 (사이트 실행 파일만 포함)
+py tools/build_deploy_zip.py
 
 # 단일 HTML 재생성 / 최신 여부 검사
 py tools/build_single.py

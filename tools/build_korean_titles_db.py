@@ -141,7 +141,7 @@ def jikan_korean_title(mal_id):
     return None
 
 
-def build_entry(media, tmdb_token):
+def build_entry(media, tmdb_token, use_jikan=True):
     title = None
     source = "none"
     overview = extract_anilist_overview(media)
@@ -158,7 +158,7 @@ def build_entry(media, tmdb_token):
             source = "anilist"
 
     # 3) MyAnimeList/Jikan 한글 대체 제목
-    if not title:
+    if not title and use_jikan:
         title = jikan_korean_title(media.get("idMal"))
         if title:
             source = "mal"
@@ -184,6 +184,8 @@ def main():
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--tmdb-token", default="", help="TMDB Read Access Token")
     parser.add_argument("--resume", action="store_true", help="기존 DB에 이어서 수집")
+    parser.add_argument("--start-page", type=int, default=1, help="AniList 수집 시작 페이지")
+    parser.add_argument("--no-jikan", action="store_true", help="Jikan 조회를 건너뜁니다(차단 환경용)")
     args = parser.parse_args()
 
     output_path = Path(args.output)
@@ -197,13 +199,15 @@ def main():
     db["policy"] = "verified-only"
 
     entries = db.get("entries", {})
-    page = 1
+    page = max(args.start_page, 1)
     collected = 0
     has_next = True
     target = max(args.limit, 1)
+    use_jikan = not args.no_jikan
 
     print(f"목표: {target}건 수집")
     print(f"TMDB 토큰: {'있음' if args.tmdb_token else '없음'}")
+    print(f"Jikan: {'사용' if use_jikan else '건너뜀'}")
     print("정책: 확인된 출처(AniList/TMDB/MAL)만 저장, 기계 번역 제외")
 
     while collected < target and has_next:
@@ -226,7 +230,7 @@ def main():
 
             label = media.get("title", {}).get("userPreferred") or media.get("title", {}).get("romaji", "")
             print(f"  [{collected+1}/{target}] {label}")
-            entry = build_entry(media, args.tmdb_token)
+            entry = build_entry(media, args.tmdb_token, use_jikan)
             entries[ani_id] = entry
             collected += 1
 

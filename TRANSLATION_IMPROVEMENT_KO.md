@@ -113,3 +113,20 @@ py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
 3. 시즌·극장판·총집편에 원작 제목을 무조건 복사하지 않는 별도 제목 관리
 4. 확인된 한국어 DB의 커버리지를 AniList ID·MAL ID 기준으로 확장
 5. AI 검색 후보의 품질을 로그로 측정하되, 표시 데이터와는 계속 분리
+
+## 8. 한국어 검색 인덱스 (v4.7.3)
+
+한국어 제목을 **표시**하는 것과 별개로, 사용자가 한국어 제목으로 **검색**할 때 네트워크 질의어를 바꾸는 인덱스를 추가했습니다.
+
+- `data/korean-title-index.js`: 한국어 공통/검증 제목 → `{ malId, anilistId, romaji, english, searchTerm }`
+- `findKoreanTitleEntry(query)`: 정확 매칭 우선, 실패 시 유사도 0.72 이상 퍼지 매칭
+- 정규화: 소문자·NFKC·공백/문장부호 제거·`시즌N`/`seasonN` 제거
+- 이 인덱스는 **검색 질의 변환에만** 사용하며, 표시 제목의 출처가 아닙니다.
+- 생성: `py tools/build_title_index.py`
+
+### 커버리지 확장 기록
+
+- AniList 인기순 1~100페이지 수확(2초 간격, 429 재시도)으로 공통 제목 178건 확보
+- `py tools/merge_common_titles.py`로 수확 JSON 병합(카탈로그/기존 ID 제외, MAL ID 정렬)
+- 인덱스 생성 결과 188개 항목(공통 제목 + 카탈로그)
+- Jikan 차단 환경에서는 `py tools/build_korean_titles_db.py --limit 3000 --no-jikan --resume`로 AniList만 수집

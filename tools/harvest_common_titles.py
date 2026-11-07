@@ -31,14 +31,23 @@ query ($page: Int!, $perPage: Int!) {
 }
 """
 
-def post_json(payload):
-    req = urllib.request.Request(
-        ANILIST_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "User-Agent": "anime-hub-harvester/1.0"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as res:
-        return json.loads(res.read().decode("utf-8"))
+def post_json(payload, retries=3):
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            ANILIST_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "anime-hub-harvester/1.0"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as res:
+                return json.loads(res.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < retries - 1:
+                wait = 5 * (attempt + 1)
+                print(f"  429 rate limit, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            raise
 
 def has_hangul(text):
     return any("\uac00" <= ch <= "\ud7a3" for ch in (text or ""))
@@ -77,7 +86,7 @@ def main():
         if not has_next:
             break
         page += 1
-        time.sleep(1)
+        time.sleep(2)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")

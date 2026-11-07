@@ -1,5 +1,42 @@
 # 변경 내역
 
+## v4.7.3 — 한국어 검색 인덱스 · 번역 커버리지 확대 (2026-11-07)
+
+### 한국어 검색
+- `data/korean-title-index.js`를 추가했습니다. 한국어 공통/검증 제목을 AniList 로마자·영어 제목과 연결해, “원령공주”처럼 한국어로 검색해도 AniList에 영어 제목으로 질의합니다.
+- 띄어쓰기·문장부호·시즌 표기를 무시하는 정규화와 유사도 매칭을 적용했습니다. `진격거인`, `귀멸의 칼날 시즌2` 같은 입력도 찾습니다.
+- 검색 자동완성에 한국어 제목 인덱스를 연결했습니다.
+- 검색 결과가 없을 때 나무위키·구글 검색 링크를 제공합니다.
+
+### 한국어 데이터
+- 국내 통용 제목 시드를 65건 → 178건으로 늘렸습니다(AniList 100페이지 수확).
+- `tools/merge_common_titles.py`로 수확 JSON 병합을 자동화했습니다(중복·카탈로그 중복 제외, MAL ID 정렬).
+- `tools/build_title_index.py`로 한국어 제목 → AniList 검색어 인덱스를 재생성할 수 있습니다.
+- `tools/build_korean_titles_db.py`에 `--start-page`, `--no-jikan` 옵션을 추가했습니다. Jikan이 차단된 환경에서도 AniList만으로 DB를 갱신할 수 있습니다.
+
+### 검색 별칭
+- `data/search-aliases.js`의 누락된 쉼표와 중복 항목을 정리했습니다. `tools/clean_search_aliases.py`로 재정리할 수 있습니다.
+- 인기 검색어 59건, 동의어 79건을 유지합니다.
+
+### 테마
+- 첫 방문 시 운영체제의 라이트/다크 설정을 따르고, `theme-color` 메타 태그를 테마에 맞게 갱신합니다.
+- 테마 버튼에 `aria-label`/`title`을 추가했습니다.
+
+### 테스트
+- `tests/korean-title-index.test.mjs`, `tests/korean-title-index.test.html`을 추가했습니다(17개 브라우저 검사).
+- `tests/search-aliases.test.mjs`를 추가했습니다.
+
+### 수정
+- 단일 파일(`anime-hub-single.html`) 빌드에서 `search-aliases.js`, `korean-josa.js`가 빠져 자동완성·조사 처리에서 `ReferenceError`가 나던 문제를 고쳤습니다.
+- `tools/build_single.py`가 `app.js`의 모든 import가 `MODULES`에 있는지 검사하도록 했습니다.
+
+### 배포
+- `tools/build_deploy_zip.py`를 추가했습니다. 사이트 실행 파일만 담은 `anime-hub-deploy.zip`을 재현 가능하게 만들 수 있습니다.
+- `DEPLOY_NO_INSTALL_KO.md`에 Cloudflare Pages 절차를 추가했습니다.
+
+### 버전
+- `APP_VERSION` 4.7.3, `VERSION.txt` 4.7.3, PWA 셸 캐시 `anime-hub-shell-v4-7-3`.
+
 ## v4.7.2 — 애니허브 · 한국어 제목 확대 (2026-11-07)
 
 ### 이름

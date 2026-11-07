@@ -33,10 +33,13 @@ MODULES = [
     "data/sync-merge.js",
     "data/sync-queue.js",
     "data/user-korean.js",
+    "data/search-aliases.js",
+    "data/korean-josa.js",
     "data/machine-translate.js",
     "data/gemini-translate.js",
     "data/korean-titles-db.js",
     "data/korean-common-titles.js",
+    "data/korean-title-index.js",
     "data/korean-query.js",
     "data/fuzzy-search.js",
     "data/namu-search.js",
@@ -82,6 +85,18 @@ def strip_module(src: str) -> str:
 
 
 def build() -> str:
+    app = (ROOT / "app.js").read_text(encoding="utf-8")
+    # app.js가 import하는 모듈이 MODULES에 빠지면 단일 파일에서 ReferenceError가 납니다.
+    imported = {
+        path[2:]
+        for path in re.findall(r"^import\s+.*?from\s+['\"](\./[^'\"]+)['\"]", app, flags=re.MULTILINE)
+    }
+    missing = [path for path in sorted(imported) if path not in MODULES]
+    if missing:
+        raise SystemExit(
+            "실패: tools/build_single.py MODULES에 없는 app.js import가 있습니다: "
+            + ", ".join(missing)
+        )
     js_parts: list[str] = []
     for module in MODULES:
         code = (ROOT / module).read_text(encoding="utf-8")

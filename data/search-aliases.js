@@ -44,7 +44,21 @@ export const POPULAR_SEARCHES = [
   "빈란드 사가",
   "바이올렛 에버가든",
   "원령공주",
-  "명탐정 코난"
+  "명탐정 코난",
+  "카우보이 비밥",
+  "트라이건",
+  "몬스터",
+  "신세기 에반게리온",
+  "베르세르크",
+  "바람의 검심",
+  "카드캡터 체리",
+  "이누야샤",
+  "하울의 움직이는 성",
+  "마녀 배달부 키키",
+  "천공의 성 라퓨타",
+  "이웃집 토토로",
+  "드래곤볼 Z",
+  "블랙 라군"
 ];
 
 export const SEARCH_SYNONYMS = {
@@ -122,27 +136,11 @@ export const SEARCH_SYNONYMS = {
   "바람의 검심": "Rurouni Kenshin",
   "트라이건": "Trigun",
   "몬스터": "Monster",
-  "원령공주": "Princess Mononoke",
-  "센과 치히로의 행방불명": "Spirited Away",
-  "하울의 움직이는 성": "Howl's Moving Castle",
-  "이웃집 토토로": "My Neighbor Totoro",
-  "천공의 성 라퓨타": "Castle in the Sky",
-  "마녀 배달부 키키": "Kiki's Delivery Service",
-  "바람이 분다": "The Wind Rises",
   "귀멸의 칼날: 상현집결": "Demon Slayer: Swordsmith Village",
   "귀멸의 칼날: 무한열차편": "Demon Slayer: Mugen Train",
   "주술회전: 회옥·옥절": "Jujutsu Kaisen: Hidden Inventory",
   "스파이 패밀리 Season 2": "Spy x Family Season 2",
-  "체인소 맨: 레제편": "Chainsaw Man: Reze Arc",
-  "약사의 혼잣말": "The Apothecary Diaries",
-  "던전밥": "Delicious in Dungeon",
-  "나 혼자만 레벨업": "Solo Leveling",
-  "괴수 8호": "Kaiju No. 8",
-  "바이올렛 에버가든": "Violet Evergarden",
-  "빈란드 사가": "Vinland Saga",
-  "닥터 스톤": "Dr. Stone",
-  "날씨의 아이": "Weathering with You",
-  "블리치 천년혈전": "Bleach Thousand-Year Blood War"
+  "체인소 맨: 레제편": "Chainsaw Man: Reze Arc"
 };
 
 export function expandSearchQuery(query) {

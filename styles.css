@@ -166,3 +166,8 @@ button:focus-visible,.pill:focus-visible,.mini-action:focus-visible{outline-offs
 .continue-bar b{font-size:13px;}
 .continue-bar small{opacity:.7;font-size:12px;}
 .continue-bar button{margin-left:auto;}
+
+/* Empty state actions */
+.empty-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;}
+.empty-actions .ghost-button{text-decoration:none;display:inline-flex;align-items:center;}
+html.light .empty-actions .ghost-button{background:var(--panel);color:var(--text);border-color:var(--line);}

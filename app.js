@@ -15,8 +15,9 @@ import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } fr
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
 import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.js';
 import { fuzzyFilter, searchVariants, normalizeForSearch } from './data/fuzzy-search.js';
+import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.7.2';
+const APP_VERSION = '4.7.3';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -110,7 +111,7 @@ function localDate(unix){ if(!unix) return '일정 미정'; return new Intl.Date
 function currentSeason(){ const m = new Date().getMonth()+1; return (m===12 || m<=2)?'WINTER':m<=5?'SPRING':m<=8?'SUMMER':'FALL'; }
 function seasonLabel(s){ return ({WINTER:'겨울',SPRING:'봄',SUMMER:'여름',FALL:'가을'}[s] || s || ''); }
 function dateRange(year){ return {startGreater: year*10000, startLesser:(year+1)*10000}; }
-function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;$('#toast-root').append(node);setTimeout(()=>node.remove(),3300); }
+function toast(message, type=''){ const node=document.createElement('div');node.className='toast '+type;node.textContent=message;node.setAttribute('role', type==='error'?'alert':'status');node.setAttribute('aria-live', type==='error'?'assertive':'polite');node.setAttribute('aria-atomic','true');$('#toast-root').append(node);setTimeout(()=>node.remove(), type==='error'?5000:3300); }
 function setLoading(node, message='불러오는 중...'){ if(node) node.innerHTML=`<div class="empty-state" role="status" aria-live="polite"><div class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><strong>${esc(message)}</strong><span>잠시만 기다려 주세요.</span></div>`; }
 
 // AniList 요청은 직렬화하고 캐시·재시도·시간 제한을 적용합니다.
@@ -841,6 +842,17 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
   try{
     data=await fetchAnimeList(requestFilters);
   }catch(error){lastError=error;}
+  // 한국어 공통/검증 제목 인덱스: "원령공주"처럼 한국어 제목을 AniList 질의어로 변환합니다.
+  if((!data||!data.media?.length)&&query&&hasHangul(query)){
+    const entry=findKoreanTitleEntry(query);
+    if(entry?.searchTerm){
+      try{
+        const retry=await fetchAnimeListSimple({page,perPage:50,search:entry.searchTerm,sort:requestFilters.sort,forceRefresh:true});
+        const filtered=filterClientMedia(retry.media,f);
+        if(filtered.length){data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;}
+      }catch(error){if(!lastError)lastError=error;}
+    }
+  }
   // If the complex filter query fails or returns no matches, retry with a minimal query and apply filters locally.
   if((!data||!data.media?.length)&&query&&hasHangul(query)){
     try{
@@ -896,7 +908,13 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
     }catch(error){if(!lastError)lastError=error;}
   }
   if(!data){target.innerHTML=`<div class="empty-state"><strong>검색에 실패했습니다.</strong><span>${esc(lastError?.message||'데이터 제공처에 연결할 수 없습니다.')}</span><br><button class="ghost-button" data-retry="browse">다시 시도</button></div>`;return;}
-  if(!data.media.length){target.innerHTML=`<div class="empty-state"><strong>검색 결과가 없습니다.</strong><span>한국어·영어·일본어 제목을 바꾸거나 다른 검색어를 입력해 보세요.</span></div>`;state.results=[];state.hasNext=false;return;}
+  if(!data.media.length){
+    const q=esc(query||'');
+    const namuUrl=`https://namu.wiki/search/${encodeURIComponent(query||'')}`;
+    const googleUrl=`https://www.google.com/search?q=${encodeURIComponent(`${query||''} 애니`)}`;
+    target.innerHTML=`<div class="empty-state"><strong>검색 결과가 없습니다.</strong><span>한국어·영어·일본어 제목을 바꾸거나 다른 검색어를 입력해 보세요.</span>${q?`<div class="empty-actions"><a class="ghost-button" href="${esc(namuUrl)}" target="_blank" rel="noopener">나무위키에서 “${q}” 검색</a><a class="ghost-button" href="${esc(googleUrl)}" target="_blank" rel="noopener">구글에서 검색</a></div>`:''}</div>`;
+    state.results=[];state.hasNext=false;return;
+  }
   state.hasNext=!!data.pageInfo.hasNextPage;state.page=page;state.results=append?[...state.results,...data.media]:data.media;
   const sortLabel=SORT_OPTIONS.find(x=>x[0]===(f.sort||'POPULARITY_DESC'))?.[1]||'인기순';
   const statusLabel=RELEASE_FILTERS.find(x=>x[0]===(f.status||''))?.[1]||'전체';
@@ -1244,7 +1262,8 @@ function addMediaToCollection(collectionId,media){
 }
 function removeMediaFromCollection(collectionId,mediaId){
   const collection=state.collections.find(x=>x.id===collectionId);if(!collection)return;
-  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==String(mediaId));collection.items=(collection.items||[]).filter(x=>String(x.id)!==String(mediaId));collection.updatedAt=new Date().toISOString();saveCollections();renderCollectionDetail(collectionId);toast('컬렉션에서 작품을 제거했습니다.');
+  const removed=(collection.items||[]).find(x=>String(x.id)===String(mediaId));
+  collection.mediaIds=collection.mediaIds.filter(x=>String(x)!==String(mediaId));collection.items=(collection.items||[]).filter(x=>String(x.id)!==String(mediaId));collection.updatedAt=new Date().toISOString();saveCollections();renderCollectionDetail(collectionId);toast(`${josa(localizedTitle(removed||{id:mediaId}),'object')} 컬렉션에서 제거했습니다.`);
 }
 function deleteCollectionById(id){
   const collection=state.collections.find(x=>x.id===id);if(!collection||!confirm(`'${collection.name}' 컬렉션을 삭제할까요? 보관함 작품은 삭제되지 않습니다.`))return;
@@ -1270,7 +1289,7 @@ function updateWatchlistItem(id){
   const status=$(`[data-watch-status="${CSS.escape(String(id))}"]`);const score=$(`[data-watch-score="${CSS.escape(String(id))}"]`);
   if(status)item.status=status.value;
   if(score&&score.value!==''){const value=Number(score.value);if(!Number.isFinite(value)||value<0||value>10){toast('개인 평점은 0~10 사이로 입력해 주세요.','error');return;}item.score=Math.round(value*10);}else if(score)item.score=null;
-  item.updated_at=new Date().toISOString();saveLocalList();if(state.supabase&&state.user&&!String(id).startsWith('mal:'))syncUpsert(item).catch(e=>toast(`이 기기에는 저장했지만 계정 동기화는 실패했습니다: ${e.message}`,'error'));toast('시청 기록을 저장했습니다.');renderWatchlist();
+  item.updated_at=new Date().toISOString();saveLocalList();if(state.supabase&&state.user&&!String(id).startsWith('mal:'))syncUpsert(item).catch(e=>toast(`이 기기에는 저장했지만 계정 동기화는 실패했습니다: ${e.message}`,'error'));toast(`${josa(localizedTitle(item.media_snapshot||{id}),'object')} 시청 기록에 저장했습니다.`);renderWatchlist();
 }
 function renderStats(){
   const main=$('#main-content');const total=state.watchlist.length;const counts=Object.fromEntries(STATUSES.map(([key])=>[key,state.watchlist.filter(x=>x.status===key).length]));
@@ -1710,7 +1729,16 @@ $('#modal-root').addEventListener('click',async e=>{
 function readRecentSearches(){try{return JSON.parse(localStorage.getItem('animehub_recent_searches')||'[]');}catch{return [];}}
 function clearRecentSearches(){localStorage.removeItem('animehub_recent_searches');updateSearchSuggestions();toast('최근 검색어를 지웠습니다.');}
 function saveRecentSearch(q){q=String(q||'').trim();if(q.length<2)return;const list=readRecentSearches().filter(x=>x!==q);list.unshift(q);localStorage.setItem('animehub_recent_searches',JSON.stringify(list.slice(0,8)));updateSearchSuggestions();}
-function updateSearchSuggestions(){const dl=document.getElementById('search-suggestions');if(!dl)return;const recent=readRecentSearches();const q=document.getElementById('global-search')?.value||'';const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));dl.innerHTML=[...recent,...aliases].map(v=>`<option value="${esc(v)}"></option>`).join('');}
+function updateSearchSuggestions(){
+  const dl=document.getElementById('search-suggestions');if(!dl)return;
+  const recent=readRecentSearches();
+  const q=document.getElementById('global-search')?.value||'';
+  const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));
+  const needle=normalizeForSearch(q);
+  const common=needle?Object.keys(KOREAN_TITLE_INDEX).filter(title=>normalizeForSearch(title).includes(needle)).slice(0,6):[];
+  const values=[...new Set([...recent,...aliases,...common])];
+  dl.innerHTML=values.map(v=>`<option value="${esc(v)}"></option>`).join('');
+}
 $('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});
 $('#global-search').addEventListener('input',()=>updateSearchSuggestions());
 updateSearchSuggestions();
@@ -1754,9 +1782,13 @@ if(backToTop){
 function applyTheme(theme){
   document.documentElement.classList.toggle('light', theme==='light');
   const btn=document.getElementById('theme-toggle');
-  if(btn) btn.textContent = theme==='light' ? '◑' : '◐';
+  if(btn){btn.textContent = theme==='light' ? '◑' : '◐';btn.setAttribute('aria-label', theme==='light' ? '다크 테마로 전환' : '라이트 테마로 전환');btn.title = theme==='light' ? '다크 테마로 전환' : '라이트 테마로 전환';}
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', theme==='light' ? '#f5f6fa' : '#11131b');
 }
-const savedTheme=localStorage.getItem('animehub_theme_v1')||'dark';
+const storedTheme=localStorage.getItem('animehub_theme_v1');
+const prefersLight=typeof window.matchMedia==='function' && window.matchMedia('(prefers-color-scheme: light)').matches;
+const savedTheme=storedTheme || (prefersLight ? 'light' : 'dark');
 applyTheme(savedTheme);
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
