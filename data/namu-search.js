@@ -32,6 +32,22 @@ export function resetNamuWikiHealth() {
   lastSuccessAt = 0;
 }
 
+const PROXY_KEY = 'animehub_namu_proxy_v1';
+
+export function getNamuProxyUrl() {
+  try { return String(localStorage.getItem(PROXY_KEY) || '').trim(); } catch (error) { return ''; }
+}
+
+export function setNamuProxyUrl(url) {
+  try {
+    const value = String(url || '').trim();
+    if (value) localStorage.setItem(PROXY_KEY, value);
+    else localStorage.removeItem(PROXY_KEY);
+    resetNamuWikiHealth();
+    return value;
+  } catch (error) { return ''; }
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json, text/plain, */*' } });
   if (!response.ok) return null;
@@ -63,8 +79,29 @@ export async function searchNamuWiki(query, options = {}) {
   if (!value || value.length < 2) return [];
   if (isNamuWikiCoolingDown()) return [];
   const maxResults = Number(options?.maxResults || 5) || 5;
+  const proxy = getNamuProxyUrl();
   const results = [];
   const seen = new Set();
+
+  // 프록시가 설정되면 프록시를 우선 사용합니다.
+  if (proxy) {
+    try {
+      const url = `${proxy}?q=${encodeURIComponent(value)}`;
+      const data = await fetchJson(url);
+      const list = Array.isArray(data?.results) ? data.results : [];
+      for (const item of list) {
+        const title = String(item?.title || '').trim();
+        if (!title) continue;
+        const key = `${item?.originTitle || ''}|${title}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({ title, originTitle: item?.originTitle || '', overview: String(item?.snippet || item?.overview || ''), source: '나무위키', url: options?.baseUrl || `https://namu.wiki/wiki/${encodeURIComponent(title)}` });
+        if (results.length >= maxResults) break;
+      }
+      if (results.length) { lastSuccessAt = Date.now(); return results; }
+    } catch (error) { /* fall through to direct endpoints */ }
+  }
+
   let attempts = 0;
   let failures = 0;
   for (const base of ENDPOINTS) {
