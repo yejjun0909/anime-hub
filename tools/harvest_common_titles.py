@@ -52,14 +52,16 @@ def pick_korean(synonyms):
 def main():
     parser = argparse.ArgumentParser(description="AniList ?쒓뎅??蹂꾩묶 ?섑솗")
     parser.add_argument("--pages", type=int, default=6)
+    parser.add_argument("--start-page", type=int, default=1)
     parser.add_argument("--per-page", type=int, default=50)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     args = parser.parse_args()
 
     output = Path(args.output)
     result = {}
-    page = 1
-    while page <= args.pages:
+    page = args.start_page
+    last_page = args.start_page + args.pages - 1
+    while page <= last_page:
         print(f"page {page}...")
         data = post_json({"query": QUERY, "variables": {"page": page, "perPage": args.per_page}})
         page_data = (data.get("data") or {}).get("Page") or {}
