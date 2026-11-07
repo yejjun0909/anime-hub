@@ -1737,7 +1737,7 @@ document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
   if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
 });
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.installPrompt=e;$('#install-button').hidden=false;toast('ANIME HUB를 홈 화면에 추가할 수 있습니다.','info');});
 function showInstallHelp(){
   const root=$('#modal-root');
   const ua=navigator.userAgent||'';const isIOS=/iPhone|iPad|iPod/i.test(ua);const isAndroid=/Android/i.test(ua);
