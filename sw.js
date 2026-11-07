@@ -33,6 +33,7 @@ const SHELL = [
   './manifest.webmanifest',
   './robots.txt',
   './sitemap.xml',
+  './offline.html',
   './assets/icon.svg',
   './assets/icon-192.png',
   './assets/icon-512.png'
@@ -99,7 +100,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, './index.html'));
+    event.respondWith(networkFirst(request, './offline.html'));
     return;
   }
 

@@ -3995,7 +3995,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = {
-  route: location.hash.replace('#', '') || 'home',
+  route: location.hash.replace('#', '') || 'home', recentViews: readRecentViews(),
   query: '', page: 1, hasNext: false, results: [], filters: defaultFilters(),
   watchlist: loadLocalList(), collections: loadCollections(), savedSearches: loadSavedSearches(), user: null, supabase: null, supabaseError: '',
   installPrompt: null, lastAiring: [], homeMedia: [], movieMedia: [], recommendedMedia: [], currentModal: null, browseMode: 'anime', mediaIndex: new Map(), watchStatusFilter: '', activeCollectionId: null, franchiseFocus: null, peopleMode: 'ALL', notificationsEnabled: localStorage.getItem(RELEASE_ALERT_KEY)==='1',
@@ -4688,6 +4688,7 @@ async function renderHome(){
       <section class="section">${sectionHead(`${yr}년 ${seasonLabel(season)} 시즌 신작`,'이번 시즌','airing')}${gridMarkup(seasonal.slice(0,5))}</section>
       <section class="feature-strip"><div class="feature-tile"><span class="feature-icon">◷</span><div><b>방영 일정</b><small>요일별 최신 방영작 확인</small></div></div><div class="feature-tile"><span class="feature-icon">♡</span><div><b>나만의 보관함</b><small>시청 상태와 평점 관리</small></div></div><div class="feature-tile"><span class="feature-icon">⌕</span><div><b>인물·제작진 탐색</b><small>성우와 제작사로 작품 찾기</small></div></div></section>
       <section class="section">${sectionHead('인기 극장판','추천 영화','movies')}${gridMarkup(movies.slice(0,5))}</section>
+      ${state.recentViews?.length?`<section class="section">${sectionHead('최근 본 작품','최근에 연 작품','browse')}${gridMarkup(state.recentViews.slice(0,5).map(v=>knownMedia(v.id)||v))}</section>`:''}
       <p class="source-footnote">작품·이미지·평점 정보: AniList API. 개인 평점 및 일부 상세 정보: Jikan API. 원본 데이터의 표기와 갱신 시점은 각 제공처에 따릅니다.</p>`;
     localizeMarked(main);hydrateKoreanCardTitles(state.homeMedia,main,10);
   }catch(error){main.innerHTML=`<div class="empty-state"><div class="empty-icon">!</div><strong>홈 데이터를 불러오지 못했습니다.</strong><span>${esc(error.message)}</span><br><button class="ghost-button" data-retry="home">다시 시도</button></div>`;}
@@ -5285,6 +5286,9 @@ async function renderRoute(){
   if(state.route==='stats')return renderStats();
   state.route='home';return renderHome();
 }
+function readRecentViews(){try{return JSON.parse(localStorage.getItem('animehub_recent_views')||'[]');}catch{return [];}}
+function writeRecentViews(list){localStorage.setItem('animehub_recent_views',JSON.stringify(list.slice(0,12)));}
+function recordRecentView(media){if(!media?.id)return;const snap=compactMediaSnapshot(media);const list=readRecentViews().filter(x=>String(x.id)!==String(media.id));list.unshift(snap);writeRecentViews(list);state.recentViews=list;}
 function continueCandidate(){
   const items=(state.watchlist||[]).filter(x=>x.status==='CURRENT');
   if(!items.length)return null;
@@ -5311,6 +5315,7 @@ async function openAnime(id){
   const showAndEnrich=(media,malData=null)=>{
     state.currentModal={media,mal:malData};
     renderDetailModal(media,malData,{extrasLoading:Number.isInteger(media.id)});
+    recordRecentView(media);
     if(Number.isInteger(media.id))loadAnimeExtras(media.id).catch(error=>{
       if(state.currentModal?.media?.id!==media.id)return;
       const slot=$('[data-detail-extras]');if(slot)slot.innerHTML=`<p class="muted">인물·제작진 정보를 가져오지 못했습니다: ${esc(error.message)}</p>`;
