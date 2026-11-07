@@ -4638,7 +4638,7 @@ function filterClientMedia(items,f={}){
 }
 
 function cardMarkup(m, showActions=false, recommendation=false){
-  const poster=posterOf(m); const score=scoreOf(m); const sourceTitle=titleOf(m); const title=localizedTitle(m);
+  const poster=m?.coverImage?.large || m?.coverImage?.extraLarge || m?.images?.jpg?.large_image_url || m?.images?.webp?.large_image_url || posterOf(m); const score=scoreOf(m); const sourceTitle=titleOf(m); const title=localizedTitle(m);
   const status=state.watchlist.find(x=>String(x.media_id)===String(m.id) || (m.idMal && x.idMal===m.idMal));
   const id=m.id ?? `mal:${m.mal_id}`;
   state.mediaIndex.set(String(id),m);
