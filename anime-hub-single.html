@@ -5859,9 +5859,9 @@ if(e.target.id==='qr-collection'){
   const collection=state.collections.find(x=>x.id===state.currentCollectionId);
   if(!collection){toast('QR을 생성할 컬렉션이 없습니다.','error');return;}
   const url=`${location.origin}${location.pathname}#c/${collection.id}`;
-  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`;
+  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
   const root=$('#modal-root');
-  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:320px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div style="padding:20px;text-align:center"><h3>${esc(collection.name)}</h3><img src="${esc(qr)}" alt="QR 코드" style="margin:12px auto;display:block" /><p class="hint">${esc(url)}</p></div></div></div>`;
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:360px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div style="padding:20px;text-align:center"><h3>${esc(collection.name)}</h3><img src="${esc(qr)}" alt="QR 코드" style="margin:12px auto;display:block" /><p class="hint">${esc(url)}</p><div style="display:flex;gap:8px;justify-content:center;margin-top:12px"><button class="ghost-button" id="copy-qr-url">링크 복사</button><a class="ghost-button" href="${esc(qr)}" download="collection-qr.png" target="_blank" rel="noopener">QR 다운로드</a></div></div></div></div>`;
   return;
 }
 if(e.target.id==='share-collection'){
@@ -5958,6 +5958,7 @@ applyTheme(savedTheme);
 document.addEventListener('click',e=>{
   if(e.target?.id==='home-install'){showInstallHelp();}
   if(e.target?.closest?.('[data-clear-recent]')){clearRecentSearches();}
+  if(e.target?.id==='copy-qr-url'){navigator.clipboard?.writeText(location.href.includes('#c/')?location.href:document.querySelector('.hint')?.textContent||'').then(()=>toast('링크를 복사했습니다.'));}
   if(e.target?.id==='theme-toggle'){
     const next=document.documentElement.classList.contains('light')?'dark':'light';
     localStorage.setItem('animehub_theme_v1',next);
