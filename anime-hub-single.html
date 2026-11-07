@@ -5616,7 +5616,7 @@ if(e.target.id==='share-collection'){
   const id=new URLSearchParams(location.hash.includes('?')?location.hash.split('?')[1]:'').get('c')||state.currentCollectionId;
   const collection=state.collections.find(x=>x.id===id)||state.collections[0];
   if(!collection){toast('공유할 컬렉션이 없습니다.','error');return;}
-  const url=`${location.origin}${location.pathname}#collection:${collection.id}`;
+  const url=`${location.origin}${location.pathname}#c/${collection.id}`;
   if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>toast('공유 링크를 복사했습니다.'));}else{prompt('공유 링크',url);}
   return;
 }
@@ -5671,7 +5671,7 @@ async function refreshCurrentRoute(){
 }
 $('#refresh-data').addEventListener('click',refreshCurrentRoute);
 
-window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1)||'home';if(raw.startsWith('collection:')){const id=raw.slice('collection:'.length);renderCollectionDetail(id);updateContinueBar();return;}const route=raw;if(route!==state.route){state.route=route;renderRoute();updateContinueBar();}});
+window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1)||'home';if(raw.startsWith('collection:')||raw.startsWith('c/')){const id=raw.startsWith('c/')?raw.slice(2):raw.slice('collection:'.length);renderCollectionDetail(id);updateContinueBar();return;}const route=raw;if(route!==state.route){state.route=route;renderRoute();updateContinueBar();}});
 
 document.addEventListener('keydown',e=>{
   if(e.key==='/' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){
@@ -5747,7 +5747,7 @@ async function replayQueuedMutations(){
 
 setInterval(()=>{if(document.visibilityState==='visible')checkNewReleaseAlerts(false);},30*60*1000);
 
-await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});const initialHash=location.hash.slice(1)||'home';if(initialHash.startsWith('collection:')){renderCollectionDetail(initialHash.slice('collection:'.length));}else{state.route=initialHash;renderRoute();}updateContinueBar();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);
+await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});const initialHash=location.hash.slice(1)||'home';if(initialHash.startsWith('collection:')||initialHash.startsWith('c/')){const id=initialHash.startsWith('c/')?initialHash.slice(2):initialHash.slice('collection:'.length);renderCollectionDetail(id);}else{state.route=initialHash;renderRoute();}updateContinueBar();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);
 
 </script>
 </body>
