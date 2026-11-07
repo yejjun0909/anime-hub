@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
-"""AniList에서 한국어 별칭(synonyms)을 수확해 common titles 후보를 만듭니다.
+﻿#!/usr/bin/env python3
+"""AniList?먯꽌 ?쒓뎅??蹂꾩묶(synonyms)???섑솗??common titles ?꾨낫瑜?留뚮벊?덈떎.
 
-사용:
+?ъ슜:
     py tools/harvest_common_titles.py --pages 6 --output data/korean-common-titles.harvest.json
 
-결과는 JSON으로 저장됩니다. 검토 후 data/korean-common-titles.js에 병합하세요.
+寃곌낵??JSON?쇰줈 ??λ맗?덈떎. 寃????data/korean-common-titles.js??蹂묓빀?섏꽭??
 """
 from __future__ import annotations
 import argparse
@@ -50,7 +50,7 @@ def pick_korean(synonyms):
     return None
 
 def main():
-    parser = argparse.ArgumentParser(description="AniList 한국어 별칭 수확")
+    parser = argparse.ArgumentParser(description="AniList ?쒓뎅??蹂꾩묶 ?섑솗")
     parser.add_argument("--pages", type=int, default=6)
     parser.add_argument("--per-page", type=int, default=50)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
@@ -83,5 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-""", "path">
-E:\다운로드\anime-hub\tools\harvest_common_titles.py
