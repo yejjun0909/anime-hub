@@ -7,7 +7,7 @@ import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-kore
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
 import { lookupKoreanSource } from './data/korean-source.js';
-import { searchAliasSuggestions } from './data/search-aliases.js';
+import { searchAliasSuggestions, expandSearchQuery } from './data/search-aliases.js';
 import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
@@ -854,6 +854,16 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
       const filtered=filterClientMedia(retry.media,f);
       if(filtered.length)data={...retry,media:filtered,total:filtered.length};
     }catch(error){if(!lastError)lastError=error;}
+  }
+  // 별칭/동의어로 재시도
+  if((!data||!data.media?.length)&&query){
+    for(const alt of expandSearchQuery(query).slice(1)){
+      try{
+        const retry=await fetchAnimeListSimple({page,perPage:50,search:alt,sort:requestFilters.sort,forceRefresh:true});
+        const filtered=filterClientMedia(retry.media,f);
+        if(filtered.length){data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;break;}
+      }catch(error){if(!lastError)lastError=error;}
+    }
   }
   if(!data||data.media?.length===0){
     // 퍼지 검색 폴백: 정확한 매칭이 모두 실패하면 유사한 이름의 작품을 결과로 반환합니다.
