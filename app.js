@@ -675,12 +675,13 @@ function filterClientMedia(items,f={}){
 }
 
 function cardMarkup(m, showActions=false, recommendation=false){
-  const poster=m?.coverImage?.large || m?.coverImage?.extraLarge || m?.images?.jpg?.large_image_url || m?.images?.webp?.large_image_url || posterOf(m); const score=scoreOf(m); const sourceTitle=titleOf(m); const title=localizedTitle(m);
+  const poster=m?.coverImage?.large || m?.coverImage?.extraLarge || m?.images?.jpg?.large_image_url || m?.images?.webp?.large_image_url || posterOf(m);
+const srcset=m?.coverImage?.medium?`${m.coverImage.medium} 2x, ${poster} 1x`:poster; const score=scoreOf(m); const sourceTitle=titleOf(m); const title=localizedTitle(m);
   const status=state.watchlist.find(x=>String(x.media_id)===String(m.id) || (m.idMal && x.idMal===m.idMal));
   const id=m.id ?? `mal:${m.mal_id}`;
   state.mediaIndex.set(String(id),m);
   return `<article class="anime-card" data-open="${esc(id)}" tabindex="0" role="button" aria-label="${esc(sourceTitle)} 상세 정보">
-    <div class="poster-wrap">${poster?`<img class="poster" src="${esc(poster)}" alt="${esc(title)} 포스터" loading="lazy" decoding="async" onerror="this.style.display='none'">`:`<div class="poster-placeholder">✦</div>`}<div class="poster-gradient"></div>${score?`<span class="poster-score">★ ${esc((score/10).toFixed(1))}</span>`:''}<span class="poster-format">${esc(formatOf(m))}</span><span class="poster-year">${esc(yearOf(m))}</span></div>
+    <div class="poster-wrap">${poster?`<img class="poster" src="${esc(poster)}" srcset="${esc(srcset)}" sizes="(max-width: 640px) 45vw, 180px" alt="${esc(title)} 포스터" loading="lazy" decoding="async" onerror="this.style.display='none'">`:`<div class="poster-placeholder">✦</div>`}<div class="poster-gradient"></div>${score?`<span class="poster-score">★ ${esc((score/10).toFixed(1))}</span>`:''}<span class="poster-format">${esc(formatOf(m))}</span><span class="poster-year">${esc(yearOf(m))}</span></div>
     <div class="card-title">${esc(title)}</div><div class="card-meta">${esc((m.genres||[]).slice(0,2).map(g=>GENRE_LABELS[g]||g).join(' · ') || statusOf(m.status))}</div>${recommendation?`<div class="recommendation-match"><b>취향 적합도 ${Math.round(m._recommendScore||0)}점</b><span>${esc((m._recommendReasons||[]).join(' · ')||'평점과 인기도를 함께 고려했습니다.')}</span></div>`:''}
     ${showActions?`<div class="card-actions"><button class="mini-action" data-open="${esc(id)}">상세 정보</button>${status?`<span class="mini-action">${esc(STATUSES.find(s=>s[0]===status.status)?.[1]||'보관 중')}</span>`:`<button class="mini-action" data-add="${esc(id)}">＋ 담기</button>`}</div>`:''}
   </article>`;
