@@ -25,7 +25,7 @@ git push -u origin main
 
 1. GitHub에서 **New repository** → 이름 입력 → **Add a README file 체크 해제** → Create.
 2. 위 공통 명령으로 `git push`.
-3. 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 변경.
+3. 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 변경합니다. (워크플로가 `configure-pages`로 자동 설정을 시도하지만, 처음 한 번은 직접 지정하는 것이 확실합니다.)
 4. **Actions** 탭에서 `Deploy to GitHub Pages` 워크플로가 실행되는지 확인.
 5. 배포 주소: `https://<사용자>.github.io/<저장소>/`
 
