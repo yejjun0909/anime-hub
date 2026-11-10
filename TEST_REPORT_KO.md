@@ -11,6 +11,7 @@
 - `tools/harvest_common_titles.py --sort`로 평점순·최신순을 추가 수확해 공통 제목 197건, 제목 인덱스 205건으로 갱신.
 - `tests/machine-translate.test.mjs`, `tests/user-korean.test.mjs` 추가(Node.js 환경에서 실행).
 - `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
+- `py tools/check_backup.py`로 `userKorean` 항목이 포함된 백업 형식을 검사(`OK: 복원 가능한 백업 형식입니다.`).
 - `py tools/build_single.py --check` → `OK: anime-hub-single.html 최신`.
 - 브라우저 콘솔 오류 0건(자동 번역 저장·검색 흐름, Jikan 터널 차단 환경 기준).
 

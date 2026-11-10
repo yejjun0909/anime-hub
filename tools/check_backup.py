@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter
 from datetime import datetime
@@ -92,6 +93,29 @@ def check_searches(items) -> None:
             fail(f"savedSearches[{index}]: id가 없습니다.")
 
 
+def check_user_korean(store) -> None:
+    if store is None:
+        return
+    if not isinstance(store, dict):
+        fail("userKorean이 객체가 아닙니다.")
+        return
+    for key, value in store.items():
+        if not re.match(r"^[am]:\d+$", str(key)):
+            fail(f"userKorean[{key!r}]: 키는 a:<AniList ID> 또는 m:<MAL ID> 형식이어야 합니다.")
+            continue
+        if not isinstance(value, dict):
+            fail(f"userKorean[{key!r}]: 객체가 아닙니다.")
+            continue
+        title = value.get("title")
+        overview = value.get("overview")
+        if title is not None and not isinstance(title, str):
+            fail(f"userKorean[{key!r}]: title이 문자열이 아닙니다.")
+        if overview is not None and not isinstance(overview, str):
+            fail(f"userKorean[{key!r}]: overview가 문자열이 아닙니다.")
+        if not (title or overview):
+            warn(f"userKorean[{key!r}]: 제목과 소개가 모두 비어 있습니다.")
+
+
 def check(path: Path) -> None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -118,13 +142,15 @@ def check(path: Path) -> None:
     check_watchlist(data.get("watchlist"))
     check_collections(data.get("collections"))
     check_searches(data.get("savedSearches"))
+    check_user_korean(data.get("userKorean"))
 
     print(f"app={data.get('app')} version={version} exportedAt={exported}")
     print(
-        "보관함 {0}개 · 컬렉션 {1}개 · 저장 검색 {2}개".format(
+        "보관함 {0}개 · 컬렉션 {1}개 · 저장 검색 {2}개 · 사용자 번역 {3}개".format(
             len(data.get("watchlist") or []),
             len(data.get("collections") or []),
             len(data.get("savedSearches") or []),
+            len(data.get("userKorean") or {}),
         )
     )
 
