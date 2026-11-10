@@ -1,6 +1,6 @@
 {
   "name": "anime-hub",
-  "version": "4.7.4",
+  "version": "4.8.0",
   "private": true,
   "type": "module",
   "description": "ANIME HUB — 애니메이션 정보·일정·시청 관리 정적 웹앱",
@@ -8,7 +8,7 @@
     "start": "python tools/serve.py",
     "serve": "python tools/serve.py",
     "build": "python tools/build_single.py",
-    "check": "node --check app.js && node --check sw.js && node --check data/korean-match.js && node --check data/korean-query.js && node --check data/korean-source.js && node --check data/korean-titles-db.js",
+    "check": "node --check app.js && node --check sw.js && node --check data/korean-match.js && node --check data/korean-platform-match.js && node --check data/korean-query.js && node --check data/korean-source.js && node --check data/korean-titles-db.js",
     "test": "node tools/run-tests.mjs",
     "verify": "npm run check && npm test",
     "validate": "python tools/check_korean_catalog.py && python tools/build_single.py --check"

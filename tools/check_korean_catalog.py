@@ -23,6 +23,8 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "data" / "korean-catalog.json"
 GENERATED = ROOT / "data" / "korean-catalog.js"
+PLATFORM_CATALOG = ROOT / "data" / "korean-platform-catalog.json"
+PLATFORM_GENERATED = ROOT / "data" / "korean-platform-catalog.js"
 CASES = ROOT / "tests" / "korean-id-cases.json"
 
 REQUIRED = (
@@ -42,6 +44,18 @@ REQUIRED = (
 )
 ALLOWED_STATUS = {"verified", "alias", "community", "unverified"}
 ALLOWED_HOSTS = {"tv.apple.com"}
+PLATFORM_HOSTS = {
+    "laftel": "laftel.net",
+    "aniplus": "aniplus.co.kr",
+    "watcha": "watcha.com",
+    "tving": "tving.com",
+    "wavve": "wavve.com",
+    "netflix": "netflix.com",
+    "coupangplay": "coupangplay.com",
+    "disneyplus": "disneyplus.com",
+    "apple": "tv.apple.com",
+}
+PLATFORM_STATUS = {"verified", "alias"}
 HANGUL = re.compile(r"[가-힣]")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -159,6 +173,141 @@ def check_catalog(data: dict) -> list[dict]:
     return records
 
 
+def check_platform_catalog(data: dict) -> list[dict]:
+    """국내 플랫폼 카탈로그(data/korean-platform-catalog.json)를 검사합니다."""
+    if not isinstance(data, dict):
+        fail("플랫폼 카탈로그 최상위가 객체가 아닙니다.")
+        return []
+    if data.get("schemaVersion") != 1:
+        fail(f"플랫폼 카탈로그 schemaVersion이 1이 아닙니다: {data.get('schemaVersion')!r}")
+    if data.get("region") != "KR":
+        fail("플랫폼 카탈로그 region이 KR이 아닙니다.")
+
+    platforms = data.get("platforms")
+    if not isinstance(platforms, list) or not platforms:
+        fail("플랫폼 카탈로그 platforms 배열이 비어 있습니다.")
+    else:
+        seen_platforms = set()
+        for index, platform in enumerate(platforms):
+            if not isinstance(platform, dict):
+                fail(f"platforms[{index}]: 객체가 아닙니다.")
+                continue
+            platform_id = platform.get("id")
+            if platform_id not in PLATFORM_HOSTS:
+                fail(f"platforms[{index}]: 알 수 없는 플랫폼 id {platform_id!r}")
+            elif platform_id in seen_platforms:
+                fail(f"platforms[{index}]: 플랫폼 id 중복 {platform_id!r}")
+            seen_platforms.add(platform_id)
+            priority = platform.get("priority")
+            if not isinstance(priority, int) or priority <= 0:
+                fail(f"platforms[{index}]: priority는 양의 정수여야 합니다: {priority!r}")
+
+    records = data.get("records")
+    if not isinstance(records, list):
+        fail("플랫폼 카탈로그 records 배열이 없습니다.")
+        return []
+    if len(records) < 20:
+        fail(f"플랫폼 카탈로그가 20건 미만입니다: {len(records)}건")
+
+    required = (
+        "workId",
+        "anilistId",
+        "malId",
+        "platform",
+        "platformId",
+        "kind",
+        "title",
+        "overview",
+        "source",
+        "sourceUrl",
+        "region",
+        "checkedAt",
+        "status",
+        "year",
+        "match",
+        "note",
+    )
+    seen_pairs: set[tuple[str, int]] = set()
+    seen_anilist: set[int] = set()
+    today = date.today()
+
+    for index, record in enumerate(records):
+        where = f"platform records[{index}]"
+        if not isinstance(record, dict):
+            fail(f"{where}: 객체가 아닙니다.")
+            continue
+        missing = [field for field in required if field not in record]
+        if missing:
+            fail(f"{where}: 누락 필드 {', '.join(missing)}")
+            continue
+
+        platform = record["platform"]
+        if platform not in PLATFORM_HOSTS:
+            fail(f"{where}: 알 수 없는 플랫폼 {platform!r}")
+            continue
+        platform_id = record["platformId"]
+        if not isinstance(platform_id, int) or platform_id <= 0:
+            fail(f"{where}: platformId는 양의 정수여야 합니다: {platform_id!r}")
+        else:
+            pair = (platform, platform_id)
+            if pair in seen_pairs:
+                fail(f"{where}: 플랫폼 작품 중복 {pair!r}")
+            seen_pairs.add(pair)
+
+        ani = record["anilistId"]
+        if not isinstance(ani, int) or ani <= 0:
+            fail(f"{where}: anilistId는 양의 정수여야 합니다: {ani!r}")
+        elif ani in seen_anilist:
+            warn(f"{where}: 같은 AniList 작품에 플랫폼 항목이 여러 개입니다 ({ani})")
+        seen_anilist.add(ani)
+        mal = record["malId"]
+        if mal is not None and (not isinstance(mal, int) or mal <= 0):
+            fail(f"{where}: malId는 null 또는 양의 정수여야 합니다: {mal!r}")
+
+        title = record["title"]
+        if not isinstance(title, str) or not HANGUL.search(title):
+            fail(f"{where}: 한국어 제목이 아닙니다: {title!r}")
+        overview = record["overview"]
+        if not isinstance(overview, str) or not HANGUL.search(overview):
+            fail(f"{where}: 줄거리에 한국어가 없습니다.")
+        if len(overview.strip()) > 4000:
+            fail(f"{where}: 줄거리가 4000자를 넘습니다 ({len(overview)}자)")
+
+        if record["region"] != "KR":
+            fail(f"{where}: region이 KR이 아닙니다: {record['region']!r}")
+        if record["status"] not in PLATFORM_STATUS:
+            fail(f"{where}: status 값 오류 {record['status']!r}")
+        if record["kind"] not in {"TV", "MOVIE", "OVA", "ONA", "SPECIAL"}:
+            fail(f"{where}: kind 값 오류 {record['kind']!r}")
+
+        year = record["year"]
+        if year is not None and (not isinstance(year, int) or year < 1900 or year > today.year + 2):
+            fail(f"{where}: year 값 오류 {year!r}")
+
+        checked = record["checkedAt"]
+        if not isinstance(checked, str) or not DATE_RE.fullmatch(checked):
+            fail(f"{where}: checkedAt 형식 오류 {checked!r}")
+        else:
+            try:
+                if date.fromisoformat(checked) > today:
+                    fail(f"{where}: checkedAt가 미래입니다: {checked}")
+            except ValueError:
+                fail(f"{where}: checkedAt 날짜 오류 {checked!r}")
+
+        source = record["source"]
+        if not isinstance(source, str) or len(source.strip()) < 2:
+            fail(f"{where}: source가 비어 있습니다.")
+        url = record["sourceUrl"]
+        if not isinstance(url, str) or not url.startswith("https://"):
+            fail(f"{where}: sourceUrl은 https여야 합니다: {url!r}")
+        else:
+            host = urlparse(url).hostname or ""
+            if host != PLATFORM_HOSTS[platform]:
+                fail(f"{where}: {platform} 출처 호스트가 다릅니다: {host}")
+
+    return records
+
+
 def check_cases(records: list[dict]) -> None:
     if not CASES.exists():
         fail("tests/korean-id-cases.json 이 없습니다.")
@@ -195,6 +344,10 @@ def check_wiring() -> None:
     app = (ROOT / "app.js").read_text(encoding="utf-8")
     if "from './data/korean-match.js'" not in app:
         fail("app.js가 data/korean-match.js를 import하지 않습니다.")
+    if "from './data/korean-platform-match.js'" not in app:
+        fail("app.js가 data/korean-platform-match.js를 import하지 않습니다.")
+    if "findKoreanPlatformRecord(" not in app:
+        fail("app.js가 findKoreanPlatformRecord()를 사용하지 않습니다.")
     if "from './data/api-vars.js'" not in app:
         fail("app.js가 data/api-vars.js를 import하지 않습니다.")
     if "from './data/korean-source.js'" not in app:
@@ -221,7 +374,7 @@ def check_wiring() -> None:
         expected_cache = f"anime-hub-shell-v{app_version.replace('.', '-')}"
         if cache.group(1) != expected_cache:
             fail(f"sw.js 캐시 이름이 버전과 다릅니다: {cache.group(1)} (기대: {expected_cache})")
-    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/korean-query.js", "./data/korean-source.js", "./data/korean-common-titles.js", "./data/korean-title-index.js", "./data/search-aliases.js", "./data/korean-josa.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js", "./data/gemini-translate.js", "./data/korean-titles-db.js", "./data/fuzzy-search.js", "./data/namu-search.js", "./data/korean-wiki.js"):
+    for asset in ("./data/korean-catalog.js", "./data/korean-match.js", "./data/korean-platform-catalog.js", "./data/korean-platform-match.js", "./data/korean-query.js", "./data/korean-source.js", "./data/korean-common-titles.js", "./data/korean-title-index.js", "./data/search-aliases.js", "./data/korean-josa.js", "./data/api-vars.js", "./data/schedule-merge.js", "./data/schedule-cache.js", "./data/schedule-status.js", "./data/recommend-score.js", "./data/recommend-eval.js", "./data/sync-merge.js", "./data/sync-queue.js", "./data/user-korean.js", "./data/machine-translate.js", "./data/gemini-translate.js", "./data/korean-titles-db.js", "./data/fuzzy-search.js", "./data/namu-search.js", "./data/korean-wiki.js"):
         if asset not in sw:
             fail(f"sw.js SHELL에 {asset} 가 없습니다.")
 
@@ -236,16 +389,19 @@ def check_wiring() -> None:
 
 
 def check_generated() -> None:
-    result = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "build_korean_catalog.py"), "--check"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    if result.returncode != 0:
-        fail(result.stderr.strip() or "생성 파일 검사 실패")
+    for script in ("build_korean_catalog.py", "build_korean_platform_catalog.py"):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / script), "--check"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if result.returncode != 0:
+            fail(result.stderr.strip() or f"{script} 생성 파일 검사 실패")
     if not GENERATED.exists():
         fail("data/korean-catalog.js 가 없습니다.")
+    if not PLATFORM_GENERATED.exists():
+        fail("data/korean-platform-catalog.js 가 없습니다.")
 
 
 def check_single_file() -> None:
@@ -265,6 +421,11 @@ def main() -> int:
         return 1
     data = json.loads(CATALOG.read_text(encoding="utf-8"))
     records = check_catalog(data)
+    if PLATFORM_CATALOG.exists():
+        platform_data = json.loads(PLATFORM_CATALOG.read_text(encoding="utf-8"))
+        check_platform_catalog(platform_data)
+    else:
+        fail("data/korean-platform-catalog.json 이 없습니다.")
     check_cases(records)
     check_wiring()
     check_generated()

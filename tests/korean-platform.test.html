@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANIME HUB — 국내 플랫폼 매칭 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #11131b; color: #e8eaf2; }
+    h1 { font-size: 20px; }
+    #summary { font-size: 16px; font-weight: 700; padding: 12px 16px; border-radius: 8px; background: #1c2030; }
+    #summary.pass { color: #7ef0a8; }
+    #summary.fail { color: #ff8f8f; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+    th, td { border-bottom: 1px solid #2a3044; padding: 8px; text-align: left; vertical-align: top; }
+    tr.fail td { background: #3a1c22; }
+    code { color: #9fc4ff; }
+  </style>
+</head>
+<body>
+  <h1>국내 플랫폼 카탈로그 매칭 테스트</h1>
+  <p>실제 앱이 사용하는 <code>data/korean-platform-match.js</code> 모듈로 실행합니다.</p>
+  <div id="summary">실행 중…</div>
+  <table>
+    <thead><tr><th>#</th><th>검사</th><th>기대</th><th>실제</th><th>결과</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script type="module">
+    import {
+      KOREAN_PLATFORM_CATALOG,
+      KOREAN_PLATFORM_META,
+      KOREAN_PLATFORM_PRIORITY,
+      findKoreanPlatformRecord,
+      listKoreanPlatformNames,
+      koreanPlatformName
+    } from '../data/korean-platform-match.js';
+
+    const rows = document.getElementById('rows');
+    const summary = document.getElementById('summary');
+    const failures = [];
+
+    function addRow(index, name, expected, actual, passed, detail = '') {
+      const tr = document.createElement('tr');
+      if (!passed) tr.className = 'fail';
+      tr.innerHTML = `<td>${index}</td><td>${name}</td><td><code>${expected ?? 'null'}</code></td>` +
+        `<td><code>${actual ?? 'null'}</code></td><td>${passed ? '통과' : '실패'}${detail ? `<br><small>${detail}</small>` : ''}</td>`;
+      rows.appendChild(tr);
+      if (!passed) failures.push({ name, expected, actual, detail });
+    }
+
+    try {
+      let index = 0;
+      const ok = (name, expected, actual) => {
+        index += 1;
+        addRow(index, name, expected, actual, expected === actual);
+      };
+
+      ok('카탈로그 schemaVersion', 1, KOREAN_PLATFORM_META.schemaVersion);
+      ok('카탈로그 region', 'KR', KOREAN_PLATFORM_META.region);
+      ok('카탈로그 20건 이상', true, KOREAN_PLATFORM_CATALOG.length >= 20);
+
+      const invalid = KOREAN_PLATFORM_CATALOG.filter((record) =>
+        record.region !== 'KR' ||
+        !['verified', 'alias'].includes(record.status) ||
+        !/[가-힣]/.test(record.title) ||
+        !/[가-힣]/.test(record.overview) ||
+        !String(record.sourceUrl).startsWith('https://laftel.net/item/') ||
+        !Number.isInteger(record.anilistId) ||
+        !Number.isInteger(record.platformId)
+      );
+      ok('모든 레코드 스키마·출처', 0, invalid.length);
+
+      const order = ['laftel', 'aniplus', 'watcha', 'tving', 'wavve', 'netflix', 'coupangplay', 'disneyplus', 'apple'];
+      const ordered = order.every((key, i) => i === 0 || KOREAN_PLATFORM_PRIORITY[order[i - 1]] < KOREAN_PLATFORM_PRIORITY[key]);
+      ok('국내 플랫폼 우선순위', true, ordered);
+      ok('플랫폼 표시 이름', '라프텔', koreanPlatformName('laftel'));
+
+      const byAniList = findKoreanPlatformRecord({ id: 101922 });
+      ok('AniList ID 조회 제목', '귀멸의 칼날', byAniList?.title ?? null);
+      ok('AniList ID 조회 출처', '라프텔', byAniList?.source ?? null);
+      ok('AniList ID 조회 URL', true, Boolean(byAniList?.url?.includes('/item/')));
+      ok('플랫폼 이름 목록', '라프텔', listKoreanPlatformNames({ id: 101922 }).join(','));
+
+      const byMal = findKoreanPlatformRecord({ idMal: 38000 });
+      ok('MAL ID 조회', '귀멸의 칼날', byMal?.title ?? null);
+
+      const byWork = findKoreanPlatformRecord({ workId: 'anilist-16498' });
+      ok('workId 조회', '진격의 거인 1기', byWork?.title ?? null);
+
+      const titleOnly = findKoreanPlatformRecord({ id: 987654321, title: { userPreferred: '귀멸의 칼날' } });
+      ok('제목만으로 연결하지 않음', null, titleOnly);
+      ok('제목만일 때 플랫폼 목록 비움', 0, listKoreanPlatformNames({ id: 987654321 }).length);
+
+      const total = index;
+      const failed = failures.length;
+      summary.className = failed ? 'fail' : 'pass';
+      summary.textContent = failed ? `실패 ${failed}건 / 전체 ${total}건` : `통과 ${total}건 / 전체 ${total}건`;
+      window.__KOREAN_PLATFORM_RESULT__ = { total, failed, failures, finishedAt: new Date().toISOString() };
+      document.title = failed ? `FAIL ${failed}/${total}` : `PASS ${total}/${total}`;
+    } catch (error) {
+      summary.className = 'fail';
+      summary.textContent = `실행 오류: ${error.message}`;
+      window.__KOREAN_PLATFORM_RESULT__ = { total: 0, failed: 1, failures: [{ name: 'harness', detail: error.message }] };
+      document.title = 'ERROR';
+    }
+  </script>
+</body>
+</html>

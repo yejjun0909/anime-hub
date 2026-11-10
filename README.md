@@ -1,4 +1,4 @@
-# 애니허브 v4.7.4
+# 애니허브 v4.8.0
 
 PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 관리 웹앱입니다. 작품 검색, 한국어 메타데이터, 개인 취향 추천, 보관함과 컬렉션을 한 곳에서 관리합니다.
 
@@ -42,16 +42,21 @@ npm run serve
 
 ### 표시 우선순위
 
-1. 국내 플랫폼 카탈로그에서 사람이 확인해 정리한 자료 (`data/korean-catalog.json`)
-2. 사용자가 직접 입력한 한국어 자료
-3. 확인된 한국어 사전 DB (`data/korean-titles-db.json`)
-4. TMDB 한국어 번역 (대한민국 `ko-KR` 우선)
-5. AniList 한글 별칭
-6. MyAnimeList/Jikan 한글 대체 제목
-7. 나무위키 문서 (best-effort)
-8. 한국어 위키백과 문서 (CORS 허용, 애니메이션 문서로 확인된 경우)
-9. 국내 통용 표기 시드 (`data/korean-common-titles.js`, 플랫폼 미확인으로 표시)
-10. 원제 또는 원문 소개
+국내 애니 정보 사이트를 먼저 참고하고, 없을 때만 다음 소스로 내려갑니다.
+
+1. **국내 플랫폼 카탈로그** (`data/korean-platform-catalog.json`): 라프텔 → 애니플러스 → 왓챠 → 티빙 → 웨이브 → 넷플릭스 KR → 쿠팡플레이 → 디즈니+ KR 순으로 확인된 제목·소개. 현재 자동 수확은 라프텔만 지원합니다.
+2. **수동 카탈로그** (`data/korean-catalog.json`): Apple TV KR 등 사람이 직접 확인해 정리한 13건. 플랫폼 카탈로그에 없는 작품의 다음 순위입니다.
+3. 사용자가 직접 입력한 한국어 자료
+4. 확인된 한국어 사전 DB (`data/korean-titles-db.json`)
+5. TMDB 한국어 번역 (대한민국 `ko-KR` 우선)
+6. AniList 한글 별칭
+7. MyAnimeList/Jikan 한글 대체 제목
+8. 나무위키 문서 (best-effort)
+9. 한국어 위키백과 문서 (CORS 허용, 애니메이션 문서로 확인된 경우)
+10. 국내 통용 표기 시드 (`data/korean-common-titles.js`, 플랫폼 미확인으로 표시)
+11. 원제 또는 원문 소개
+
+플랫폼 카탈로그는 **AniList ID → workId → MAL ID** 순으로만 연결합니다. 제목이 비슷하다는 이유만으로 연결하지 않으며, 정규화한 제목이 같고 (연도를 알 수 있으면) 연도 차이가 1년 이내일 때만 수확합니다. 수확된 소개는 플랫폼이 등록한 문장을 그대로 사용하고 화면에 `소개(플랫폼 등록)`·`라프텔 출처`로 표시합니다.
 
 ### 기계 번역과 AI의 역할
 
@@ -70,7 +75,7 @@ npm run serve
 - AniList GraphQL: 작품·방영·장르·제작사·인물·관계 데이터와 일부 한글 별칭
 - Jikan / MyAnimeList: 보조 평점·순위·일부 작품 정보·한글 대체 제목. Jikan은 MyAnimeList의 비공식 API입니다.
 - TMDB: 선택 연결 시 한국어 제목·줄거리·작품별 번역 정보
-- 국내 서비스 카탈로그: 대표 작품에 한해 수동으로 확인하고 요약한 한국어 메타데이터
+- 국내 서비스 카탈로그: 라프텔 등 국내 플랫폼에서 직접 확인한 제목·줄거리(자동 수확), Apple TV KR 등 수동 확인 자료
 - 나무위키 / 한국어 위키백과: 확인된 문서의 제목·소개 (best-effort)
 
 API 응답과 데이터 범위는 각 제공처의 갱신 시점, 요청 제한, 서비스 상태에 영향을 받습니다.
@@ -90,6 +95,9 @@ anime-hub/
 │   ├── korean-catalog.json     # 수동 확인 한국어 카탈로그 원본
 │   ├── korean-catalog.js       # 위 JSON에서 생성
 │   ├── korean-match.js         # ID 기반 카탈로그 매칭
+│   ├── korean-platform-catalog.json # 국내 플랫폼(라프텔) 수확 원본
+│   ├── korean-platform-catalog.js   # 위 JSON에서 생성
+│   ├── korean-platform-match.js     # 플랫폼 우선순위·ID 기반 매칭
 │   ├── korean-titles-db.json   # 사전 계산 한국어 제목 DB
 │   ├── korean-titles-db.js     # 검증된 출처만 노출
 │   ├── korean-common-titles.js # MAL ID 기준 국내 통용 표기 시드
@@ -103,6 +111,8 @@ anime-hub/
 │   ├── serve.py                # 로컬 정적 서버
 │   ├── build_single.py         # 단일 HTML 생성/검사
 │   ├── build_korean_catalog.py
+│   ├── build_korean_platform_catalog.py # 플랫폼 카탈로그 JSON → JS 생성
+│   ├── harvest_laftel.py       # 라프텔 검색/상세 수확 (제목·연도 검증)
 │   ├── build_korean_titles_db.py
 │   ├── build_title_index.py    # 한국어 제목 인덱스 생성
 │   ├── merge_common_titles.py  # 수확 JSON → 공통 제목 병합
@@ -125,6 +135,14 @@ py tools/serve.py
 
 # 한국어 카탈로그 JSON → JS 생성
 py tools/build_korean_catalog.py
+
+# 라프텔 국내 카탈로그 수확 → data/korean-platform-catalog.json
+py tools/harvest_laftel.py
+# AniList 인기 작품의 한국어 별칭까지 후보로 확장 (12페이지 = 600작품)
+py tools/harvest_laftel.py --anilist-pages 12
+# 수확 JSON → 브라우저용 모듈 생성 / 최신 여부 검사
+py tools/build_korean_platform_catalog.py
+py tools/build_korean_platform_catalog.py --check
 
 # 사전 제목 DB 재수집 (확인된 출처만)
 py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
@@ -153,6 +171,10 @@ py tools/check_korean_catalog.py
 
 # Node 테스트 (Node.js 20+)
 npm test
+
+# Node.js가 없을 때: 로컬 서버에서 브라우저 테스트 페이지 열기
+# http://127.0.0.1:8123/tests/korean-platform.test.html
+# http://127.0.0.1:8123/tests/id-match.test.html
 ```
 
 ### 캐시와 버전

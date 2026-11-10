@@ -23,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 COMMON_JS = ROOT / "data" / "korean-common-titles.js"
 CATALOG_JSON = ROOT / "data" / "korean-catalog.json"
+PLATFORM_JSON = ROOT / "data" / "korean-platform-catalog.json"
 OUTPUT_JS = ROOT / "data" / "korean-title-index.js"
 ANILIST_URL = "https://graphql.anilist.co"
 USER_AGENT = "anime-hub-title-index/1.0"
@@ -82,6 +83,24 @@ def load_catalog_titles() -> dict[str, str]:
     return result
 
 
+def load_platform_records() -> list[dict]:
+    """국내 플랫폼에서 직접 확인한 제목을 검색 인덱스 별칭으로 추가합니다."""
+    if not PLATFORM_JSON.exists():
+        return []
+    data = json.loads(PLATFORM_JSON.read_text(encoding="utf-8"))
+    records: list[dict] = []
+    for record in data.get("records", []) or []:
+        if record.get("status") not in {"verified", "alias"}:
+            continue
+        mal_id = record.get("malId")
+        ani_id = record.get("anilistId")
+        title = str(record.get("title") or "").strip()
+        if not (isinstance(mal_id, int) and isinstance(ani_id, int) and has_hangul(title)):
+            continue
+        records.append({"malId": mal_id, "anilistId": ani_id, "title": title})
+    return records
+
+
 def fetch_media(ids: list[int]) -> list[dict]:
     data = post_json({"query": QUERY, "variables": {"ids": ids}})
     page = (data.get("data") or {}).get("Page") or {}
@@ -103,6 +122,14 @@ def main() -> int:
     # 카탈로그의 검증된 제목을 우선합니다.
     titles.update(catalog)
 
+    platform_records = load_platform_records()
+    platform_titles = {
+        str(record["malId"]): record["title"] for record in platform_records
+    }
+    seed_titles = dict(titles)
+    # 국내 플랫폼에서 직접 확인한 표기를 가장 우선합니다.
+    titles.update(platform_titles)
+
     mal_ids = sorted({int(key) for key in titles if str(key).isdigit()})
     print(f"대상 MAL ID: {len(mal_ids)}개")
 
@@ -123,6 +150,7 @@ def main() -> int:
         time.sleep(1)
 
     entries: dict[str, dict] = {}
+    entry_by_mal: dict[int, dict] = {}
     for mal_id in mal_ids:
         korean = titles.get(str(mal_id))
         item = media_by_mal.get(mal_id)
@@ -140,11 +168,22 @@ def main() -> int:
             "english": english,
             "searchTerm": english or romaji,
         }
+        entry_by_mal[mal_id] = entry
         # 같은 한국어 제목이 여러 작품에 매핑되면 영어 제목이 있는 쪽을 유지합니다.
         existing = entries.get(korean)
         if existing and existing.get("english") and not english:
             continue
         entries[korean] = entry
+
+    # 플랫폼 표기와 기존 시드 표기를 모두 검색 별칭으로 남깁니다.
+    for record in platform_records:
+        entry = entry_by_mal.get(record["malId"])
+        if entry:
+            entries.setdefault(record["title"], entry)
+    for mal_key, seed_title in seed_titles.items():
+        entry = entry_by_mal.get(int(mal_key))
+        if entry:
+            entries.setdefault(seed_title, entry)
 
     print(f"인덱스 항목: {len(entries)}개")
     if args.dry_run:

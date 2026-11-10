@@ -1,5 +1,19 @@
 # 애니허브 검사 보고서
 
+## v4.8.0 국내 플랫폼 우선 한국어 메타데이터 (2026-11-11)
+- `py tools/harvest_laftel.py --anilist-pages 12` 실행: AniList 인기 600작품의 한국어 별칭까지 후보로 확장한 시드 213개(중복 정리 후 203작품) → **106건** 수확(라프텔 TV 86 / 영화 14 / ONA 5 / OVA 1). 줄거리 빈 항목 0건, 플랫폼 작품 중복 0건, AniList 중복 0건.
+- 수확 매칭 결과: `exact-title+year` 83, `season-title+year` 21, `exact-title` 2. 미개봉 극장판(`마녀의 여행` 205444)은 제외하고 TV 112609만 유지. 인기 600작품으로 후보를 넓혀도 새로 연결된 작품은 없었고, 기존 1건의 매칭 방식만 `season-title+year` → `exact-title+year`로 정교해졌습니다.
+- `py tools/build_korean_platform_catalog.py` → `data/korean-platform-catalog.js` 생성(106건, 약 121KB). `--check` 최신 상태 확인.
+- `py tools/build_title_index.py` → 한국어 제목 인덱스 205 → **243건**(플랫폼 표기·기존 시드 별칭 38건 추가).
+- `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
+- `py tools/build_single.py` → 단일 HTML 557,414 bytes 재생성, `--check` 최신 확인.
+- 브라우저 확인(로컬 서버, Jikan 터널 차단 환경):
+  - “귀멸의 칼날” 검색 → AniList 101922 상세에서 `제목: 라프텔`, `소개(플랫폼 등록): 라프텔`, 라프텔 줄거리 표시. 콘솔 오류 0건.
+  - “진격의 거인 1기” 검색 → AniList 16498 상세에서 `제목: 라프텔` 표시.
+  - “주술회전”은 라프텔 미보유 → 기존 수동 카탈로그(Apple TV 한국)로 폴백 확인.
+- `tests/korean-platform.test.html` 브라우저 하네스 → **14/14 통과**. `tests/korean-platform.test.mjs`는 Node 환경용으로 함께 추가.
+- Node.js가 없는 환경이라 `tests/korean-platform.test.mjs`를 포함한 `.mjs` 테스트는 CI/Node 환경에서 실행해야 합니다.
+
 ## v4.7.4 자동 번역 미리보기·사용자 번역 백업 (2026-11-10)
 - 설정 모달에서 `자동 번역 (선택)` 토글 표시, 기본값 꺼짐 확인. 토글 시 `animehub_machine_translate_enabled_v1` 저장 확인.
 - 작품 상세에서 `자동 번역 보기 (비공식)` 버튼과 결과 블록(`자동 번역 · 비공식`, 엔진 표시) 확인. 공식 제목·소개 영역은 변경되지 않음.

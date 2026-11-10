@@ -24,6 +24,8 @@ DEFAULT_OUT = ROOT / "anime-hub-single.html"
 MODULES = [
     "data/korean-catalog.js",
     "data/korean-match.js",
+    "data/korean-platform-catalog.js",
+    "data/korean-platform-match.js",
     "data/api-vars.js",
     "data/schedule-merge.js",
     "data/schedule-cache.js",

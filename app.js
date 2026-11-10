@@ -1,4 +1,5 @@
 import { findKoreanCatalogRecord } from './data/korean-match.js';
+import { findKoreanPlatformRecord, listKoreanPlatformNames } from './data/korean-platform-match.js';
 import { pruneNullVariables } from './data/api-vars.js';
 import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
@@ -18,7 +19,7 @@ import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.j
 import { fuzzyFilter, searchVariants, normalizeForSearch, fuzzyMatch, similarity } from './data/fuzzy-search.js';
 import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.7.4';
+const APP_VERSION = '4.8.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -532,6 +533,7 @@ function tmdbKoreanSourceLabel(country){
   return 'TMDB 한국어 등록 번역';
 }
 function koreanTitleInfo(media){
+  const platform=findKoreanPlatformRecord(media);if(platform?.title)return platform;
   const curated=curatedKoreanOverride(media);if(curated?.title)return {title:curated.title,source:curated.source,url:curated.url,kind:'curated'};
   const user=getUserKorean(media);if(user?.title)return {title:user.title,source:user.source,url:user.url,kind:'user'};
   const db=lookupKoreanTitle(media);if(db?.title)return db;
@@ -545,6 +547,7 @@ function koreanTitleInfo(media){
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
 function koreanDescriptionInfo(media){
+  const platform=findKoreanPlatformRecord(media);if(platform?.overview)return {overview:platform.overview,source:platform.source,url:platform.url,kind:'platform',platform:platform.platform};
   const curated=curatedKoreanOverride(media);if(curated?.overview)return {overview:curated.overview,source:curated.source,url:curated.url,kind:'curated'};
   const user=getUserKorean(media);if(user?.overview)return {overview:user.overview,source:user.source,url:user.url,kind:'user'};
   const db=lookupKoreanTitle(media);if(db?.overview)return {overview:db.overview,source:db.source,url:db.url,kind:db.kind};
@@ -561,10 +564,12 @@ function koreanMetadataSourceMarkup(media){
   const titleInfo=koreanTitleInfo(media),descInfo=koreanDescriptionInfo(media);
   const link=(info)=>info?.url?`<a href="${esc(info.url)}" target="_blank" rel="noopener" class="text-link">${esc(info.source)} 출처 ↗</a>`:esc(info?.source||'확인되지 않음');
   const titleLine=`제목: ${link(titleInfo)}`;
-  const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)': '소개';
+  const descLabel=descInfo?.kind==='curated'?'소개(국내 카탈로그 바탕 요약)':descInfo?.kind==='platform'?'소개(플랫폼 등록)': '소개';
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
-  const note=titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='common'?'국내에서 널리 쓰이는 표기를 정리한 것으로 국내 플랫폼에서 직접 확인하지 않았습니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
-  return `${titleLine}<br>${descLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
+  const platforms=listKoreanPlatformNames(media);
+  const platformLine=platforms.length>1?`<br><small>확인된 국내 플랫폼: ${esc(platforms.join(' · '))}</small>`:'';
+  const note=titleInfo.kind==='platform'?`${titleInfo.source||'국내 플랫폼'}에 등록된 한국어 제목과 소개입니다. 플랫폼 표기를 기준으로 하며, 시즌·판본에 따라 표기가 다를 수 있습니다.`:titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='common'?'국내에서 널리 쓰이는 표기를 정리한 것으로 국내 플랫폼에서 직접 확인하지 않았습니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  return `${titleLine}<br>${descLine}${platformLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}
 function knownMedia(id){
@@ -1602,7 +1607,7 @@ function saveMachineTranslationToUser(){
 function renderDetailModal(m,mal=null,options={}){
   machineTranslationDismissed=false;
   const root=$('#modal-root');const id=m.id;const saved=state.watchlist.find(x=>String(x.media_id)===String(id));const originalDesc=cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');
-  const originalTitle=localizedTitleSource(m);const koreanTitle=localizedTitle(m);const koreanDescInfo=koreanDescriptionInfo(m);const koreanDesc=koreanDescInfo?.overview||'';const descriptionBadge=koreanDescInfo?.kind==='curated'?'국내 카탈로그 기반 요약':koreanDescInfo?.kind==='user'?'사용자 입력 소개':koreanDescInfo?'한국어 등록 소개':'한국어 소개 미등록 · 원문 표시';const displayedDesc=koreanDesc||cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');const native=m.title?.native||'';const english=m.title?.english||'';const romaji=m.title?.romaji||'';
+  const originalTitle=localizedTitleSource(m);const koreanTitle=localizedTitle(m);const koreanDescInfo=koreanDescriptionInfo(m);const koreanDesc=koreanDescInfo?.overview||'';const descriptionBadge=koreanDescInfo?.kind==='platform'?`${koreanDescInfo.source} 등록 소개`:koreanDescInfo?.kind==='curated'?'국내 카탈로그 기반 요약':koreanDescInfo?.kind==='user'?'사용자 입력 소개':koreanDescInfo?'한국어 등록 소개':'한국어 소개 미등록 · 원문 표시';const displayedDesc=koreanDesc||cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');const native=m.title?.native||'';const english=m.title?.english||'';const romaji=m.title?.romaji||'';
   const originalNames=[native,english,romaji].filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
   const relationMarkup=detailRelationsMarkup(m);
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal"><div class="modal-top"><button class="close-button" data-close-modal aria-label="닫기">×</button></div>

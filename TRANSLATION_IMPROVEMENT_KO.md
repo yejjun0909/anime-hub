@@ -1,4 +1,4 @@
-# 한국어 번역·메타데이터 전략 (v4.7.0)
+# 한국어 번역·메타데이터 전략 (v4.8.0)
 
 ## 결론
 
@@ -129,6 +129,7 @@ py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
 - v4.7.4에서 평점순·최신순 수확을 추가해 공통 제목 197건으로 확대(즐겨찾기순은 중복만 확인)
 - `py tools/merge_common_titles.py`로 수확 JSON 병합(카탈로그/기존 ID 제외, MAL ID 정렬)
 - 인덱스 생성 결과 205개 항목(공통 제목 + 카탈로그)
+- v4.8.0에서 라프텔 플랫폼 표기 106건을 별칭으로 추가해 인덱스 243건으로 확대
 - Jikan 차단 환경에서는 `py tools/build_korean_titles_db.py --limit 3000 --no-jikan --resume`로 AniList만 수집
 
 ## 9. 자동 번역 미리보기 (v4.7.4)
@@ -145,3 +146,17 @@ py tools/build_korean_titles_db.py --limit 500 --tmdb-token YOUR_TOKEN --resume
 - 전체 백업에는 사용자가 직접 입력한 한국어 제목·소개(`animehub_user_korean_v1`)가 포함되어 다른 기기로 옮길 수 있습니다.
 
 이 기능은 공식 표기가 아니므로, 정확한 제목은 상세 화면의 출처 링크에서 확인해야 합니다.
+
+## 10. 국내 플랫폼 우선 표시 (v4.8.0)
+
+한국 애니 정보 사이트를 먼저 참고하고, 없을 때만 다음 소스로 넘어가는 순서를 적용했습니다.
+
+1. 국내 플랫폼 카탈로그: 라프텔 → 애니플러스 → 왓챠 → 티빙 → 웨이브 → 넷플릭스 KR → 쿠팡플레이 → 디즈니+ KR
+2. Apple TV KR 등 수동 확인 카탈로그(`data/korean-catalog.json`, 13건)
+3. 사용자 직접 입력 → 검증 DB → TMDB → AniList → MAL/Jikan → 나무위키 → 한국어 위키백과 → 국내 통용 표기 → 원제
+
+- 현재 자동 수확은 라프텔만 지원합니다. `tools/harvest_laftel.py`가 제목·방영 연도를 확인한 106건을 `data/korean-platform-catalog.json`에 기록합니다.
+- 매칭은 **AniList ID → workId → MAL ID** 순으로만 하며, 제목만 같아서는 연결하지 않습니다.
+- 수확된 소개는 플랫폼이 등록한 한국어 문장을 그대로 사용하고 `소개(플랫폼 등록)`으로 표시합니다. 기계 번역이 아닙니다.
+- 라프텔 API는 `Origin: https://laftel.net`만 허용하므로 브라우저에서 직접 호출하지 않고, 빌드 타임에 생성한 정적 모듈을 사용합니다.
+- 애니플러스·왓챠·티빙·웨이브·쿠팡플레이·디즈니+는 접근·토큰 제약으로 자동 수확하지 않습니다. 우선순위와 표시 구조만 준비되어 있습니다.

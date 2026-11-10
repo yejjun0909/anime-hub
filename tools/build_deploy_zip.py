@@ -36,8 +36,7 @@ ROOT_FILES = [
 ]
 
 # data/ 안에서 배포에 넣지 않는 파일(수확 중간 산출물).
-EXCLUDED_DATA_SUFFIXES = (".harvest.json", "harvest2.json", "harvest4.json", "harvest5.json",
-                          "harvest6.json", "harvest7.json", "harvest8.json", "harvest9.json")
+EXCLUDED_DATA_MARKERS = ("harvest",)
 
 
 def collect() -> list[Path]:
@@ -53,7 +52,9 @@ def collect() -> list[Path]:
         for path in sorted((ROOT / folder).rglob("*")):
             if not path.is_file():
                 continue
-            if folder == "data" and any(path.name.endswith(suffix) for suffix in EXCLUDED_DATA_SUFFIXES):
+            if folder == "data" and any(marker in path.name.lower() for marker in EXCLUDED_DATA_MARKERS):
+                continue
+            if folder == "data" and path.name == "korean-platform-catalog.json":
                 continue
             if folder == "data" and "schedule-snapshots" in path.parts:
                 continue
@@ -79,6 +80,7 @@ def main() -> int:
 
     names = {path.relative_to(ROOT).as_posix() for path in files}
     missing = [name for name in ("index.html", "app.js", "sw.js", "data/korean-title-index.js",
+                                 "data/korean-platform-catalog.js", "data/korean-platform-match.js",
                                  "data/korean-titles-db.json") if name not in names]
     if missing:
         print(f"실패: ZIP에 필요한 파일이 없습니다: {', '.join(missing)}")
