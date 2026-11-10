@@ -5,6 +5,8 @@
 // 정책: 작품명·줄거리는 원칙적으로 기계 번역하지 않지만, 사용자 선택에 따른 실험적 기능으로 제공합니다.
 
 const CACHE_KEY = 'animehub_machine_translate_v1';
+const ENABLED_KEY = 'animehub_machine_translate_enabled_v1';
+const AUTO_SHOW_KEY = 'animehub_machine_translate_auto_show_v1';
 const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 
 function readCache(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
@@ -32,7 +34,7 @@ function writeCache(cache, storage = (typeof localStorage !== 'undefined' ? loca
 export function isMachineTranslationEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
   if (!storage) return false;
   try {
-    return storage.getItem('animehub_machine_translate_enabled_v1') === '1';
+    return storage.getItem(ENABLED_KEY) === '1';
   } catch (error) {
     return false;
   }
@@ -41,8 +43,28 @@ export function isMachineTranslationEnabled(storage = (typeof localStorage !== '
 export function setMachineTranslationEnabled(enabled, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
   if (!storage) return false;
   try {
-    if (enabled) storage.setItem('animehub_machine_translate_enabled_v1', '1');
-    else storage.removeItem('animehub_machine_translate_enabled_v1');
+    if (enabled) storage.setItem(ENABLED_KEY, '1');
+    else storage.removeItem(ENABLED_KEY);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export function isMachineTranslationAutoShowEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return false;
+  try {
+    return isMachineTranslationEnabled(storage) && storage.getItem(AUTO_SHOW_KEY) === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
+export function setMachineTranslationAutoShowEnabled(enabled, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return false;
+  try {
+    if (enabled) storage.setItem(AUTO_SHOW_KEY, '1');
+    else storage.removeItem(AUTO_SHOW_KEY);
     return true;
   } catch (error) {
     return false;

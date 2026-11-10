@@ -44,6 +44,9 @@ export function getUserKorean(media, storage) {
     overview: entry.overview || '',
     source: '사용자 입력',
     url: entry.url || '',
+    anilistId: entry.anilistId ?? null,
+    malId: entry.malId ?? null,
+    searchTerm: entry.searchTerm || '',
     kind: 'user',
     checkedAt: entry.savedAt || ''
   };
@@ -57,6 +60,9 @@ export function setUserKorean(media, value, storage) {
     title: (value?.title || '').trim(),
     overview: (value?.overview || '').trim(),
     url: (value?.url || '').trim(),
+    anilistId: Number.isInteger(Number(value?.anilistId)) ? Number(value.anilistId) : null,
+    malId: Number.isInteger(Number(value?.malId)) ? Number(value.malId) : null,
+    searchTerm: (value?.searchTerm || '').trim().slice(0, 300),
     savedAt: new Date().toISOString()
   };
   return writeStore(store, storage);
@@ -73,4 +79,28 @@ export function deleteUserKorean(media, storage) {
 
 export function allUserKorean(storage) {
   return readStore(storage);
+}
+
+export function mergeUserKorean(entries, storage) {
+  if (!entries || typeof entries !== 'object') return 0;
+  const store = readStore(storage);
+  let merged = 0;
+  for (const [key, value] of Object.entries(entries)) {
+    if (!/^[am]:/.test(String(key)) || !value || typeof value !== 'object') continue;
+    const title = String(value.title || '').trim().slice(0, 160);
+    const overview = String(value.overview || '').trim().slice(0, 6000);
+    const url = String(value.url || '').trim().slice(0, 600);
+    if (!title && !overview) continue;
+    store[key] = {
+      title,
+      overview,
+      url,
+      anilistId: Number.isInteger(Number(value.anilistId)) ? Number(value.anilistId) : null,
+      malId: Number.isInteger(Number(value.malId)) ? Number(value.malId) : null,
+      searchTerm: String(value.searchTerm || '').trim().slice(0, 300),
+      savedAt: value.savedAt || new Date().toISOString()
+    };
+    merged += 1;
+  }
+  return writeStore(store, storage) ? merged : 0;
 }

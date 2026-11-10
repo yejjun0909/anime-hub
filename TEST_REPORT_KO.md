@@ -1,5 +1,19 @@
 # 애니허브 검사 보고서
 
+## v4.7.4 자동 번역 미리보기·사용자 번역 백업 (2026-11-10)
+- 설정 모달에서 `자동 번역 (선택)` 토글 표시, 기본값 꺼짐 확인. 토글 시 `animehub_machine_translate_enabled_v1` 저장 확인.
+- 작품 상세에서 `자동 번역 보기 (비공식)` 버튼과 결과 블록(`자동 번역 · 비공식`, 엔진 표시) 확인. 공식 제목·소개 영역은 변경되지 않음.
+- 자동 번역 결과가 공식 캐시(`animehub_korean_metadata_v3`)에 기록되지 않는지 확인.
+- Google 번역 응답을 스텁으로 대체해 제목·소개 번역 UI가 정상 렌더링되는지 확인.
+- 자동 번역 결과를 "내 한국어 자료로 저장"하면 `animehub_user_korean_v1`에 사용자 입력으로 저장되고, 상세 화면 제목·소개가 즉시 갱신되는지 확인.
+- 저장한 한국어 제목이 검색 자동완성에 나타나고, 해당 제목으로 검색했을 때 AniList ID 조회로 작품이 다시 검색되는지 확인.
+- 설정에서 `상세 화면에서 번역 결과 바로 표시`를 켠 뒤, 한국어 자료가 없는 작품을 열면 자동 번역 블록이 자동으로 표시되는지 확인(약 1.2초 후 시작, 공식 자료 확인 시 숨김).
+- `tools/harvest_common_titles.py --sort`로 평점순·최신순을 추가 수확해 공통 제목 197건, 제목 인덱스 205건으로 갱신.
+- `tests/machine-translate.test.mjs`, `tests/user-korean.test.mjs` 추가(Node.js 환경에서 실행).
+- `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
+- `py tools/build_single.py --check` → `OK: anime-hub-single.html 최신`.
+- 브라우저 콘솔 오류 0건(자동 번역 저장·검색 흐름, Jikan 터널 차단 환경 기준).
+
 ## v4.7.3 한국어 검색 인덱스·배포 (2026-11-07)
 - `data/korean-title-index.js` 188개 항목 생성, 정확/퍼지 매칭 확인.
 - 브라우저 테스트: `korean-title-index.test.html` 17/17, `korean-source.test.html` 18/18, `namu-fuzzy.test.html` 35/35, `id-match.test.html` 32/32 통과.

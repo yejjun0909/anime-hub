@@ -4,7 +4,7 @@
 // 이미지·아이콘 같은 정적 자산만 캐시 우선으로 처리합니다.
 // 오프라인일 때는 마지막으로 캐시된 앱 셸을 사용합니다.
 
-const CACHE_NAME = 'anime-hub-shell-v4-7-3';
+const CACHE_NAME = 'anime-hub-shell-v4-7-4';
 const SHELL = [
   './',
   './index.html',

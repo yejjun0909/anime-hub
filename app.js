@@ -3,10 +3,11 @@ import { pruneNullVariables } from './data/api-vars.js';
 import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
-import { getUserKorean, setUserKorean, deleteUserKorean } from './data/user-korean.js';
+import { getUserKorean, setUserKorean, deleteUserKorean, allUserKorean, mergeUserKorean } from './data/user-korean.js';
 import { lookupKoreanTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { lookupCommonKoreanTitle } from './data/korean-common-titles.js';
-import { getGeminiKey, setGeminiKey } from './data/gemini-translate.js';
+import { getGeminiKey, setGeminiKey, geminiTranslate } from './data/gemini-translate.js';
+import { isMachineTranslationEnabled, setMachineTranslationEnabled, isMachineTranslationAutoShowEnabled, setMachineTranslationAutoShowEnabled } from './data/machine-translate.js';
 import { lookupKoreanSource } from './data/korean-source.js';
 import { searchAliasSuggestions, expandSearchQuery } from './data/search-aliases.js';
 import { josa } from './data/korean-josa.js';
@@ -14,10 +15,10 @@ import { rankCandidates, selectDiverse } from './data/recommend-score.js';
 import { evaluateRecommendation as recommendationMetrics, coldStartStrategy } from './data/recommend-eval.js';
 import { mergeWatchlistWithConflicts } from './data/sync-merge.js';
 import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.js';
-import { fuzzyFilter, searchVariants, normalizeForSearch } from './data/fuzzy-search.js';
+import { fuzzyFilter, searchVariants, normalizeForSearch, fuzzyMatch, similarity } from './data/fuzzy-search.js';
 import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.7.3';
+const APP_VERSION = '4.7.4';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -660,6 +661,27 @@ async function fetchAnimeListSimple({page=1,perPage=50,search='',sort=['POPULARI
   const data=await anilist(q,{page,perPage:Math.min(perPage,50),search:search||null,sort},{forceRefresh});
   return data.Page;
 }
+async function fetchAnimeByUserEntry(entry){
+  if(entry?.anilistId||entry?.malId){
+    const q=`query UserKoreanLookup($ids:[Int],$malIds:[Int]){Page(page:1,perPage:10){pageInfo{currentPage hasNextPage total} media(type:ANIME,isAdult:false,id_in:$ids,idMal_in:$malIds){${LIST_MEDIA_FIELDS}}}}`;
+    const data=await anilist(q,{ids:entry.anilistId?[Number(entry.anilistId)]:null,malIds:entry.malId?[Number(entry.malId)]:null},{forceRefresh:true});
+    return data?.Page||null;
+  }
+  if(entry?.searchTerm)return fetchAnimeListSimple({page:1,perPage:50,search:entry.searchTerm,sort:['POPULARITY_DESC'],forceRefresh:true});
+  return null;
+}
+function findUserKoreanSearchEntry(query){
+  const needle=normalizeForSearch(query);
+  if(!needle)return null;
+  let best=null,bestScore=0;
+  for(const value of Object.values(allUserKorean())){
+    const title=String(value?.title||'').trim();
+    if(!title||!fuzzyMatch(query,title,0.72))continue;
+    const score=similarity(needle,normalizeForSearch(title));
+    if(score>bestScore){bestScore=score;best=value;}
+  }
+  return best;
+}
 function filterClientMedia(items,f={}){
   return (items||[]).filter(m=>{
     if(f.status&&m.status!==f.status)return false;
@@ -850,6 +872,19 @@ async function runBrowseSearch(page=1,append=false,forceRefresh=false){
         const retry=await fetchAnimeListSimple({page,perPage:50,search:entry.searchTerm,sort:requestFilters.sort,forceRefresh:true});
         const filtered=filterClientMedia(retry.media,f);
         if(filtered.length){data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;}
+      }catch(error){if(!lastError)lastError=error;}
+    }
+  }
+  // 사용자가 저장한 한국어 제목(자동 번역 저장 포함)으로도 작품을 찾습니다.
+  if((!data||!data.media?.length)&&query&&hasHangul(query)){
+    const userEntry=findUserKoreanSearchEntry(query);
+    if(userEntry){
+      try{
+        const retry=await fetchAnimeByUserEntry(userEntry);
+        if(retry?.media?.length){
+          const filtered=filterClientMedia(retry.media,f);
+          if(filtered.length){data={...retry,media:filtered,total:filtered.length};fallbackUsed=true;}
+        }
       }catch(error){if(!lastError)lastError=error;}
     }
   }
@@ -1214,23 +1249,24 @@ function scoreRecommendations(candidates,profile){
 }
 
 function exportAllData(){
-  const payload={app:'ANIME HUB',version:APP_VERSION,exportedAt:new Date().toISOString(),watchlist:state.watchlist,collections:state.collections,savedSearches:state.savedSearches};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`anime-hub-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('보관함·컬렉션·검색 조건을 백업했습니다.');
+  const payload={app:'ANIME HUB',version:APP_VERSION,exportedAt:new Date().toISOString(),watchlist:state.watchlist,collections:state.collections,savedSearches:state.savedSearches,userKorean:allUserKorean()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`anime-hub-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('보관함·컬렉션·검색 조건·사용자 번역을 백업했습니다.');
 }
 async function importAllData(file){
   if(!file)return;try{const data=JSON.parse(await file.text());if(!data||data.app!=='ANIME HUB')throw new Error('애니허브 백업 파일이 아닙니다.');
-    const watch=Array.isArray(data.watchlist)?data.watchlist:[];const collections=Array.isArray(data.collections)?data.collections:[];const searches=Array.isArray(data.savedSearches)?data.savedSearches:[];
-    if(!confirm(`백업 데이터를 불러올까요?\n보관함 ${watch.length}개 · 컬렉션 ${collections.length}개 · 검색 조건 ${searches.length}개\n기존 데이터와 합쳐집니다.`))return;
+    const watch=Array.isArray(data.watchlist)?data.watchlist:[];const collections=Array.isArray(data.collections)?data.collections:[];const searches=Array.isArray(data.savedSearches)?data.savedSearches:[];const userKorean=data.userKorean&&typeof data.userKorean==='object'?data.userKorean:{};
+    if(!confirm(`백업 데이터를 불러올까요?\n보관함 ${watch.length}개 · 컬렉션 ${collections.length}개 · 검색 조건 ${searches.length}개 · 사용자 번역 ${Object.keys(userKorean).length}개\n기존 데이터와 합쳐집니다.`))return;
     const map=new Map(state.watchlist.map(x=>[String(x.media_id),x]));for(const item of watch){if(item?.media_id!=null)map.set(String(item.media_id),item);}state.watchlist=[...map.values()];
     const cm=new Map(state.collections.map(x=>[String(x.id),x]));for(const c of collections){if(c?.id==null)continue;const old=cm.get(String(c.id));if(old){const items=new Map([...(old.items||[]),...(c.items||[])].map(x=>[String(x.id),x]));const ids=[...new Set([...(old.mediaIds||[]),...(c.mediaIds||[])].map(String))];cm.set(String(c.id),{...old,...c,mediaIds:ids,items:[...items.values()],updatedAt:new Date().toISOString()});}else cm.set(String(c.id),c);}state.collections=[...cm.values()];
     const sm=new Map(state.savedSearches.map(x=>[String(x.id),x]));for(const x of searches){if(x?.id!=null)sm.set(String(x.id),x);}state.savedSearches=[...sm.values()];
+    const mergedTranslations=mergeUserKorean(userKorean);
     saveLocalList();saveCollections({cloud:false});saveSavedSearches({cloud:false});
     if(state.supabase&&state.user){
       try{
         for(const item of state.watchlist){if(Number.isInteger(Number(item.media_id))&&!String(item.media_id).startsWith('mal:'))await syncUpsert(item);}
-        await syncUserData();toast('백업 데이터를 복원하고 계정에 동기화했습니다.');
+        await syncUserData();toast(`백업 데이터를 복원하고 계정에 동기화했습니다.${mergedTranslations?` 사용자 번역 ${mergedTranslations}개를 합쳤습니다.`:''}`);
       }catch(error){toast(`기기에는 복원했지만 클라우드 동기화에 실패했습니다: ${error.message}`,'error');}
-    }else toast(`${josa(localizedTitle(media), 'object')} 보관함에 추가했습니다.`);
+    }else toast(`백업 데이터를 복원했습니다.${mergedTranslations?` 사용자 번역 ${mergedTranslations}개를 합쳤습니다.`:''}`);
     if(state.route==='watchlist')renderWatchlist();
   }catch(error){toast(`백업을 불러오지 못했습니다: ${error.message}`,'error');}
 }
@@ -1467,18 +1503,111 @@ function showUserKoreanModal(media){
   const root=$('#modal-root');
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:520px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">사용자 입력</div><h2>한국어 제목·소개 직접 입력</h2><p class="page-subtitle">공식 자료가 없는 작품에 직접 한국어 제목과 소개를 입력할 수 있습니다. "사용자 입력"으로 표시되며, 언제든 수정·삭제할 수 있습니다.</p><form class="settings-form" id="user-korean-form"><label>한국어 제목<input id="uk-title" type="text" placeholder="예: 귀멸의 칼날" value="${esc(existing?.title||'')}"></label><label>한국어 소개<textarea id="uk-overview" rows="4" placeholder="작품 소개를 입력하세요">${esc(existing?.overview||'')}</textarea></label><label>출처 URL (선택)<input id="uk-url" type="url" placeholder="https://..." value="${esc(existing?.url||'')}"></label><div class="watch-controls"><button class="primary-button" type="submit">저장</button>${existing?`<button class="ghost-button danger-button" type="button" id="uk-delete">삭제</button>`:''}<button class="ghost-button" type="button" data-close-modal>취소</button></div></form></div></div></div>`;
   const form=$('#user-korean-form');
-  form.onsubmit=e=>{e.preventDefault();const title=$('#uk-title').value.trim();const overview=$('#uk-overview').value.trim();const url=$('#uk-url').value.trim();if(!title&&!overview){toast('제목 또는 소개를 입력해 주세요.','error');return;}setUserKorean(media,{title,overview,url});toast('한국어 자료를 저장했습니다.');root.innerHTML='';state.currentModal={media};renderDetailModal(media);};
+  form.onsubmit=e=>{e.preventDefault();const title=$('#uk-title').value.trim();const overview=$('#uk-overview').value.trim();const url=$('#uk-url').value.trim();if(!title&&!overview){toast('제목 또는 소개를 입력해 주세요.','error');return;}setUserKorean(media,{title,overview,url,anilistId:media.id,malId:media.idMal||media.mal_id||existing?.malId,searchTerm:existing?.searchTerm||media.title?.english||media.title?.romaji||''});toast('한국어 자료를 저장했습니다.');root.innerHTML='';state.currentModal={media};renderDetailModal(media);};
   $('#uk-delete')?.addEventListener('click',()=>{deleteUserKorean(media);toast('사용자 입력 자료를 삭제했습니다.');root.innerHTML='';state.currentModal={media};renderDetailModal(media);});
 };
 
+async function translateForDisplay(text,{title=false}={}){
+  const value=String(text||'').trim();
+  if(!value||!isMachineTranslationEnabled())return null;
+  if(title&&getGeminiKey()){
+    try{const result=await geminiTranslate(value,'ja','ko');if(result?.text)return {text:result.text,engine:'Gemini AI'};}catch(error){/* 다음 번역 수단으로 진행 */}
+  }
+  try{const translated=await translateText(value,'ko');if(translated)return {text:translated,engine:'Google 번역'};}catch(error){/* 다음 번역 수단으로 진행 */}
+  if(getGeminiKey()){
+    try{const result=await geminiTranslate(value,title?'ja':'auto','ko');if(result?.text)return {text:result.text,engine:'Gemini AI'};}catch(error){/* 번역 실패 */}
+  }
+  return null;
+}
+
+let lastMachineTranslation=null;
+let machineTranslationLoading=false;
+let machineTranslationAutoOpened=false;
+let machineTranslationDismissed=false;
+
+async function openMachineTranslation({auto=false}={}){
+  const media=state.currentModal?.media;
+  const target=$('#machine-translation-result');
+  const button=$('#machine-translate-detail');
+  if(!media||!target)return;
+  if(!auto){machineTranslationAutoOpened=false;machineTranslationDismissed=false;}
+  if(machineTranslationLoading)return;
+  if(!isMachineTranslationEnabled()){
+    target.hidden=false;
+    target.innerHTML=`<div class="machine-translation-head"><span class="translation-badge">자동 번역 · 비공식</span></div><p class="hint">자동 번역이 꺼져 있습니다. 켜면 이 작품의 제목·소개를 기계 번역으로 미리 볼 수 있습니다. 공식 메타데이터로 저장되지는 않습니다.</p><button class="primary-button" id="enable-machine-translation" type="button">자동 번역 켜고 번역</button>`;
+    return;
+  }
+  const titleInfo=koreanTitleInfo(media);
+  const needsTitle=titleInfo.kind==='original';
+  const needsDescription=!koreanDescriptionInfo(media);
+  const originalTitle=needsTitle?titleOf(media):'';
+  const originalDesc=needsDescription?cleanDescription(media.description||media.synopsis||''):'';
+  if(!originalTitle&&!originalDesc){
+    target.hidden=false;
+    target.innerHTML=`<div class="machine-translation-head"><span class="translation-badge">자동 번역 · 비공식</span></div><p class="hint">이미 한국어 제목과 소개가 등록되어 있어 자동 번역이 필요하지 않습니다.</p>`;
+    return;
+  }
+  target.hidden=false;
+  target.innerHTML=`<div class="machine-translation-head"><span class="translation-badge">자동 번역 · 비공식</span><span class="machine-engine">번역 중…</span></div>`;
+  if(button)button.disabled=true;
+  machineTranslationLoading=true;
+  try{
+    const [titleResult,descResult]=await Promise.all([
+      originalTitle?translateForDisplay(originalTitle,{title:true}):Promise.resolve(null),
+      originalDesc?translateForDisplay(originalDesc):Promise.resolve(null)
+    ]);
+    if(!titleResult&&!descResult){
+      target.innerHTML=`<div class="machine-translation-head"><span class="translation-badge">자동 번역 · 비공식</span></div><p class="hint">번역 결과를 가져오지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.</p>`;
+      return;
+    }
+    const parts=[];
+    if(titleResult)parts.push(`<strong class="machine-title">${esc(titleResult.text)}</strong><p class="machine-title-note">자동 번역 제목 · 원제 ${esc(originalTitle)}</p>`);
+    if(descResult)parts.push(`<p class="detail-desc machine-desc">${esc(descResult.text)}</p>`);
+    const engines=[...new Set([titleResult?.engine,descResult?.engine].filter(Boolean))].join(' · ');
+    lastMachineTranslation={mediaId:media.id,title:titleResult?.text||'',overview:descResult?.text||''};
+    target.innerHTML=`<div class="machine-translation-head"><span class="translation-badge">자동 번역 · 비공식</span><span class="machine-engine">${esc(engines)}</span><button class="ghost-button" id="close-machine-translation" type="button">숨기기</button></div>${parts.join('')}<div class="machine-actions"><button class="ghost-button" id="save-machine-translation" type="button">내 한국어 자료로 저장</button></div><p class="translation-note">기계 번역 결과입니다. 공식 제목·소개가 아니며 국내 판권사 표기와 다를 수 있습니다. 정확한 정보는 위 출처 링크에서 확인하세요.</p>`;
+  }finally{machineTranslationLoading=false;if(button)button.disabled=false;}
+}
+
+function maybeAutoShowMachineTranslation(media){
+  if(machineTranslationDismissed||!isMachineTranslationAutoShowEnabled()||state.currentModal?.media?.id!==media.id)return;
+  if(koreanTitleInfo(media).kind==='original'||!koreanDescriptionInfo(media))openMachineTranslation({auto:true});
+}
+function hideMachineTranslationIfResolved(media){
+  if(!machineTranslationAutoOpened)return;
+  if(koreanTitleInfo(media).kind==='original'||!koreanDescriptionInfo(media))return;
+  const box=$('#machine-translation-result');
+  if(box){box.hidden=true;box.innerHTML='';}
+  machineTranslationAutoOpened=false;
+}
+
+function saveMachineTranslationToUser(){
+  const media=state.currentModal?.media;
+  if(!media||!lastMachineTranslation||lastMachineTranslation.mediaId!==media.id)return;
+  if(!confirm('기계 번역 결과를 내 한국어 자료로 저장할까요?\n\n저장하면 "사용자 입력"으로 표시되고 전체 백업에 포함됩니다. 기계 번역은 틀릴 수 있으니 내용을 확인한 뒤 저장하세요.'))return;
+  const existing=getUserKorean(media)||{};
+  const title=(lastMachineTranslation.title||existing.title||'').trim();
+  const overview=(lastMachineTranslation.overview||existing.overview||'').trim();
+  if(!title&&!overview){toast('저장할 번역 결과가 없습니다.','error');return;}
+  if(!setUserKorean(media,{title,overview,url:existing.url||media.siteUrl||'',anilistId:media.id,malId:media.idMal||media.mal_id||existing.malId,searchTerm:media.title?.english||media.title?.romaji||existing.searchTerm||''})){toast('사용자 번역을 저장하지 못했습니다. 저장 공간을 확인하세요.','error');return;}
+  const titleNode=$('[data-translate-title]');if(titleNode)titleNode.textContent=localizedTitle(media);
+  const descNode=$('[data-translate-description]');const localized=localizedDescription(media);
+  if(descNode&&localized){descNode.textContent=localized;descNode.dataset.descriptionKind='localized';}
+  const sourceNode=$('[data-korean-metadata-source]');if(sourceNode)sourceNode.innerHTML=koreanMetadataSourceMarkup(media);
+  lastMachineTranslation=null;
+  const box=$('#machine-translation-result');if(box){box.hidden=true;box.innerHTML='';}
+  toast('자동 번역을 사용자 입력으로 저장했습니다. 백업에 포함됩니다.');
+}
+
 function renderDetailModal(m,mal=null,options={}){
+  machineTranslationDismissed=false;
   const root=$('#modal-root');const id=m.id;const saved=state.watchlist.find(x=>String(x.media_id)===String(id));const originalDesc=cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');
   const originalTitle=localizedTitleSource(m);const koreanTitle=localizedTitle(m);const koreanDescInfo=koreanDescriptionInfo(m);const koreanDesc=koreanDescInfo?.overview||'';const descriptionBadge=koreanDescInfo?.kind==='curated'?'국내 카탈로그 기반 요약':koreanDescInfo?.kind==='user'?'사용자 입력 소개':koreanDescInfo?'한국어 등록 소개':'한국어 소개 미등록 · 원문 표시';const displayedDesc=koreanDesc||cleanDescription(m.description||'작품 설명이 등록되지 않았습니다.');const native=m.title?.native||'';const english=m.title?.english||'';const romaji=m.title?.romaji||'';
   const originalNames=[native,english,romaji].filter((x,i,a)=>x&&a.indexOf(x)===i).join(' · ');
   const relationMarkup=detailRelationsMarkup(m);
   root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal"><div class="modal-top"><button class="close-button" data-close-modal aria-label="닫기">×</button></div>
   <div class="detail-hero"><img class="detail-cover" src="${esc(posterOf(m))}" alt="${esc(originalTitle)}" loading="lazy" decoding="async" onerror="this.style.opacity='.2'"><div><div class="eyebrow">${esc(formatOf(m))} · ${esc(yearOf(m))}</div><h2 class="detail-title" data-translate-title>${esc(koreanTitle)}</h2><div class="detail-native">원제: ${esc(originalNames||originalTitle)}</div><div class="detail-stats"><span class="stat-chip"><strong>★ ${((m.averageScore||0)/10).toFixed(1)}</strong>AniList</span><span data-detail-mal></span><span class="stat-chip">${esc(statusOf(m.status))}</span>${m.episodes?`<span class="stat-chip">${m.episodes}화</span>`:''}<span class="stat-chip">인기 ${Number(m.popularity||0).toLocaleString('ko-KR')}</span></div><div class="tag-list">${(m.genres||[]).map(g=>`<span class="genre-tag">${esc(GENRE_LABELS[g]||g)}</span>`).join('')}</div><div class="card-meta">제작사: ${detailStudiosMarkup(m)}</div><div class="detail-actions"><select class="status-select" id="detail-status"><option value="">시청 상태 선택</option>${STATUSES.map(([s,l])=>`<option value="${s}" ${saved?.status===s?'selected':''}>${l}</option>`).join('')}</select><button class="secondary-button" data-save-anime="${esc(id)}">${saved?'목록 업데이트':'내 보관함에 추가'}</button><select class="status-select" id="detail-collection-select"><option value="">컬렉션 선택</option>${state.collections.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="ghost-button" data-add-collection="${esc(id)}">컬렉션에 담기</button><button class="ghost-button" data-create-collection-detail="${esc(id)}">새 컬렉션 만들기</button><a class="secondary-button" href="${esc(m.siteUrl||'#')}" target="_blank" rel="noopener">원본 정보 ↗</a><a class="ghost-button" href="https://www.google.com/search?q=${encodeURIComponent((koreanTitle||originalTitle||'')+' 굿즈 피규어')}" target="_blank" rel="noopener">굿즈 검색 ↗원본 정보 ↗</a><a class="ghost-button" href="https://search.yes24.com/Search?domain=ALL&query=${encodeURIComponent(koreanTitle||originalTitle||'')}" target="_blank" rel="noopener">Yes24</a><a class="ghost-button" href="https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=All&SearchWord=${encodeURIComponent(koreanTitle||originalTitle||'')}" target="_blank" rel="noopener">알라딘</a></div></div></div>
-  <div class="detail-body"><section class="detail-section"><h3>작품 소개 <span class="translation-badge">${esc(descriptionBadge)}</span></h3><div class="detail-desc" data-translate-description>${esc(displayedDesc)}</div><details class="translation-original"><summary>${koreanDesc?'원문 보기':'원문 정보'}</summary><div class="detail-desc" data-translation-original-content>${esc(originalDesc.slice(0,5000))}${originalDesc.length>5000?'…':''}</div></details><p class="translation-note" data-korean-metadata-source>${koreanMetadataSourceMarkup(m)}</p><button class="ghost-button" id="retry-korean-translation" type="button">한국어 등록 정보 다시 조회</button> <button class="ghost-button" id="user-korean-input" type="button">한국어 제목 직접 입력</button></section>
+  <div class="detail-body"><section class="detail-section"><h3>작품 소개 <span class="translation-badge">${esc(descriptionBadge)}</span></h3><div class="detail-desc" data-translate-description>${esc(displayedDesc)}</div><details class="translation-original"><summary>${koreanDesc?'원문 보기':'원문 정보'}</summary><div class="detail-desc" data-translation-original-content>${esc(originalDesc.slice(0,5000))}${originalDesc.length>5000?'…':''}</div></details><p class="translation-note" data-korean-metadata-source>${koreanMetadataSourceMarkup(m)}</p><button class="ghost-button" id="retry-korean-translation" type="button">한국어 등록 정보 다시 조회</button> <button class="ghost-button" id="user-korean-input" type="button">한국어 제목 직접 입력</button> <button class="ghost-button" id="machine-translate-detail" type="button">자동 번역 보기 (비공식)</button><div id="machine-translation-result" class="machine-translation" aria-live="polite" hidden></div></section>
   <section class="detail-section"><h3>방영 · 제작 정보</h3><div class="detail-desc" data-detail-production-info>${detailProductionMarkup(m)}</div></section>
   <section class="detail-section similar-section"><h3>비슷한 작품</h3><button class="ghost-button" id="load-similar-works">비슷한 작품 찾기</button><div id="similar-works-results"></div></section><div data-detail-relations>${relationMarkup}</div>${options.extrasLoading?`<section class="detail-section" data-detail-extras><h3>등장인물 · 제작진</h3><p class="muted">기본 정보를 표시했습니다. 인물 및 제작진 정보를 이어서 불러오고 있습니다...</p></section>`:detailExtrasMarkup(m)}
   <p class="source-footnote">정보 출처: AniList · MyAnimeList/Jikan · TMDB(선택 설정) · 일부 국내 서비스 카탈로그를 확인해 정리한 한국어 자료. 한국어 제목 별칭과 한국어 줄거리는 출처와 신뢰 수준을 구분해 표시하며, 등록되지 않은 줄거리는 원문 그대로 제공합니다.</p></div></div></div>`;
@@ -1490,7 +1619,9 @@ function renderDetailModal(m,mal=null,options={}){
     root.appendChild(ld);
   }catch(error){}
   if(descriptionNode){descriptionNode.dataset.descriptionKind=koreanDesc?'localized':'original';}
-  loadKoreanMetadataIntoDetail(m).catch(error=>console.warn('Korean title/description lookup failed:',error));
+  const koreanReady=loadKoreanMetadataIntoDetail(m);
+  koreanReady.then(()=>{maybeAutoShowMachineTranslation(m);hideMachineTranslationIfResolved(m);}).catch(error=>console.warn('Korean title/description lookup failed:',error));
+  Promise.race([koreanReady,new Promise(resolve=>setTimeout(resolve,1200))]).then(()=>maybeAutoShowMachineTranslation(m)).catch(()=>{});
   if(mal){const scoreNode=$('[data-detail-mal]');if(scoreNode&&mal.score)scoreNode.innerHTML=`<span class="stat-chip"><strong>★ ${esc(mal.score)}</strong>MyAnimeList</span>`;const rank=$('[data-detail-rank]'),source=$('[data-detail-source]');if(rank)rank.textContent=mal.rank?`#${mal.rank}`:'정보 없음';if(source)source.textContent=mal.source||'정보 없음';}
 }
 
@@ -1647,8 +1778,8 @@ function showConflictModal(conflicts){
 
 function showSettings(){
   const cfg=JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');const tmdbCfg=loadTMDBConfig();const root=$('#modal-root');
-  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, 사전 수확 한국어 제목 DB, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선), 나무위키·한국어 위키백과에서 확인된 한국어 표기를 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>Gemini AI · 나무위키 검색 보조 (선택)</h3><p class="detail-desc">Google Gemini 무료 API 키를 입력하면, 한국어 자료가 없는 작품의 <b>나무위키 검색 후보(한국어 제목)</b>를 만드는 데에만 사용합니다. AI가 만든 번역을 화면에 표시하지 않으며, 나무위키·한국어 위키백과에서 실제 문서가 확인된 경우에만 그 제목·소개를 사용합니다. 키가 없으면 원제로 나무위키·한국어 위키백과를 직접 검색합니다.</p><form class="settings-form" id="gemini-settings-form"><label>Gemini API Key<input id="gemini-key" type="password" placeholder="AIzaSy..." value="${esc(getGeminiKey())}" autocomplete="off"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">무료 tier: 15 req/min, 1M tokens/day. API 키는 이 브라우저에만 저장되며, 나무위키 검색 보조 외에는 사용되지 않습니다.</p></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>나무위키: 1차 한국어 제목·소개 보조(문서가 확인된 경우에 한함)<br>한국어 위키백과: 나무위키 조회 실패 시 한국어 제목·소개 보조(애니메이션·만화 문서로 확인된 경우)<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 제목 DB → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 소개 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <section class="detail-section"><h3>나무위키 프록시 (선택)</h3><form class="settings-form" id="namu-proxy-form"><label>프록시 URL<input id="namu-proxy-url" type="url" placeholder="https://namu-proxy.yourname.workers.dev" value="${esc(localStorage.getItem('animehub_namu_proxy_v1')||'')}"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">Cloudflare Worker URL을 입력하면 나무위키 검색이 프록시를 통해 안정화됩니다. 비워두면 직접 조회를 시도합니다.</p></section><button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
-  root.addEventListener('change',e=>{if(e.target.id==='import-backup-file')importAllData(e.target.files?.[0]);});
+  root.innerHTML=`<div class="modal-backdrop" data-close-modal><div class="modal" style="max-width:610px"><div class="modal-top"><button class="close-button" data-close-modal>×</button></div><div class="settings-wrap"><div class="eyebrow">설정</div><h2>데이터 · 계정 설정</h2><p class="page-subtitle">기본 작품 정보는 AniList에서 제공하며, MyAnimeList 점수와 상세 정보는 Jikan을 통해 보완합니다.</p><section class="detail-section"><h3>계정 동기화 · Supabase</h3><div class="${state.supabase?'success-box':'warning-box'}">${state.supabase?'Supabase 연결이 설정되어 있습니다. 로그인하면 보관함·컬렉션·저장 검색 조건이 계정별로 동기화됩니다.':'Supabase 연결 정보가 필요합니다. 아래에 프로젝트 정보를 입력하면 이메일 계정과 클라우드 저장 기능을 사용할 수 있습니다.'}</div><form class="settings-form" id="settings-form"><label>Project URL<input id="supabase-url" type="url" placeholder="https://your-project.supabase.co" value="${esc(cfg.url||'')}"></label><label>Publishable key 또는 anon key<input id="supabase-key" type="password" placeholder="sb_publishable_... 또는 anon key" value="${esc(cfg.key||'')}"></label><button class="primary-button" type="submit">연결 정보 저장 및 연결</button></form><p class="hint">Supabase 대시보드의 Project URL과 공개용 publishable key(또는 legacy anon key)를 입력하세요. <b>service_role 키는 절대 입력하지 마세요.</b> 연결 후 최신 supabase/schema.sql을 Supabase SQL Editor에서 실행해야 보관함·컬렉션·검색 조건을 계정별로 저장할 수 있습니다.</p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-link">Supabase 대시보드 열기 ↗</a></section><section class="detail-section"><h3>한국어 작품명 · 줄거리 정보</h3><p class="detail-desc">작품 제목과 소개는 각각 별도로 한국어 자료를 확인합니다. 국내 플랫폼 카탈로그를 직접 대조해 정리한 일부 대표작 자료, 사전 수확 한국어 제목 DB, AniList 한글 별칭, MyAnimeList/Jikan 한글 대체 제목, TMDB 한국어 등록 번역(대한민국 KR 우선), 나무위키·한국어 위키백과에서 확인된 한국어 표기를 출처별로 구분해 사용합니다. 한국어 제목이 없으면 원제를 유지하고, 한국어 소개가 확인되지 않으면 원문을 보여줍니다. 별칭과 TMDB 번역은 국내 판권사의 최종 공식 표기와 다를 수 있습니다. 검색어 입력을 보조하는 경우 외에는 제목·줄거리·인물명·제작사명을 기계 번역하지 않습니다.</p><form class="settings-form" id="tmdb-settings-form"><label>TMDB Read Access Token (v4)<input id="tmdb-read-token" type="password" placeholder="TMDB API Read Access Token" value="${esc(tmdbCfg.readAccessToken||'')}" autocomplete="off"></label><button class="primary-button" type="submit">한국어 데이터 연결 저장</button></form><p class="hint">TMDB 계정의 API 설정에서 v4 Read Access Token을 발급해 입력하세요. 토큰은 현재 브라우저의 로컬 저장소에만 보관됩니다. 대한민국(KR) 지역의 한국어 번역이 있으면 우선 사용하고, 없으면 다른 지역의 한국어 번역도 출처 국가를 구분해 사용할 수 있습니다. TMDB 등록 정보가 국내 판권사·방송사의 최종 정식 표기와 모든 경우에 일치한다고 보장되지는 않습니다. 작품 상세의 출처 링크에서 등록 내용을 직접 확인할 수 있습니다.</p><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener" class="text-link">TMDB API 설정 열기 ↗</a></section><section class="detail-section"><h3>Gemini AI · 나무위키 검색 보조 (선택)</h3><p class="detail-desc">Google Gemini 무료 API 키를 입력하면, 한국어 자료가 없는 작품의 <b>나무위키 검색 후보(한국어 제목)</b>를 만드는 데에만 사용합니다. AI가 만든 번역을 화면에 표시하지 않으며, 나무위키·한국어 위키백과에서 실제 문서가 확인된 경우에만 그 제목·소개를 사용합니다. 키가 없으면 원제로 나무위키·한국어 위키백과를 직접 검색합니다.</p><form class="settings-form" id="gemini-settings-form"><label>Gemini API Key<input id="gemini-key" type="password" placeholder="AIzaSy..." value="${esc(getGeminiKey())}" autocomplete="off"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">무료 tier: 15 req/min, 1M tokens/day. API 키는 이 브라우저에만 저장되며, 나무위키 검색 보조 외에는 사용되지 않습니다.</p></section><section class="detail-section"><h3>자동 번역 (선택)</h3><p class="detail-desc">공식 한국어 자료가 없는 작품의 <b>제목·소개를 기계 번역</b>으로 미리 볼 수 있습니다. 결과에는 항상 "자동 번역 · 비공식" 표시가 붙고, 공식 메타데이터·검색 색인·백업에는 저장되지 않습니다. Gemini 키가 있으면 제목 번역에 Gemini를 우선 사용하고, 없으면 Google 번역을 사용합니다.</p><label class="toggle-row"><input type="checkbox" id="auto-translate-toggle" ${isMachineTranslationEnabled()?'checked':''}> <span>자동 번역 사용</span></label><label class="toggle-row"><input type="checkbox" id="auto-translate-show-toggle" ${isMachineTranslationAutoShowEnabled()?'checked':''} ${isMachineTranslationEnabled()?'':'disabled'}> <span>상세 화면에서 번역 결과 바로 표시</span></label><p class="hint">번역할 원문이 외부 번역 서비스로 전송될 수 있습니다. 민감한 정보는 입력하지 마세요. 자동 번역은 공식 표기가 아니므로 정확한 제목은 출처 링크에서 확인하세요.</p></section><section class="detail-section"><h3>데이터 출처 · Credits</h3><div class="detail-desc">AniList: 작품·방영·장르·제작사·인물·연관 작품 및 한글 별칭<br>Jikan / MyAnimeList: 보조 평점·순위·일부 설명<br>TMDB: 선택 설정 시 한국어 작품명·줄거리 및 작품별 번역 목록(대한민국 KR 우선, 다른 국가 자료는 구분 표시)<br>국내 카탈로그 수동 확인: 일부 대표 작품의 한국어 제목·줄거리<br>나무위키: 1차 한국어 제목·소개 보조(문서가 확인된 경우에 한함)<br>한국어 위키백과: 나무위키 조회 실패 시 한국어 제목·소개 보조(애니메이션·만화 문서로 확인된 경우)<br>화면 제목 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 제목 DB → TMDB 한국어 등록 정보 → AniList 한글 별칭 → MAL 한글 대체 제목 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원제<br>줄거리 우선순위: 수동 확인 국내 카탈로그 → 사용자 입력 → 사전 수확 한국어 소개 → TMDB 한국어 등록 소개 → MAL 한국어 소개 → 나무위키 확인 문서 → 한국어 위키백과 확인 문서 → 원문<br><br>데이터베이스 전체를 한 번에 내려받는 방식은 아닙니다. 검색과 페이지 이동을 통해 원본 DB의 공개 데이터를 조회합니다. 각 API의 요청 제한과 가용성에 따라 일부 항목은 늦게 표시될 수 있습니다.</div><div class="tmdb-attribution"><a href="https://www.themoviedb.org" target="_blank" rel="noopener" aria-label="The Movie Database"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" alt="TMDB"></a><div><b>한국어 현지화 정보 제공 · TMDB</b><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p><a href="https://www.themoviedb.org/about/logos-attribution" target="_blank" rel="noopener" class="text-link">TMDB 로고 및 출처 표시 안내 ↗</a></div></div></section><section class="detail-section"><h3>내 데이터</h3><button class="ghost-button" id="export-list">보관함 JSON 내보내기</button> <button class="ghost-button" id="export-collections">컬렉션 JSON 내보내기</button> <button class="ghost-button" id="export-all-data">전체 백업 다운로드</button> <button class="ghost-button" id="import-all-data">백업 복원</button><input type="file" id="import-backup-file" accept="application/json,.json" hidden> <section class="detail-section"><h3>나무위키 프록시 (선택)</h3><form class="settings-form" id="namu-proxy-form"><label>프록시 URL<input id="namu-proxy-url" type="url" placeholder="https://namu-proxy.yourname.workers.dev" value="${esc(localStorage.getItem('animehub_namu_proxy_v1')||'')}"></label><button class="primary-button" type="submit">저장</button></form><p class="hint">Cloudflare Worker URL을 입력하면 나무위키 검색이 프록시를 통해 안정화됩니다. 비워두면 직접 조회를 시도합니다.</p></section><button class="ghost-button" id="clear-local">이 기기 보관함 비우기</button></section></div></div></div>`;
+  root.onchange=e=>{if(e.target.id==='import-backup-file')importAllData(e.target.files?.[0]);if(e.target.id==='auto-translate-toggle'){const on=!!e.target.checked;setMachineTranslationEnabled(on);const autoShow=$('#auto-translate-show-toggle');if(autoShow){autoShow.disabled=!on;if(!on){autoShow.checked=false;setMachineTranslationAutoShowEnabled(false);}}toast(on?'자동 번역을 켰습니다. 작품 상세에서 "자동 번역 보기"를 사용할 수 있습니다.':'자동 번역을 껐습니다.');}if(e.target.id==='auto-translate-show-toggle'){const on=!!e.target.checked;setMachineTranslationAutoShowEnabled(on);toast(on?'자동 번역이 필요한 작품 상세에서 번역 결과를 바로 표시합니다.':'자동 번역 결과를 자동으로 표시하지 않습니다.');}};
   root.onsubmit=async e=>{if(e.target.id==='tmdb-settings-form'){e.preventDefault();const readAccessToken=$('#tmdb-read-token').value.trim();if(readAccessToken){localStorage.setItem(TMDB_CONFIG_KEY,JSON.stringify({readAccessToken}));toast('한국어 현지화 데이터 연결을 저장했습니다.');}else{localStorage.removeItem(TMDB_CONFIG_KEY);toast('TMDB 연결을 해제했습니다.');}localStorage.removeItem(KOREAN_METADATA_CACHE_KEY);showSettings();return;}if(e.target.id==='gemini-settings-form'){e.preventDefault();const key=$('#gemini-key').value.trim();setGeminiKey(key);toast(key?'Gemini API 키를 저장했습니다.':'Gemini API 키를 삭제했습니다.');showSettings();return;}if(e.target.id==='namu-proxy-form'){e.preventDefault();const url=$('#namu-proxy-url').value.trim();if(url){localStorage.setItem('animehub_namu_proxy_v1',url);toast('나무위키 프록시 URL을 저장했습니다.');}else{localStorage.removeItem('animehub_namu_proxy_v1');toast('나무위키 프록시를 해제했습니다.');}showSettings();return;}if(e.target.id!=='settings-form')return;e.preventDefault();const url=$('#supabase-url').value.trim().replace(/\/$/,''),key=$('#supabase-key').value.trim();if(!url||!key){toast('Project URL과 공개 키를 모두 입력해 주세요.','error');return;}try{new URL(url);}catch{toast('Project URL 형식이 올바르지 않습니다.','error');return;}localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));state.supabase=null;state.user=null;await loadSupabase();if(state.supabase){toast('Supabase 연결 정보를 저장했습니다.');showSettings();}else toast(`연결 실패: ${state.supabaseError||'설정을 확인해 주세요.'}`,'error');};
   root.onclick=e=>{if(e.target.id==='export-all-data'){exportAllData();}if(e.target.id==='import-all-data')$('#import-backup-file')?.click();if(e.target.id==='import-backup-file')return;if(e.target.id==='export-list'){const blob=new Blob([JSON.stringify(state.watchlist,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-watchlist.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='export-collections'){const blob=new Blob([JSON.stringify(state.collections,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anime-hub-collections.json';a.click();URL.revokeObjectURL(a.href);}if(e.target.id==='clear-local'){if(confirm('이 기기에 저장된 보관함을 삭제할까요? 클라우드 데이터는 삭제하지 않습니다.')){state.watchlist=[];saveLocalList();toast('이 기기의 보관함을 비웠습니다.');root.innerHTML='';if(state.route==='watchlist')renderWatchlist();}}};
 }
@@ -1714,6 +1845,10 @@ $('#modal-root').addEventListener('click',async e=>{
   if(e.target.closest('#user-korean-input')){
     if(state.currentModal?.media)showUserKoreanModal(state.currentModal.media);return;
   }
+  if(e.target.closest('#machine-translate-detail')){await openMachineTranslation();return;}
+  if(e.target.closest('#enable-machine-translation')){setMachineTranslationEnabled(true);await openMachineTranslation();return;}
+  if(e.target.closest('#close-machine-translation')){const box=$('#machine-translation-result');if(box){box.hidden=true;box.innerHTML='';}machineTranslationAutoOpened=false;machineTranslationDismissed=true;return;}
+  if(e.target.closest('#save-machine-translation')){saveMachineTranslationToUser();return;}
   if(e.target.closest('#load-similar-works')){loadSimilarWorks();return;}
   if(e.target.closest('#open-franchise-map')){const media=state.currentModal?.media;if(media)renderFranchisePage(media);return;}
   const studioLink=e.target.closest('[data-studio]');if(studioLink){const id=studioLink.dataset.studio,name=studioLink.dataset.studioName||'';$('#modal-root').innerHTML='';showStudioWorks(id,name);return;}
@@ -1736,7 +1871,8 @@ function updateSearchSuggestions(){
   const aliases=searchAliasSuggestions(q).filter(x=>!recent.includes(x));
   const needle=normalizeForSearch(q);
   const common=needle?Object.keys(KOREAN_TITLE_INDEX).filter(title=>normalizeForSearch(title).includes(needle)).slice(0,6):[];
-  const values=[...new Set([...recent,...aliases,...common])];
+  const userTitles=needle?Object.values(allUserKorean()).map(v=>String(v?.title||'').trim()).filter(title=>title&&normalizeForSearch(title).includes(needle)).slice(0,4):[];
+  const values=[...new Set([...recent,...aliases,...userTitles,...common])];
   dl.innerHTML=values.map(v=>`<option value="${esc(v)}"></option>`).join('');
 }
 $('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.trim();state.query=q;state.filters=defaultFilters();saveRecentSearch(q);navigate('browse');}});

@@ -18,10 +18,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT = ROOT / "data" / "korean-common-titles.harvest.json"
 
 QUERY = """
-query ($page: Int!, $perPage: Int!) {
+query ($page: Int!, $perPage: Int!, $sort: [MediaSort]) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { hasNextPage }
-    media(type: ANIME, sort: [POPULARITY_DESC]) {
+    media(type: ANIME, sort: $sort) {
       id
       idMal
       title { romaji english native }
@@ -63,6 +63,7 @@ def main():
     parser.add_argument("--pages", type=int, default=6)
     parser.add_argument("--start-page", type=int, default=1)
     parser.add_argument("--per-page", type=int, default=50)
+    parser.add_argument("--sort", default="POPULARITY_DESC", help="AniList MediaSort (예: SCORE_DESC, START_DATE_DESC)")
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     args = parser.parse_args()
 
@@ -72,7 +73,7 @@ def main():
     last_page = args.start_page + args.pages - 1
     while page <= last_page:
         print(f"page {page}...")
-        data = post_json({"query": QUERY, "variables": {"page": page, "perPage": args.per_page}})
+        data = post_json({"query": QUERY, "variables": {"page": page, "perPage": args.per_page, "sort": [args.sort]}})
         page_data = (data.get("data") or {}).get("Page") or {}
         media_list = page_data.get("media") or []
         has_next = page_data.get("pageInfo", {}).get("hasNextPage", False)

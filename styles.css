@@ -49,6 +49,19 @@
 @media(max-width:900px){.saved-search-panel{grid-template-columns:1fr 1fr}.saved-search-label{grid-column:1/-1}.saved-search-actions{justify-content:flex-start}}
 @media(max-width:760px){.saved-search-panel{grid-template-columns:1fr;gap:9px;padding:11px}.saved-search-label{grid-column:auto}.saved-search-actions{display:grid;grid-template-columns:1fr 1fr 1.2fr}.saved-search-actions button{padding:8px 5px}.result-toolbar{align-items:flex-start;flex-direction:column}.result-toolbar-actions{width:100%;justify-content:space-between}.refresh-results{margin-left:auto}.data-update-time{font-size:8px}}
 .translation-badge{display:inline-flex;vertical-align:middle;margin-left:7px;padding:3px 7px;border-radius:6px;background:#8c79ed20;border:1px solid #9e8cf044;color:#c9bdff;font-size:9px;font-weight:700}.translation-original{margin:7px 0 0;border:1px solid #30364a;border-radius:9px;background:#111520;padding:9px 11px}.translation-original summary{cursor:pointer;color:#aeb5c8;font-size:10px;font-weight:700}.translation-original .detail-desc{margin:9px 0 2px;white-space:pre-line}.translation-note{margin:7px 0 0;color:#737b91;font-size:9px;line-height:1.6}.detail-desc[data-translate-description]{white-space:pre-line;min-height:24px}
+.toggle-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#171b28;font-weight:600;font-size:12px;cursor:pointer}
+.toggle-row input{width:16px;height:16px;accent-color:var(--accent)}
+.machine-translation{margin-top:12px;padding:12px;border:1px solid #8c79ed55;border-radius:12px;background:#171329}
+.machine-translation-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.machine-translation-head .translation-badge{margin-left:0}
+.machine-engine{margin-left:auto;color:#8f97ad;font-size:10px}
+.machine-title{display:block;font-size:15px;color:#e8e4ff;margin-bottom:2px}
+.machine-title-note{margin:0 0 8px;color:#8f97ad;font-size:10px}
+.machine-desc{white-space:pre-line;margin:0 0 8px}
+.machine-translation .translation-note{margin-top:6px}
+html.light .toggle-row{background:var(--panel2)}
+html.light .machine-translation{background:#f6f3ff;border-color:#cfc3ff}
+html.light .machine-title{color:#3b2f6b}
 
 
 /* ANIME HUB v4 — collections, personal recommendations, stats and Korean-first layout */
