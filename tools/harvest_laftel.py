@@ -524,6 +524,10 @@ def main() -> int:
             continue
 
         overview = clean_overview(detail.get("content") or "")
+        if not overview or not HANGUL.search(overview):
+            stats["rejected"] += 1
+            log(f"[{position}/{len(work_items)}] 소개 없음/한국어 아님: {title}")
+            continue
         platform_year = laftel_year(detail)
         ani_format = str(anilist.get("format") or "").upper()
         kind = {
@@ -569,8 +573,32 @@ def main() -> int:
 
     # 같은 플랫폼 작품이 여러 AniList 항목에 연결된 경우(예: 미개봉 극장판),
     # 연도와 형식이 확인된 항목만 남깁니다.
+    preserved_records: list[dict] = []
+    preserved_platforms: list[dict] = []
+    if OUTPUT.exists():
+        try:
+            previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            log(f"기존 카탈로그를 읽지 못했습니다(새로 작성): {error}")
+        else:
+            preserved_records = [
+                record
+                for record in previous.get("records", []) or []
+                if isinstance(record, dict) and record.get("platform") != PLATFORM_ID
+            ]
+            preserved_platforms = [
+                platform
+                for platform in previous.get("platforms", []) or []
+                if isinstance(platform, dict) and platform.get("id") != PLATFORM_ID
+            ]
+            if preserved_records or preserved_platforms:
+                log(
+                    f"기존 다른 플랫폼 자료 유지: 레코드 {len(preserved_records)}건, "
+                    f"플랫폼 {len(preserved_platforms)}개"
+                )
+
     deduped: dict[tuple[str, int], dict] = {}
-    for record in records:
+    for record in preserved_records + records:
         key = (record["platform"], record["platformId"])
         current = deduped.get(key)
         if current is None:
@@ -583,19 +611,22 @@ def main() -> int:
     records = list(deduped.values())
 
     records.sort(key=lambda record: (record["anilistId"], record["platform"]))
+    laftel_platform = {
+        "id": PLATFORM_ID,
+        "name": PLATFORM_NAME,
+        "priority": PLATFORM_PRIORITY,
+        "sourceUrl": "https://laftel.net/",
+        "checkedAt": CHECKED_AT,
+    }
+    platforms = sorted(
+        preserved_platforms + [laftel_platform],
+        key=lambda platform: (platform.get("priority", 99), str(platform.get("id") or "")),
+    )
     payload = {
         "schemaVersion": 1,
         "region": "KR",
         "checkedAt": CHECKED_AT,
-        "platforms": [
-            {
-                "id": PLATFORM_ID,
-                "name": PLATFORM_NAME,
-                "priority": PLATFORM_PRIORITY,
-                "sourceUrl": "https://laftel.net/",
-                "checkedAt": CHECKED_AT,
-            }
-        ],
+        "platforms": platforms,
         "records": records,
     }
 

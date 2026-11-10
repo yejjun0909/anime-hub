@@ -1,18 +1,28 @@
 # 애니허브 검사 보고서
 
 ## v4.8.0 국내 플랫폼 우선 한국어 메타데이터 (2026-11-11)
-- `py tools/harvest_laftel.py --anilist-pages 12` 실행: AniList 인기 600작품의 한국어 별칭까지 후보로 확장한 시드 213개(중복 정리 후 203작품) → **106건** 수확(라프텔 TV 86 / 영화 14 / ONA 5 / OVA 1). 줄거리 빈 항목 0건, 플랫폼 작품 중복 0건, AniList 중복 0건.
+- `py tools/harvest_laftel.py --anilist-pages 12` 실행: AniList 인기 600작품의 한국어 별칭까지 후보로 확장한 시드 213개 중 미개봉 10건을 제외한 203작품 → **106건** 수확(라프텔 TV 86 / 영화 14 / ONA 5 / OVA 1). 줄거리 빈 항목 0건, 플랫폼 작품 중복 0건, AniList 중복 0건.
 - 수확 매칭 결과: `exact-title+year` 83, `season-title+year` 21, `exact-title` 2. 미개봉 극장판(`마녀의 여행` 205444)은 제외하고 TV 112609만 유지. 인기 600작품으로 후보를 넓혀도 새로 연결된 작품은 없었고, 기존 1건의 매칭 방식만 `season-title+year` → `exact-title+year`로 정교해졌습니다.
 - `py tools/build_korean_platform_catalog.py` → `data/korean-platform-catalog.js` 생성(106건, 약 121KB). `--check` 최신 상태 확인.
 - `py tools/build_title_index.py` → 한국어 제목 인덱스 205 → **243건**(플랫폼 표기·기존 시드 별칭 38건 추가).
 - `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
-- `py tools/build_single.py` → 단일 HTML 557,414 bytes 재생성, `--check` 최신 확인.
+- `py tools/build_single.py` → 단일 HTML 557,664 bytes 재생성, `--check` 최신 확인.
 - 브라우저 확인(로컬 서버, Jikan 터널 차단 환경):
   - “귀멸의 칼날” 검색 → AniList 101922 상세에서 `제목: 라프텔`, `소개(플랫폼 등록): 라프텔`, 라프텔 줄거리 표시. 콘솔 오류 0건.
   - “진격의 거인 1기” 검색 → AniList 16498 상세에서 `제목: 라프텔` 표시.
+  - “귀환자의 마법은 특별해야 합니다” 검색 → 플랫폼 작품 AniList 163142가 첫 결과로 나오고 상세에서 `제목: 라프텔`, `소개(플랫폼 등록): 라프텔` 표시(검색 인덱스 수정 확인).
   - “주술회전”은 라프텔 미보유 → 기존 수동 카탈로그(Apple TV 한국)로 폴백 확인.
+  - 모듈형 사이트(`index.html`)와 단일 HTML 모두에서 확인. 콘솔 오류 0건.
 - `tests/korean-platform.test.html` 브라우저 하네스 → **14/14 통과**. `tests/korean-platform.test.mjs`는 Node 환경용으로 함께 추가.
 - Node.js가 없는 환경이라 `tests/korean-platform.test.mjs`를 포함한 `.mjs` 테스트는 CI/Node 환경에서 실행해야 합니다.
+
+### 자체 검토 보완
+- 검색 인덱스 충돌 수정: `귀환자의 마법은 특별해야 합니다`가 기존 MAL 57612/AniList 172192(2기)로 먼저 매핑되던 문제를 고쳐, 플랫폼이 확인한 MAL 54852/AniList 163142(1기)를 가리키도록 `tools/build_title_index.py`를 수정했습니다. 재생성 후 플랫폼 제목 누락 0건·AniList ID 불일치 0건(243건).
+- 수확 검증 강화: `tools/harvest_laftel.py`가 한국어 줄거리가 없거나 비한국어인 항목을 제외하고, 재수확 시 라프텔 이외 플랫폼 레코드·플랫폼 목록을 보존하며, 기존 카탈로그 읽기 오류를 안전하게 처리합니다.
+- 보조 조회 생략: `app.js`에서 플랫폼 자료가 있는 작품은 Jikan·TMDB·나무위키·한국어 위키백과 보조 조회를 건너뛰어 플랫폼 확인 값을 덮어쓰지 않습니다.
+- 검사 강화: `tools/check_korean_catalog.py`가 `workId == anilist-<id>`와 플랫폼 제목의 검색 인덱스 연결 일치를 검사합니다.
+- 회귀 테스트: `tests/korean-title-index.test.mjs`에 플랫폼 확인 제목이 AniList 163142를 가리키는 검사를 추가했습니다.
+- `py -m py_compile tools/harvest_laftel.py tools/build_title_index.py tools/check_korean_catalog.py` 통과, `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
 
 ## v4.7.4 자동 번역 미리보기·사용자 번역 백업 (2026-11-10)
 - 설정 모달에서 `자동 번역 (선택)` 토글 표시, 기본값 꺼짐 확인. 토글 시 `animehub_machine_translate_enabled_v1` 저장 확인.

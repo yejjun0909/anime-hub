@@ -25,6 +25,7 @@ CATALOG = ROOT / "data" / "korean-catalog.json"
 GENERATED = ROOT / "data" / "korean-catalog.js"
 PLATFORM_CATALOG = ROOT / "data" / "korean-platform-catalog.json"
 PLATFORM_GENERATED = ROOT / "data" / "korean-platform-catalog.js"
+TITLE_INDEX = ROOT / "data" / "korean-title-index.js"
 CASES = ROOT / "tests" / "korean-id-cases.json"
 
 REQUIRED = (
@@ -257,8 +258,12 @@ def check_platform_catalog(data: dict) -> list[dict]:
         ani = record["anilistId"]
         if not isinstance(ani, int) or ani <= 0:
             fail(f"{where}: anilistId는 양의 정수여야 합니다: {ani!r}")
-        elif ani in seen_anilist:
-            warn(f"{where}: 같은 AniList 작품에 플랫폼 항목이 여러 개입니다 ({ani})")
+        else:
+            work_id = record["workId"]
+            if work_id != f"anilist-{ani}":
+                fail(f"{where}: workId가 anilistId와 다릅니다: {work_id!r}")
+            if ani in seen_anilist:
+                warn(f"{where}: 같은 AniList 작품에 플랫폼 항목이 여러 개입니다 ({ani})")
         seen_anilist.add(ani)
         mal = record["malId"]
         if mal is not None and (not isinstance(mal, int) or mal <= 0):
@@ -306,6 +311,38 @@ def check_platform_catalog(data: dict) -> list[dict]:
                 fail(f"{where}: {platform} 출처 호스트가 다릅니다: {host}")
 
     return records
+
+
+def check_platform_title_index(records: list[dict]) -> None:
+    """플랫폼 제목이 검색 인덱스에서 같은 작품을 가리키는지 확인합니다."""
+    if not TITLE_INDEX.exists():
+        fail("data/korean-title-index.js 가 없습니다.")
+        return
+    source = TITLE_INDEX.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r'^\s*("(?:[^"\\]|\\.)*")\s*:\s*\{\s*malId:\s*(\d+),\s*anilistId:\s*"(\d+)"',
+        re.M,
+    )
+    index: dict[str, tuple[int, int]] = {}
+    for raw_key, mal_id, anilist_id in pattern.findall(source):
+        try:
+            key = json.loads(raw_key)
+        except json.JSONDecodeError:
+            continue
+        index[key] = (int(mal_id), int(anilist_id))
+    if not index:
+        fail("검색 인덱스에서 항목을 읽지 못했습니다.")
+        return
+    for record in records:
+        title = record["title"]
+        hit = index.get(title)
+        if hit is None:
+            fail(f"검색 인덱스에 플랫폼 제목이 없습니다: {title!r}")
+        elif hit[1] != record["anilistId"]:
+            fail(
+                "검색 인덱스의 플랫폼 제목이 다른 작품을 가리킵니다: "
+                f"{title!r} (인덱스 {hit[1]} / 플랫폼 {record['anilistId']})"
+            )
 
 
 def check_cases(records: list[dict]) -> None:
@@ -423,7 +460,8 @@ def main() -> int:
     records = check_catalog(data)
     if PLATFORM_CATALOG.exists():
         platform_data = json.loads(PLATFORM_CATALOG.read_text(encoding="utf-8"))
-        check_platform_catalog(platform_data)
+        platform_records = check_platform_catalog(platform_data)
+        check_platform_title_index(platform_records)
     else:
         fail("data/korean-platform-catalog.json 이 없습니다.")
     check_cases(records)

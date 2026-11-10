@@ -28,6 +28,11 @@ test('제목 인덱스: 시즌 표기 무시', () => {
   assert.equal(findKoreanTitleEntry('귀멸의 칼날 시즌2')?.title, '귀멸의 칼날');
 });
 
+test('제목 인덱스: 플랫폼 확인 제목은 같은 작품을 가리킨다', () => {
+  const entry = findKoreanTitleEntry('귀환자의 마법은 특별해야 합니다');
+  assert.equal(entry?.anilistId, '163142');
+});
+
 test('제목 인덱스: 기호/공백 차이 무시', () => {
   assert.equal(findKoreanTitleEntry('Re:제로부터 시작하는 이세계 생활')?.malId, 31240);
 });

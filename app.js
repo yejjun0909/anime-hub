@@ -391,6 +391,7 @@ async function enrichKoreanMetadata(items,concurrency=2){
   let cursor=0;const workers=Array.from({length:Math.min(concurrency,items.length)},async()=>{
     while(cursor<items.length){const item=items[cursor++];
       try{
+        if(findKoreanPlatformRecord(item))continue;
         let alias=cachedKoreanAlias(item);
         if(!curatedKoreanOverride(item)&&!koreanAniListSynonym(item)&&!alias)alias=await getJikanKoreanInfo(item);
         if(tmdbToken()&&!cachedKoreanMetadata(item))await findKoreanMetadata(item,{jikanInfo:alias});
@@ -407,6 +408,7 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
   const titleNode=$('[data-translate-title]',root),descNode=$('[data-translate-description]',root),sourceNode=$('[data-korean-metadata-source]',root);
   if(!titleNode||!descNode)return;
+  const platform=findKoreanPlatformRecord(media);
   const refresh=()=>{
     titleNode.textContent=localizedTitle(media);
     const overview=localizedDescription(media);if(overview){descNode.textContent=overview;descNode.dataset.descriptionKind='localized';}
@@ -415,11 +417,11 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
   };
   refresh();
   try{
-    if(!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
-    if(tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
+    if(!platform&&!curatedKoreanOverride(media)&&!koreanAniListSynonym(media)&&!cachedKoreanAlias(media))await getJikanKoreanInfo(media);
+    if(!platform&&tmdbToken()&&(options.force||!cachedKoreanMetadata(media)||cachedKoreanMetadata(media)?.missing))await findKoreanMetadata(media,{force:options.force===true});
     // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
-    // 이미 확인된 한국어 제목(카탈로그/DB/사용자/TMDB/AniList)이 있으면 덮어쓰지 않습니다.
-    if(!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
+    // 이미 확인된 한국어 제목(플랫폼/카탈로그/DB/사용자/TMDB/AniList)이 있으면 덮어쓰지 않습니다.
+    if(!platform&&!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
       if(nativeTitle&&String(nativeTitle).trim().length>1){
         const found=await lookupKoreanFallback(nativeTitle);
@@ -722,10 +724,10 @@ function sectionHead(title,kicker='',action=''){return `<div class="section-head
 async function hydrateKoreanCardTitles(items,root,maxItems=8){
   if(!Array.isArray(items)||!items.length||!root)return;
   const unique=[...new Map(items.filter(m=>m?.id!=null).map(m=>[String(m.id),m])).values()];
-  const pending=unique.filter(m=>!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
+  const pending=unique.filter(m=>!findKoreanPlatformRecord(m)&&!curatedKoreanOverride(m)&&!koreanAniListSynonym(m)&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   if(pending.length)await enrichKoreanMetadata(pending,2);
   // 한국어 소스 조회 (v4.7+): 나무위키 → AI 보조 재검색 → 한국어 위키백과
-  const sourcePending=unique.filter(m=>!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanMetadata(m)?.title&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
+  const sourcePending=unique.filter(m=>!findKoreanPlatformRecord(m)&&!curatedKoreanOverride(m)&&!getUserKorean(m)&&!koreanAniListSynonym(m)&&!cachedKoreanMetadata(m)?.title&&(!cachedKoreanAlias(m)||tmdbToken()&&!cachedKoreanMetadata(m))).slice(0,maxItems);
   for(const m of sourcePending){
     try{
       const nativeTitle=m?.title?.native||m?.title?.romaji||m?.title?.english;

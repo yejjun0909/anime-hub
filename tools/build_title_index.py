@@ -175,11 +175,19 @@ def main() -> int:
             continue
         entries[korean] = entry
 
-    # 플랫폼 표기와 기존 시드 표기를 모두 검색 별칭으로 남깁니다.
+    # 플랫폼에서 직접 확인한 표기는 같은 제목이 다른 작품(시즌 등)에 먼저
+    # 매핑되어 있어도 플랫폼 작품 쪽으로 우선 연결합니다.
     for record in platform_records:
         entry = entry_by_mal.get(record["malId"])
-        if entry:
-            entries.setdefault(record["title"], entry)
+        if not entry:
+            continue
+        if str(entry.get("anilistId")) != str(record["anilistId"]):
+            print(
+                f"  경고: 플랫폼 제목 연결 불일치 '{record['title']}' "
+                f"(AniList {record['anilistId']} / MAL {record['malId']})"
+            )
+            continue
+        entries[record["title"]] = entry
     for mal_key, seed_title in seed_titles.items():
         entry = entry_by_mal.get(int(mal_key))
         if entry:
