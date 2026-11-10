@@ -1,0 +1,10 @@
+# Netlify Git 연동용 설정
+# 저장소를 연결하면 push할 때마다 자동으로 빌드·배포됩니다.
+# (수동 ZIP 업로드는 DEPLOY_NO_INSTALL_KO.md 참고)
+
+[build]
+  command = "python3 tools/build_site.py"
+  publish = "_site"
+
+[build.environment]
+  PYTHON_VERSION = "3.12"

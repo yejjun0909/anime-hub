@@ -24,6 +24,16 @@
 - 회귀 테스트: `tests/korean-title-index.test.mjs`에 플랫폼 확인 제목이 AniList 163142를 가리키는 검사를 추가했습니다.
 - `py -m py_compile tools/harvest_laftel.py tools/build_title_index.py tools/check_korean_catalog.py` 통과, `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`.
 
+### 자동 배포·모바일 오프라인 보강 (2026-11-11)
+- `py tools/build_site.py` → 플랫폼 카탈로그 JS 106건, 단일 HTML 557,664 bytes, `_site/` 45개 파일 생성.
+- `_site/`에 `index.html`, `app.js`, `sw.js`, 플랫폼 JS, 검색 인덱스, 제목 DB가 모두 포함되고 수확 원본 JSON·플랫폼 JSON은 제외됨을 확인.
+- `py tools/build_deploy_zip.py` → 배포 ZIP 382,492 bytes, 45개 파일(자동 배포 문서 포함).
+- `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`, `py tools/build_single.py --check` → 최신 확인.
+- 브라우저에서 서비스 워커 등록·제어 확인: `anime-hub-shell-v4-8-0` 셸 44개 항목 캐시.
+- 포스터 이미지 캐시 확인: `anime-hub-images-v1`에 AniList 배너·커버 저장(외부 opaque 응답 포함). 이 과정의 콘솔 오류는 기존 Jikan 터널 차단 2건뿐이며 이미지 캐시 동작과 무관합니다.
+- `.github/workflows/deploy-pages.yml`은 저장소 연결 후 GitHub Actions에서 실행되는 구성이며, 로컬에는 원격 저장소가 없어 실제 Pages 배포 실행은 하지 못했습니다.
+- `py tools/serve.py --lan`의 LAN 주소 출력 코드와 문법을 확인했습니다. 실제 휴대폰 접속은 같은 Wi-Fi·방화벽 허용이 필요합니다.
+
 ## v4.7.4 자동 번역 미리보기·사용자 번역 백업 (2026-11-10)
 - 설정 모달에서 `자동 번역 (선택)` 토글 표시, 기본값 꺼짐 확인. 토글 시 `animehub_machine_translate_enabled_v1` 저장 확인.
 - 작품 상세에서 `자동 번역 보기 (비공식)` 버튼과 결과 블록(`자동 번역 · 비공식`, 엔진 표시) 확인. 공식 제목·소개 영역은 변경되지 않음.

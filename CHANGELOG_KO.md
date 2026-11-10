@@ -28,6 +28,14 @@
 - 플랫폼 자료가 있는 작품은 Jikan·TMDB·나무위키·위키백과 보조 조회를 생략해 확인된 제목·소개를 덮어쓰지 않습니다.
 - 검사 도구가 `workId`와 검색 인덱스의 플랫폼 제목 연결까지 확인하도록 보강했습니다.
 
+### 자동 배포 · 모바일 오프라인
+- Git 저장소를 연결하면 푸시할 때마다 자동 배포되도록 `.github/workflows/deploy-pages.yml`(GitHub Pages)과 `netlify.toml`(Netlify Git 연동)을 추가했습니다.
+- `tools/build_site.py`가 플랫폼 카탈로그 JS → 단일 HTML → `_site/` 배포 폴더를 한 번에 생성합니다.
+- `tools/build_deploy_dir.py`와 `tools/deploy_files.py`를 추가해 자동 배포와 ZIP이 같은 포함 목록을 사용합니다.
+- 서비스 워커가 AniList·TMDB·MAL 포스터 이미지를 캐시하고, 오프라인에 없으면 자리 표시자를 표시합니다. 셸 갱신 시 HTTP 캐시가 아닌 서버 파일을 다시 받습니다.
+- `py tools/serve.py --lan`으로 같은 Wi-Fi의 휴대폰에서 PC 서버에 접속할 수 있습니다.
+- 자세한 일회성 설정은 `DEPLOY_AUTO_KO.md`에 정리했습니다.
+
 ### 버전
 - `APP_VERSION` 4.8.0, `VERSION.txt` 4.8.0, PWA 셸 캐시 `anime-hub-shell-v4-8-0`, `package.json` 4.8.0.
 

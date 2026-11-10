@@ -117,6 +117,9 @@ anime-hub/
 │   ├── build_title_index.py    # 한국어 제목 인덱스 생성
 │   ├── merge_common_titles.py  # 수확 JSON → 공통 제목 병합
 │   ├── build_deploy_zip.py     # 배포용 ZIP 생성
+│   ├── build_deploy_dir.py     # 자동 배포용 _site/ 생성
+│   ├── build_site.py           # 자동 배포 산출물 일괄 생성
+│   ├── deploy_files.py         # 배포 포함 파일 목록
 │   ├── check_korean_catalog.py
 │   └── ...
 ├── tests/
@@ -132,6 +135,8 @@ anime-hub/
 ```bash
 # 로컬 서버
 py tools/serve.py
+# 같은 Wi-Fi의 휴대폰에서 접속 (PC가 켜져 있을 때만)
+py tools/serve.py --lan
 
 # 한국어 카탈로그 JSON → JS 생성
 py tools/build_korean_catalog.py
@@ -159,8 +164,11 @@ py tools/build_title_index.py
 # 사전 DB에서 빈 항목 정리
 py tools/prune_korean_titles_db.py
 
-# 배포용 ZIP 생성 (사이트 실행 파일만 포함)
+# 배포용 ZIP 생성 (사이트 실행 파일만 포함, 수동 업로드용)
 py tools/build_deploy_zip.py
+
+# 자동 배포용 산출물 생성 (GitHub Pages / Netlify / Cloudflare Pages)
+py tools/build_site.py
 
 # 단일 HTML 재생성 / 최신 여부 검사
 py tools/build_single.py
@@ -199,4 +207,6 @@ AniList는 API 이용 약관에서 경쟁 관계에 있는 비보완형 애니�
 
 ## PWA와 모바일
 
-Android Chrome 및 iPhone Safari에서 일반 웹사이트로 이용할 수 있습니다. 원한다면 홈 화면에 추가해 앱처럼 사용할 수 있습니다. 서비스 워커는 앱 셸과 일부 정적 파일을 캐시하며, 외부 API 조회에는 인터넷 연결이 필요합니다.
+Android Chrome 및 iPhone Safari에서 일반 웹사이트로 이용할 수 있습니다. 원한다면 홈 화면에 추가해 앱처럼 사용할 수 있습니다. 서비스 워커는 앱 셸과 최근 포스터 이미지를 캐시하며, 외부 API 조회에는 인터넷 연결이 필요합니다.
+
+PC가 꺼져 있어도 모바일에서 계속 쓰려면 HTTPS 정적 호스팅에 한 번 배포해야 합니다. Git 저장소를 연결하면 푸시할 때마다 자동 배포되므로 ZIP을 다시 올릴 필요가 없습니다: [DEPLOY_AUTO_KO.md](DEPLOY_AUTO_KO.md).
