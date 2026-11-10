@@ -9,7 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="애니허브" />
   <meta http-equiv="Content-Language" content="ko" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css" />
-  <meta name="description" content="전 세계 애니메이션을 검색하고 나만의 시청 목록을 관리하는 ANIME HUB" />
+  <meta name="description" content="애니허브에서 전 세계 애니메이션을 검색하고 방영 일정, 한국어 제목, 개인 시청 목록과 컬렉션을 한 곳에서 관리하세요." />
+  <meta name="format-detection" content="telephone=no" />
   <title>애니허브 — 애니메이션 통합 정보</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
@@ -18,15 +19,40 @@
   <link rel="preconnect" href="https://api.anilist.co" crossorigin />
   <link rel="dns-prefetch" href="https://api.jikan.moe" />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:site_name" content="애니허브" />
   <meta property="og:title" content="애니허브 — 애니메이션 통합 정보" />
   <meta property="og:description" content="전 세계 애니메이션을 검색하고 나만의 시청 목록을 관리하세요." />
   <meta property="og:image" content="assets/icon-512.png" />
+  <meta property="og:image:alt" content="애니허브 로고" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
   <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="애니허브 — 애니메이션 통합 정보" />
+  <meta name="twitter:description" content="전 세계 애니메이션을 검색하고 나만의 시청 목록을 관리하세요." />
+  <meta name="twitter:image" content="assets/icon-512.png" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "애니허브",
+      "alternateName": "ANIME HUB",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "ko",
+      "description": "애니메이션 검색, 방영 일정, 한국어 제목, 개인 시청 목록과 컬렉션을 제공하는 웹앱입니다.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+    }
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <!-- Analytics (optional): set data-website-id to enable Umami -->
   <!-- <script defer src="https://analytics.example.com/script.js" data-website-id="REPLACE_ME"></script> -->
 </head>
 <body>
+  <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+  <noscript>
+    <div class="noscript-notice">애니허브는 자바스크립트로 동작합니다. 브라우저 설정에서 자바스크립트를 켜면 검색과 시청 목록 기능을 사용할 수 있습니다.</div>
+  </noscript>
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="#home" aria-label="애니허브 홈">
@@ -35,38 +61,38 @@
       </a>
       <div class="top-search" role="search">
         <span class="search-symbol">⌕</span>
-        <input id="global-search" type="search" placeholder="작품·성우·제작사 검색" autocomplete="off" list="search-suggestions" />
+        <input id="global-search" type="search" placeholder="작품·성우·제작사 검색" aria-label="애니메이션 검색" autocomplete="off" list="search-suggestions" />
 <datalist id="search-suggestions"></datalist>
         <kbd>↵</kbd>
       </div>
       <div class="top-actions">
         <button class="icon-button" id="refresh-data" title="최신 정보 확인" aria-label="최신 정보 확인">↻</button>
-        <button class="icon-button" id="install-button" title="앱 설치" hidden>⇩</button>
-<button class="icon-button" id="export-data" title="데이터 백업">⤓</button>
-<button class="icon-button" id="import-data" title="데이터 복원">⤒</button>
-<button class="icon-button" id="theme-toggle" title="테마 전환">◐</button>
+        <button class="icon-button" id="install-button" title="앱 설치" aria-label="앱 설치" hidden>⇩</button>
+<button class="icon-button" id="export-data" title="데이터 백업" aria-label="데이터 백업">⤓</button>
+<button class="icon-button" id="import-data" title="데이터 복원" aria-label="데이터 복원">⤒</button>
+<button class="icon-button" id="theme-toggle" title="테마 전환" aria-label="테마 전환">◐</button>
 <input type="file" id="import-file" accept="application/json" hidden />
-        <button class="account-button" id="account-button" title="개인 데이터 및 계정 설정"><span class="avatar">U</span><span id="account-label">로컬 저장</span></button>
+        <button class="account-button" id="account-button" title="개인 데이터 및 계정 설정" aria-label="개인 데이터 및 계정 설정"><span class="avatar" aria-hidden="true">U</span><span id="account-label">로컬 저장</span></button>
       </div>
     </header>
 
     <div class="layout">
       <aside class="sidebar">
         <div class="nav-label">탐색 메뉴</div>
-        <nav id="main-nav" class="main-nav">
-          <a href="#home" data-route="home" class="nav-item active"><span>⌂</span> 홈</a>
-          <a href="#airing" data-route="airing" class="nav-item"><span>◷</span> 방영 일정</a>
-          <a href="#browse" data-route="browse" class="nav-item"><span>▦</span> 전체 애니</a>
-          <a href="#movies" data-route="movies" class="nav-item"><span>▣</span> 극장판 · 영화</a>
-          <a href="#studios" data-route="studios" class="nav-item"><span>▤</span> 제작사</a>
-          <a href="#people" data-route="people" class="nav-item"><span>♙</span> 성우 · 스태프</a>
+        <nav id="main-nav" class="main-nav" aria-label="탐색 메뉴">
+          <a href="#home" data-route="home" class="nav-item active" aria-current="page"><span aria-hidden="true">⌂</span> 홈</a>
+          <a href="#airing" data-route="airing" class="nav-item"><span aria-hidden="true">◷</span> 방영 일정</a>
+          <a href="#browse" data-route="browse" class="nav-item"><span aria-hidden="true">▦</span> 전체 애니</a>
+          <a href="#movies" data-route="movies" class="nav-item"><span aria-hidden="true">▣</span> 극장판 · 영화</a>
+          <a href="#studios" data-route="studios" class="nav-item"><span aria-hidden="true">▤</span> 제작사</a>
+          <a href="#people" data-route="people" class="nav-item"><span aria-hidden="true">♙</span> 성우 · 스태프</a>
         </nav>
         <div class="nav-label personal-label">나의 공간</div>
-        <nav class="main-nav">
-          <a href="#watchlist" data-route="watchlist" class="nav-item"><span>♡</span> 내 보관함</a>
-          <a href="#recommend" data-route="recommend" class="nav-item"><span>✧</span> 취향 추천</a>
-          <a href="#collections" data-route="collections" class="nav-item"><span>▣</span> 컬렉션</a>
-          <a href="#stats" data-route="stats" class="nav-item"><span>▥</span> 시청 통계</a>
+        <nav class="main-nav" aria-label="나의 공간">
+          <a href="#watchlist" data-route="watchlist" class="nav-item"><span aria-hidden="true">♡</span> 내 보관함</a>
+          <a href="#recommend" data-route="recommend" class="nav-item"><span aria-hidden="true">✧</span> 취향 추천</a>
+          <a href="#collections" data-route="collections" class="nav-item"><span aria-hidden="true">▣</span> 컬렉션</a>
+          <a href="#stats" data-route="stats" class="nav-item"><span aria-hidden="true">▥</span> 시청 통계</a>
         </nav>
         <div class="sidebar-bottom">
           <div class="source-status"><span class="live-dot"></span><div><b>데이터 연결</b><small>AniList · Jikan · TMDB(선택)</small></div></div>
@@ -75,7 +101,7 @@
         </div>
       </aside>
 
-      <main id="main-content" class="main-content">
+      <main id="main-content" class="main-content" tabindex="-1">
         <section class="welcome-skeleton"><div class="skeleton wide"></div><div class="skeleton row"></div><div class="skeleton cards"></div></section>
       </main>
     </div>

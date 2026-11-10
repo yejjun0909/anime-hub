@@ -1,5 +1,17 @@
 # 애니허브 검사 보고서
 
+## v4.7.3 한국어 검색 인덱스·배포 (2026-11-07)
+- `data/korean-title-index.js` 188개 항목 생성, 정확/퍼지 매칭 확인.
+- 브라우저 테스트: `korean-title-index.test.html` 17/17, `korean-source.test.html` 18/18, `namu-fuzzy.test.html` 35/35, `id-match.test.html` 32/32 통과.
+- 메인 앱 콘솔 오류 0건. 테마 토글(`light` 클래스, `theme-color` 갱신, `aria-label`)과 자동완성의 한국어 제목 노출 확인.
+- 검색 “진격거인” → 인덱스가 `Attack on Titan`으로 질의, 20개 결과 표시 확인.
+- 결과 없음 화면에서 나무위키·구글 검색 링크 표시 확인.
+- 검증 DB 180건 로드, `lookupKoreanTitle({id:101922})` → `귀멸의 칼날` 반환 확인.
+- 단일 파일 빌드 누락 모듈(`search-aliases.js`, `korean-josa.js`) 수정 후 단일 파일에서도 한국어 제목 질의·자동완성·콘솔 오류 0건 확인.
+- `py tools/check_korean_catalog.py`, `py tools/build_single.py --check` 통과. 배포 ZIP 42개 파일 무결성(SW 셸·index 참조) 확인.
+- 접근성·SEO 보강 확인: skip link, `<noscript>`, `main tabindex="-1"`, 검색/아이콘 버튼 `aria-label`, 탐색 메뉴 `aria-label`·`aria-current="page"`, `prefers-reduced-motion` 규칙, OG/Twitter/JSON-LD 존재. 경로 이동 시 `aria-current` 갱신 확인.
+- Node.js가 없는 환경이라 `.mjs` 테스트는 CI에서 실행해야 합니다.
+
 ####### v4.9 추천 v2 (2차)
 - `data/recommend-eval.js`에 `avgScore` 필드 추가, 추천 UI footnote에 다양성·평균 점수 표시.
 - 브라우저 확인: 다양성 0.82 · 평균 점수 88.9.

@@ -1349,7 +1349,7 @@ async function checkNewReleaseAlerts(initial=false){
 
 async function renderRoute(){
   state.lastAutoRefresh=Date.now();state.staleDataUsed=false;
-  $$('.nav-item').forEach(a=>a.classList.toggle('active',a.dataset.route===state.route));
+  $$('.nav-item').forEach(a=>{const active=a.dataset.route===state.route;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   if(state.route==='home')return renderHome();
   if(state.route==='browse')return renderBrowse();
   if(state.route==='airing')return renderAiring();

@@ -22,6 +22,12 @@
 - 첫 방문 시 운영체제의 라이트/다크 설정을 따르고, `theme-color` 메타 태그를 테마에 맞게 갱신합니다.
 - 테마 버튼에 `aria-label`/`title`을 추가했습니다.
 
+### 접근성·SEO
+- 본문 바로가기(skip link), `<noscript>` 안내, `#main-content` 포커스 대상(`tabindex="-1"`)을 추가했습니다.
+- 검색 입력과 아이콘 버튼(설치·백업·복원·테마·계정)에 `aria-label`을 지정하고, 탐색 메뉴에 `aria-label`과 현재 경로 `aria-current="page"`를 적용했습니다.
+- 장식용 아이콘에 `aria-hidden="true"`를 적용하고, `prefers-reduced-motion`에서 부드러운 스크롤도 끄도록 보강했습니다.
+- 메타 설명, Open Graph/Twitter 카드, `WebApplication` JSON-LD 구조화 데이터를 추가했습니다.
+
 ### 테스트
 - `tests/korean-title-index.test.mjs`, `tests/korean-title-index.test.html`을 추가했습니다(17개 브라우저 검사).
 - `tests/search-aliases.test.mjs`를 추가했습니다.
