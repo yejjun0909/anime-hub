@@ -27,7 +27,7 @@
 ### 자동 배포·모바일 오프라인 보강 (2026-11-11)
 - `py tools/build_site.py` → 플랫폼 카탈로그 JS 106건, 단일 HTML 557,664 bytes, `_site/` 45개 파일 생성.
 - `_site/`에 `index.html`, `app.js`, `sw.js`, 플랫폼 JS, 검색 인덱스, 제목 DB가 모두 포함되고 수확 원본 JSON·플랫폼 JSON은 제외됨을 확인.
-- `py tools/build_deploy_zip.py` → 배포 ZIP 382,492 bytes, 45개 파일(자동 배포 문서 포함).
+- `py tools/build_deploy_zip.py` → 배포 ZIP 382,554 bytes, 45개 파일(자동 배포 문서 포함).
 - `py tools/check_korean_catalog.py` → `OK: 카탈로그 13건, 경고 0건`, `py tools/build_single.py --check` → 최신 확인.
 - 브라우저에서 서비스 워커 등록·제어 확인: `anime-hub-shell-v4-8-0` 셸 44개 항목 캐시.
 - 포스터 이미지 캐시 확인: `anime-hub-images-v1`에 AniList 배너·커버 저장(외부 opaque 응답 포함). 이 과정의 콘솔 오류는 기존 Jikan 터널 차단 2건뿐이며 이미지 캐시 동작과 무관합니다.
