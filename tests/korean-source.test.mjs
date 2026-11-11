@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   setKoreanTitlesDb,
   lookupKoreanTitle,
+  lookupKoreanWikiTitle,
   filterVerifiedDb,
   isVerifiedKoreanSource
 } from '../data/korean-titles-db.js';
@@ -65,6 +66,54 @@ test('lookupKoreanTitle: TMDB 항목은 TMDB 출처로 표시', () => {
   assert.equal(found?.source, 'TMDB 한국어 등록 번역');
   assert.equal(found?.kind, 'tmdb');
   assert.equal(found?.overview, '거인과 싸우는 이야기.');
+});
+
+test('lookupKoreanWikiTitle: wikiEntries를 AniList ID/MAL ID로 조회', () => {
+  setKoreanTitlesDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    wikiEntries: {
+      '2': {
+        anilistId: 2,
+        title: '장송의 프리렌',
+        overview: '마왕을 쓰러뜨린 뒤의 이야기.',
+        source: 'wiki',
+        url: 'https://ko.wikipedia.org/wiki/장송의_프리렌'
+      },
+      'mal:3': { anilistId: null, malId: 3, title: '체인소 맨', source: 'wiki' }
+    }
+  });
+  const byId = lookupKoreanWikiTitle({ id: 2 });
+  assert.equal(byId?.title, '장송의 프리렌');
+  assert.equal(byId?.kind, 'wiki');
+  assert.equal(byId?.source, '한국어 위키백과');
+  assert.equal(byId?.overview, '마왕을 쓰러뜨린 뒤의 이야기.');
+  assert.equal(byId?.url, 'https://ko.wikipedia.org/wiki/장송의_프리렌');
+  assert.equal(lookupKoreanWikiTitle({ id: 99, idMal: 3 })?.title, '체인소 맨');
+  assert.equal(lookupKoreanWikiTitle({ id: 1 }), null);
+});
+
+test('lookupKoreanWikiTitle: 검증되지 않은 출처는 반환하지 않음', () => {
+  setKoreanTitlesDb({
+    entries: {},
+    wikiEntries: {
+      '5': { title: 'AI 번역 제목', source: 'gemini' }
+    }
+  });
+  assert.equal(lookupKoreanWikiTitle({ id: 5 }), null);
+});
+
+test('filterVerifiedDb: wikiEntries도 검증 출처만 남김', () => {
+  const filtered = filterVerifiedDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    wikiEntries: {
+      '1': { title: '위키 제목', source: 'wiki' },
+      '2': { title: 'AI 제목', source: 'gemini' },
+      '3': { title: '' }
+    }
+  });
+  assert.deepEqual(Object.keys(filtered.wikiEntries), ['1']);
+  assert.equal(filtered.wikiCount, 1);
+  assert.equal(filtered.count, 1);
 });
 
 test('한국어 검색 후보: 부제/시즌 표기 변형 생성', () => {

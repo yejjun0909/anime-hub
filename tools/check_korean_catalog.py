@@ -425,6 +425,72 @@ def check_wiring() -> None:
         fail(f"VERSION.txt가 app.js 버전({app_version})과 다릅니다: {version_file.strip()!r}")
 
 
+def check_titles_db() -> None:
+    """사전 계산 한국어 제목 DB의 출처/형식을 검사합니다.
+
+    `entries`는 강한 출처(플랫폼·카탈로그·TMDB·AniList·MAL), `wikiEntries`는
+    한국어 위키백과 수확분입니다. 위키 항목은 반드시 한국어 제목과 위키 URL을
+    갖고, 기계 번역 출처가 섞이면 실패합니다.
+    """
+    path = ROOT / "data" / "korean-titles-db.json"
+    if not path.exists():
+        fail("data/korean-titles-db.json 이 없습니다.")
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as error:  # noqa: BLE001
+        fail(f"data/korean-titles-db.json 파싱 실패: {error}")
+        return
+    if not isinstance(data, dict):
+        fail("korean-titles-db.json 최상위가 객체가 아닙니다.")
+        return
+    verified_sources = {"anilist", "tmdb", "mal", "jikan", "wiki", "catalog", "curated", "manual"}
+    entries = data.get("entries") or {}
+    wiki_entries = data.get("wikiEntries") or {}
+    if not isinstance(entries, dict) or not isinstance(wiki_entries, dict):
+        fail("korean-titles-db.json의 entries/wikiEntries가 객체가 아닙니다.")
+        return
+
+    for key, entry in entries.items():
+        if not isinstance(entry, dict):
+            fail(f"entries[{key}]가 객체가 아닙니다.")
+            continue
+        title = str(entry.get("title") or "").strip()
+        source = str(entry.get("source") or "").strip()
+        if title and source not in verified_sources:
+            fail(f"entries[{key}]의 출처가 검증 목록에 없습니다: {source!r}")
+
+    for key, entry in wiki_entries.items():
+        if not isinstance(entry, dict):
+            fail(f"wikiEntries[{key}]가 객체가 아닙니다.")
+            continue
+        title = str(entry.get("title") or "").strip()
+        source = str(entry.get("source") or "").strip()
+        if source != "wiki":
+            fail(f"wikiEntries[{key}]의 출처는 wiki여야 합니다: {source!r}")
+        if not title or not HANGUL.search(title):
+            fail(f"wikiEntries[{key}]에 한국어 제목이 없습니다: {title!r}")
+            continue
+        if not (entry.get("anilistId") or entry.get("malId")):
+            fail(f"wikiEntries[{key}]에 AniList/MAL ID가 없습니다.")
+        url = str(entry.get("url") or "")
+        if url and "ko.wikipedia.org/" not in url:
+            fail(f"wikiEntries[{key}]의 URL이 한국어 위키백과가 아닙니다: {url}")
+        overview = str(entry.get("overview") or "").strip()
+        if overview and not HANGUL.search(overview):
+            fail(f"wikiEntries[{key}]의 소개가 한국어가 아닙니다.")
+
+    if data.get("wikiCount") not in (None, len(wiki_entries)):
+        warn(
+            "wikiCount가 실제 wikiEntries 수와 다릅니다: "
+            f"{data.get('wikiCount')} != {len(wiki_entries)}"
+        )
+    print(
+        f"제목 DB: entries {len(entries)}건 · wikiEntries {len(wiki_entries)}건 "
+        f"(검증 {data.get('verifiedCount')}건)"
+    )
+
+
 def check_generated() -> None:
     for script in ("build_korean_catalog.py", "build_korean_platform_catalog.py"):
         result = subprocess.run(
@@ -466,6 +532,7 @@ def main() -> int:
         fail("data/korean-platform-catalog.json 이 없습니다.")
     check_cases(records)
     check_wiring()
+    check_titles_db()
     check_generated()
     check_single_file()
 

@@ -49,13 +49,29 @@ function hasDisplayValue(entry) {
 
 // 원본 DB는 보존하고, 화면에 표시 가능한 항목만 새 객체로 돌려줍니다.
 export function filterVerifiedDb(db) {
-  if (!db || typeof db !== 'object' || !db.entries || typeof db.entries !== 'object') return db;
+  if (!db || typeof db !== 'object') return db;
   const entries = {};
-  for (const [id, entry] of Object.entries(db.entries)) {
+  const rawEntries = db.entries && typeof db.entries === 'object' ? db.entries : {};
+  for (const [id, entry] of Object.entries(rawEntries)) {
     if (!hasDisplayValue(entry) || !isVerifiedKoreanSource(entry.source)) continue;
     entries[id] = entry;
   }
-  return { ...db, entries, count: Object.keys(entries).length };
+  // `wikiEntries`는 한국어 위키백과에서 확인한 제목/소개만 담습니다.
+  // 기존 `entries`의 우선순위를 덮지 않도록 별도 저장하고, 별도 조회 함수로만 씁니다.
+  const wikiEntries = {};
+  const rawWiki = db.wikiEntries && typeof db.wikiEntries === 'object' ? db.wikiEntries : {};
+  for (const [key, entry] of Object.entries(rawWiki)) {
+    if (!hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    wikiEntries[key] = entry;
+  }
+  return {
+    ...db,
+    entries,
+    count: Object.keys(entries).length,
+    wikiEntries,
+    wikiCount: Object.keys(wikiEntries).length
+  };
 }
 
 export function setKoreanTitlesDb(db) {
@@ -75,6 +91,7 @@ export function getKoreanTitlesDbStats() {
   return {
     loaded: _dbLoaded,
     count: _db?.entries ? Object.keys(_db.entries).length : 0,
+    wikiCount: _db?.wikiEntries ? Object.keys(_db.wikiEntries).length : 0,
     sources: _db?.entries
       ? Object.values(_db.entries).reduce((acc, entry) => {
           const source = String(entry?.source || 'none');
@@ -100,6 +117,32 @@ export function lookupKoreanTitle(media) {
     url: String(entry.url || '').trim(),
     kind: meta?.kind || 'db'
   };
+}
+
+// 한국어 위키백과에서 수확한 제목/소개를 조회합니다.
+// `entries`보다 우선순위가 낮으므로 앱의 제목/소개 체인에서 나무위키·캐시 뒤,
+// 국내 통용 표기 앞에서 호출합니다.
+export function lookupKoreanWikiTitle(media) {
+  const wiki = _db?.wikiEntries;
+  if (!wiki) return null;
+  const keys = [
+    media?.id != null ? String(media.id) : null,
+    media?.idMal ? `mal:${media.idMal}` : null,
+    media?.mal_id ? `mal:${media.mal_id}` : null
+  ].filter(Boolean);
+  for (const key of keys) {
+    const entry = wiki[key];
+    if (!entry || !hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    return {
+      title: String(entry.title || '').trim(),
+      overview: String(entry.overview || '').trim(),
+      source: sourceMeta(entry.source || 'wiki')?.label || '한국어 위키백과',
+      url: String(entry.url || '').trim(),
+      kind: 'wiki'
+    };
+  }
+  return null;
 }
 
 export async function loadKoreanTitlesDb(url = './data/korean-titles-db.json') {

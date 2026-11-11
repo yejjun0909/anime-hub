@@ -1,5 +1,34 @@
 # 변경 내역
 
+## v4.9.0 — 한국어 위키백과·AniList 카탈로그 대량 수확 (2026-11-11)
+
+### 한국어 위키백과
+- `tools/harvest_ko_wikipedia.py`를 추가했습니다. 한국어 위키백과의 애니메이션 분류(일본의 애니메이션·TV 애니메이션·애니메이션 영화·웹 애니메이션·OVA)에서 후보 **2,537문서**를 모아 **2,014건**을 AniList 카탈로그와 연결했습니다.
+- 연결된 문서 중 애니메이션 작품 설명이 확인된 **926건**의 한국어 소개를 수확했습니다.
+- 수확 결과는 기존 검증 DB(`entries`)를 덮지 않도록 `data/korean-titles-db.json`의 별도 `wikiEntries`에 저장합니다. `lookupKoreanWikiTitle()`로만 조회하며, 표시 우선순위는 나무위키·캐시 뒤, 국내 통용 표기 앞입니다.
+- 위키데이터 P31(작품 종류)과 도입부 문장을 함께 판정해 **만화·게임·비주얼 노벨·소설 등 원작 문서는 소개를 쓰지 않고 제목만** 사용합니다. 원작 문서는 영어 기반 후보와 동의어(synonym) 일치도 배제해 `TAKE MOON → Carnival Phantasm` 같은 오매칭을 막았습니다.
+- 미디어 믹스·프랜차이즈 문서와 방송 채널 문서(예: `애니맥스`)는 애니메이션 작품이 아니므로 소개·제목을 수확하지 않습니다.
+- 문서 도입부의 일본어 원제·영어 제목을 카탈로그와 정밀 대조(정확 → 접두 → 독음)하고, 연도·형식·인기도로 점수화합니다. 근접 동점은 `ambiguous`로 제외합니다.
+- 제목에서 `(비디오 게임)`, `(애니메이션)` 같은 괄호 설명을 제거하고, 괄호가 깨진 원제는 버립니다.
+
+### AniList 카탈로그
+- `tools/harvest_anilist_catalog.py`를 추가했습니다. 인기순 상위권 누락 없이 **14,963작품**의 AniList 카탈로그를 수확했습니다.
+- AniList `Page`의 5,000건 제한 때문에 `seasonYear` 연도별로 나눠 수확하고, 1940년 미만은 `seasonYear`가 100년 뒤로 해석되는 API 특성에 맞춰 `startDate` 범위로 별도 수확했습니다(147작품).
+- 카탈로그의 한국어 별칭 **183작품**을 DB `entries`에 병합했습니다. 기존 180건 + 신규 82건으로 **262건(검증 191건)** 이 되었습니다.
+- 병합은 AniList 한국어 별칭만 사용하며, 기존 제목과 강한 출처(플랫폼·수동·사용자)는 덮지 않습니다.
+
+### 검색 인덱스·검사
+- `tools/build_title_index.py`가 `entries`와 `wikiEntries`를 함께 읽고, **위키 전용 제목을 최저 우선순위로 먼저 깐 뒤 강한 출처가 덮어쓰도록** 했습니다. 인덱스는 **2,183건**입니다.
+- `tools/check_korean_catalog.py`에 `check_titles_db()`를 추가해 `entries`/`wikiEntries`의 출처·한국어 여부·URL·ID를 검사합니다.
+- `tests/korean-source.test.mjs`에 `wikiEntries` 조회·필터 테스트 4건을 추가했습니다. 전체 테스트 **158건** 통과.
+- 수확 원본(`data/anilist-catalog-harvest.json`, `data/ko-wikipedia-harvest.json`)은 저장소와 배포에서 제외합니다.
+
+### 문서
+- `README.md`와 `KOREAN_DATA_POLICY_KO.md`에 위키백과 우선순위·수확 도구·검증 원칙을 반영했습니다.
+
+### 버전
+- `APP_VERSION` 4.9.0, `VERSION.txt` 4.9.0, PWA 셸 캐시 `anime-hub-shell-v4-9-0`, `package.json` 4.9.0.
+
 ## v4.8.0 — 국내 플랫폼 우선 한국어 메타데이터 (2026-11-11)
 
 ### 국내 플랫폼 우선

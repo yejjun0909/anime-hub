@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parent.parent
 COMMON_JS = ROOT / "data" / "korean-common-titles.js"
 CATALOG_JSON = ROOT / "data" / "korean-catalog.json"
 PLATFORM_JSON = ROOT / "data" / "korean-platform-catalog.json"
+DB_JSON = ROOT / "data" / "korean-titles-db.json"
+HARVEST_JSON = ROOT / "data" / "anilist-catalog-harvest.json"
 OUTPUT_JS = ROOT / "data" / "korean-title-index.js"
 ANILIST_URL = "https://graphql.anilist.co"
 USER_AGENT = "anime-hub-title-index/1.0"
@@ -83,6 +85,65 @@ def load_catalog_titles() -> dict[str, str]:
     return result
 
 
+VERIFIED_DB_SOURCES = {"anilist", "tmdb", "mal", "jikan", "wiki", "catalog", "curated", "manual"}
+
+
+def load_harvest_index() -> tuple[dict[int, dict], dict[int, dict]]:
+    """AniList 수확 카탈로그를 읽어 AniList ID/MAL ID 인덱스를 만듭니다.
+
+    네트워크 조회 없이 로마자/영어 제목과 MAL ID를 채우는 데 씁니다.
+    """
+    by_id: dict[int, dict] = {}
+    by_mal: dict[int, dict] = {}
+    if not HARVEST_JSON.exists():
+        return by_id, by_mal
+    try:
+        data = json.loads(HARVEST_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return by_id, by_mal
+    for media in (data.get("media") or {}).values():
+        anilist_id = media.get("id")
+        mal_id = media.get("idMal")
+        if isinstance(anilist_id, int):
+            by_id[anilist_id] = media
+        if isinstance(mal_id, int):
+            by_mal[mal_id] = media
+    return by_id, by_mal
+
+
+def load_db_titles(harvest_by_id: dict[int, dict]) -> tuple[dict[str, str], dict[str, str]]:
+    """검증 DB(entries)와 한국어 위키백과(wikiEntries) 제목을 MAL ID로 모읍니다.
+
+    반환: (entries_titles, wiki_titles). `entries`가 `wikiEntries`보다 우선합니다.
+    """
+    entries_titles: dict[str, str] = {}
+    wiki_titles: dict[str, str] = {}
+    if not DB_JSON.exists():
+        return entries_titles, wiki_titles
+    try:
+        data = json.loads(DB_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return entries_titles, wiki_titles
+    for section, target in (("entries", entries_titles), ("wikiEntries", wiki_titles)):
+        for entry in (data.get(section) or {}).values():
+            if not isinstance(entry, dict):
+                continue
+            if str(entry.get("source") or "") not in VERIFIED_DB_SOURCES:
+                continue
+            title = str(entry.get("title") or "").strip()
+            if not title or not has_hangul(title):
+                continue
+            mal_id = entry.get("malId")
+            if not isinstance(mal_id, int):
+                anilist_id = entry.get("anilistId")
+                if isinstance(anilist_id, int):
+                    mal_id = (harvest_by_id.get(anilist_id) or {}).get("idMal")
+            if not isinstance(mal_id, int):
+                continue
+            target.setdefault(str(mal_id), title)
+    return entries_titles, wiki_titles
+
+
 def load_platform_records() -> list[dict]:
     """국내 플랫폼에서 직접 확인한 제목을 검색 인덱스 별칭으로 추가합니다."""
     if not PLATFORM_JSON.exists():
@@ -117,7 +178,14 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    titles = load_common_titles()
+    harvest_by_id, harvest_by_mal = load_harvest_index()
+    entries_titles, wiki_titles = load_db_titles(harvest_by_id)
+    # 한국어 위키백과 제목은 가장 낮은 우선순위로 먼저 깔아 둡니다.
+    # 아래에서 국내 통용 표기·검증 DB·카탈로그·플랫폼 제목이 덮어쓰므로,
+    # 위키 전용 제목이 더 강한 출처의 표기를 가로채지 않습니다.
+    titles = dict(wiki_titles)
+    titles.update(load_common_titles())
+    titles.update(entries_titles)
     catalog = load_catalog_titles()
     # 카탈로그의 검증된 제목을 우선합니다.
     titles.update(catalog)
@@ -134,8 +202,13 @@ def main() -> int:
     print(f"대상 MAL ID: {len(mal_ids)}개")
 
     media_by_mal: dict[int, dict] = {}
-    for start in range(0, len(mal_ids), 50):
-        chunk = mal_ids[start : start + 50]
+    for mal_id in mal_ids:
+        if mal_id in harvest_by_mal:
+            media_by_mal[mal_id] = harvest_by_mal[mal_id]
+    missing_mal = [mal_id for mal_id in mal_ids if mal_id not in media_by_mal]
+    print(f"수확 카탈로그 재사용: {len(media_by_mal)}개 · API 조회: {len(missing_mal)}개")
+    for start in range(0, len(missing_mal), 50):
+        chunk = missing_mal[start : start + 50]
         try:
             media = fetch_media(chunk)
         except Exception as error:  # noqa: BLE001
@@ -146,7 +219,7 @@ def main() -> int:
             mal_id = item.get("idMal")
             if mal_id:
                 media_by_mal[int(mal_id)] = item
-        print(f"  {min(start + 50, len(mal_ids))}/{len(mal_ids)} 조회")
+        print(f"  {min(start + 50, len(missing_mal))}/{len(missing_mal)} 조회")
         time.sleep(1)
 
     entries: dict[str, dict] = {}

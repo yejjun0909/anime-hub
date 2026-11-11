@@ -5,3 +5,7 @@ node_modules/
 test-results/
 playwright-report/
 
+# 대용량 수확 원본: 도구로 재생성하며 배포/저장소에서 제외합니다.
+data/anilist-catalog-harvest.json
+data/ko-wikipedia-harvest.json
+

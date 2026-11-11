@@ -1,6 +1,6 @@
 {
   "name": "anime-hub",
-  "version": "4.8.0",
+  "version": "4.9.0",
   "private": true,
   "type": "module",
   "description": "ANIME HUB — 애니메이션 정보·일정·시청 관리 정적 웹앱",
