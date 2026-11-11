@@ -38,6 +38,7 @@
 
 ### 수정
 - `data/machine-translate.js`의 `machineTranslate()`가 자동 번역 비활성 상태에서도 네트워크를 호출하던 문제를 고쳤습니다. 이제 설정이 꺼져 있으면 즉시 `null`을 반환합니다.
+- 브라우저 스모크 테스트가 사이트 로고의 현재 문구(`애니허브`)를 확인하도록 수정했습니다. 이전에는 `ANIME`을 기대해 CI에서 실패했습니다.
 
 ### 버전
 - `APP_VERSION` 4.8.0, `VERSION.txt` 4.8.0, PWA 셸 캐시 `anime-hub-shell-v4-8-0`, `package.json` 4.8.0.

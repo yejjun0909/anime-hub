@@ -131,7 +131,7 @@
 - Node.js 26.13.0 설치 후 `npm test` → **155개 중 155개 통과**(실패 0).
 - `data/machine-translate.js`의 `machineTranslate()`가 설정 비활성 상태에서도 네트워크를 호출하던 문제를 고쳐, 비활성 시 즉시 `null`을 반환합니다.
 - GitHub Actions `정적 검사 · 단위 테스트` job 통과.
-- `브라우저 스모크 (초기 스켈레톤)` job은 `continue-on-error: true`라 배포를 막지 않지만, CI 러너에서 실패 원인은 아직 확인하지 못했습니다. 로컬 Chromium 하네스(`tests/*.test.html`)로 대체 확인했습니다.
+- 브라우저 스모크 테스트를 로컬 Playwright Chromium으로 실행해 2건 모두 통과했습니다. 사이트 로고 문구가 `애니허브`로 바뀐 뒤에도 테스트가 `ANIME`을 기대하던 오래된 검사를 고쳤습니다.
 
 ### 알려진 제한
 - `npm test`는 Node.js PATH를 새로 고친 뒤 실행해야 합니다(Windows에서 설치 직후).

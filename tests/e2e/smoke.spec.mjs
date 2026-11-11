@@ -14,7 +14,7 @@ test('앱 셸이 로드되고 설정 모달이 열린다', async ({ page }) => {
   page.on('pageerror', (error) => errors.push(error.message));
 
   await page.goto('/');
-  await expect(page.locator('.brand-name')).toContainText('ANIME');
+  await expect(page.locator('.brand-name')).toContainText('애니');
   await page.locator('#settings-open').click();
   await expect(page.getByRole('heading', { name: '데이터 · 계정 설정' })).toBeVisible();
   await expect(page.getByRole('button', { name: '전체 백업 다운로드' })).toBeVisible();

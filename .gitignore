@@ -1,4 +1,7 @@
 __pycache__/
 *.pyc
 _site/
+node_modules/
+test-results/
+playwright-report/
 

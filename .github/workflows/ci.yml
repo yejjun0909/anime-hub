@@ -57,8 +57,6 @@ jobs:
   browser:
     name: 브라우저 스모크 (초기 스켈레톤)
     runs-on: ubuntu-latest
-    # 첫 CI 실행에서 안정화되면 continue-on-error를 제거해 필수 게이트로 승격합니다.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
