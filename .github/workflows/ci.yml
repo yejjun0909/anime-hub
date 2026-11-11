@@ -79,9 +79,11 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          {
-            echo '### Playwright 실패 로그'
-            echo '```'
-            tail -n 200 /tmp/playwright.log || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY'
+          import os
+          path = '/tmp/playwright.log'
+          text = open(path, encoding='utf-8', errors='replace').read() if os.path.exists(path) else 'no log'
+          lines = [line for line in text.splitlines() if line.strip()][-60:]
+          message = '\n'.join(lines).replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+          print(f'::error title=Playwright failure::{message}')
+          PY
