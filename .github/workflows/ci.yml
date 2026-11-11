@@ -70,4 +70,18 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: 스모크 테스트
-        run: npx playwright test
+        shell: bash
+        run: |
+          set -o pipefail
+          npx playwright test 2>&1 | tee /tmp/playwright.log
+
+      - name: 실패 로그 요약
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo '### Playwright 실패 로그'
+            echo '```'
+            tail -n 200 /tmp/playwright.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
