@@ -84,6 +84,8 @@ export function getCachedMachineTranslation(text, from = 'ja', to = 'ko', storag
   return cache[key] || null;
 }
 export async function machineTranslate(text, from = 'ja', to = 'ko', storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  // 설정에서 자동 번역을 켠 경우에만 네트워크를 호출합니다.
+  if (!isMachineTranslationEnabled(storage)) return null;
   const value = String(text || '').trim();
   if (!value || value.length < 2) return null;
   if (value.length > 5000) return null; // 너무 긴 텍스트는 번역하지 않음

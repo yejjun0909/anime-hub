@@ -128,11 +128,14 @@
 
 ### CI
 - `.github/workflows/ci.yml`, `playwright.config.mjs`, `tests/e2e/smoke.spec.mjs` 추가.
-- 로컬 Node 미설치로 `npm test` 미실행; CI 환경에서 실행 예정.
+- Node.js 26.13.0 설치 후 `npm test` → **155개 중 155개 통과**(실패 0).
+- `data/machine-translate.js`의 `machineTranslate()`가 설정 비활성 상태에서도 네트워크를 호출하던 문제를 고쳐, 비활성 시 즉시 `null`을 반환합니다.
+- GitHub Actions `정적 검사 · 단위 테스트` job 통과.
+- `브라우저 스모크 (초기 스켈레톤)` job은 `continue-on-error: true`라 배포를 막지 않지만, CI 러너에서 실패 원인은 아직 확인하지 못했습니다. 로컬 Chromium 하네스(`tests/*.test.html`)로 대체 확인했습니다.
 
 ### 알려진 제한
-- Node.js가 현재 환경 PATH에 없어 `node --check`와 `npm test`를 로컬에서 실행하지 못했습니다. 브라우저 스모크 테스트로 대체.
-- `git` 미설치, 변경분은 커밋되지 않은 로컬 파일입니다.
+- `npm test`는 Node.js PATH를 새로 고친 뒤 실행해야 합니다(Windows에서 설치 직후).
+- Jikan·나무위키 직접 조회는 이 환경의 네트워크 터널 차단으로 실패합니다(코드 오류 아님).
 
 ## v4.5.1 검사 보고서
 - `app.js`의 백업 JSON 버전이 `APP_VERSION`(4.5.1)을 사용하도록 수정.

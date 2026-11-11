@@ -36,6 +36,9 @@
 - `py tools/serve.py --lan`으로 같은 Wi-Fi의 휴대폰에서 PC 서버에 접속할 수 있습니다.
 - 자세한 일회성 설정은 `DEPLOY_AUTO_KO.md`에 정리했습니다.
 
+### 수정
+- `data/machine-translate.js`의 `machineTranslate()`가 자동 번역 비활성 상태에서도 네트워크를 호출하던 문제를 고쳤습니다. 이제 설정이 꺼져 있으면 즉시 `null`을 반환합니다.
+
 ### 버전
 - `APP_VERSION` 4.8.0, `VERSION.txt` 4.8.0, PWA 셸 캐시 `anime-hub-shell-v4-8-0`, `package.json` 4.8.0.
 
