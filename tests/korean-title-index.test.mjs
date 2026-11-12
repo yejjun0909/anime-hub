@@ -24,6 +24,11 @@ test('제목 인덱스: 띄어쓰기 누락 퍼지 매칭', () => {
   assert.equal(findKoreanTitleEntry('진격거인')?.malId, 16498);
 });
 
+test('제목 인덱스: 대표 제목은 파생 작품이 아닌 본편을 가리킨다', () => {
+  assert.equal(findKoreanTitleEntry('진격의 거인')?.malId, 16498);
+  assert.equal(findKoreanTitleEntry('진격의 거인 1기')?.malId, 16498);
+});
+
 test('제목 인덱스: 시즌 표기 무시', () => {
   assert.equal(findKoreanTitleEntry('귀멸의 칼날 시즌2')?.title, '귀멸의 칼날');
 });

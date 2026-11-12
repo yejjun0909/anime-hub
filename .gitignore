@@ -9,3 +9,7 @@ playwright-report/
 data/anilist-catalog-harvest.json
 data/ko-wikipedia-harvest.json
 
+
+# 로컬 수확 진행/디버그 파일 (tmp_namu_full.json 재개용)
+tmp_*
+

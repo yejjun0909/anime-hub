@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   setKoreanTitlesDb,
   lookupKoreanTitle,
+  lookupKoreanNamuTitle,
   lookupKoreanWikiTitle,
   filterVerifiedDb,
   isVerifiedKoreanSource
@@ -16,6 +17,7 @@ import { lookupKoreanSource, createKoreanSourceResolver } from '../data/korean-s
 test('verified source: 실제 한국어 출처만 허용', () => {
   assert.equal(isVerifiedKoreanSource('anilist'), true);
   assert.equal(isVerifiedKoreanSource('tmdb'), true);
+  assert.equal(isVerifiedKoreanSource('namu'), true);
   assert.equal(isVerifiedKoreanSource('wiki'), true);
   assert.equal(isVerifiedKoreanSource('google'), false);
   assert.equal(isVerifiedKoreanSource('gemini'), false);
@@ -90,6 +92,54 @@ test('lookupKoreanWikiTitle: wikiEntries를 AniList ID/MAL ID로 조회', () => 
   assert.equal(byId?.url, 'https://ko.wikipedia.org/wiki/장송의_프리렌');
   assert.equal(lookupKoreanWikiTitle({ id: 99, idMal: 3 })?.title, '체인소 맨');
   assert.equal(lookupKoreanWikiTitle({ id: 1 }), null);
+});
+
+test('lookupKoreanNamuTitle: namuEntries를 AniList ID/MAL ID로 조회', () => {
+  setKoreanTitlesDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    namuEntries: {
+      '2': {
+        anilistId: 2,
+        title: '장송의 프리렌',
+        overview: '마왕을 쓰러뜨린 뒤의 이야기.',
+        source: 'namu',
+        url: 'https://namu.wiki/w/장송의_프리렌'
+      },
+      'mal:3': { anilistId: null, malId: 3, title: '체인소 맨', source: 'namu' }
+    }
+  });
+  const byId = lookupKoreanNamuTitle({ id: 2 });
+  assert.equal(byId?.title, '장송의 프리렌');
+  assert.equal(byId?.kind, 'namu');
+  assert.equal(byId?.source, '나무위키');
+  assert.equal(byId?.overview, '마왕을 쓰러뜨린 뒤의 이야기.');
+  assert.equal(byId?.url, 'https://namu.wiki/w/장송의_프리렌');
+  assert.equal(lookupKoreanNamuTitle({ id: 99, idMal: 3 })?.title, '체인소 맨');
+  assert.equal(lookupKoreanNamuTitle({ id: 1 }), null);
+});
+
+test('lookupKoreanNamuTitle: 검증되지 않은 출처는 반환하지 않음', () => {
+  setKoreanTitlesDb({
+    entries: {},
+    namuEntries: {
+      '5': { title: 'AI 번역 제목', source: 'gemini' }
+    }
+  });
+  assert.equal(lookupKoreanNamuTitle({ id: 5 }), null);
+});
+
+test('filterVerifiedDb: namuEntries도 검증 출처만 남김', () => {
+  const filtered = filterVerifiedDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    namuEntries: {
+      '1': { title: '나무위키 제목', source: 'namu' },
+      '2': { title: 'AI 제목', source: 'gemini' },
+      '3': { title: '' }
+    }
+  });
+  assert.deepEqual(Object.keys(filtered.namuEntries), ['1']);
+  assert.equal(filtered.namuCount, 1);
+  assert.equal(filtered.count, 1);
 });
 
 test('lookupKoreanWikiTitle: 검증되지 않은 출처는 반환하지 않음', () => {

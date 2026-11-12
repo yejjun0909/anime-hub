@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """한국어 제목 → AniList 작품/검색어 인덱스를 생성합니다.
 
-`data/korean-common-titles.js`(MAL ID → 한국어 제목)와
-`data/korean-catalog.json`(검증된 한국어 제목)을 모아, AniList에서
-로마자/영어 제목을 가져와 `data/korean-title-index.js`를 만듭니다.
+`data/korean-common-titles.js`(MAL ID → 한국어 제목),
+`data/korean-catalog.json`(검증된 한국어 제목),
+`data/korean-titles-db.json`(검증 DB · 나무위키 · 위키백과 수확분)을 모아,
+AniList에서 로마자/영어 제목을 가져와 `data/korean-title-index.js`를 만듭니다.
 
 이 인덱스가 있으면 사용자가 "원령공주"처럼 한국어 제목으로 검색해도
 AniList에 로마자 제목으로 질의할 수 있습니다.
@@ -85,7 +86,7 @@ def load_catalog_titles() -> dict[str, str]:
     return result
 
 
-VERIFIED_DB_SOURCES = {"anilist", "tmdb", "mal", "jikan", "wiki", "catalog", "curated", "manual"}
+VERIFIED_DB_SOURCES = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "catalog", "curated", "manual"}
 
 
 def load_harvest_index() -> tuple[dict[int, dict], dict[int, dict]]:
@@ -111,20 +112,28 @@ def load_harvest_index() -> tuple[dict[int, dict], dict[int, dict]]:
     return by_id, by_mal
 
 
-def load_db_titles(harvest_by_id: dict[int, dict]) -> tuple[dict[str, str], dict[str, str]]:
-    """검증 DB(entries)와 한국어 위키백과(wikiEntries) 제목을 MAL ID로 모읍니다.
+def load_db_titles(
+    harvest_by_id: dict[int, dict],
+) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """검증 DB(entries)·나무위키(namuEntries)·위키백과(wikiEntries) 제목을 MAL ID로 모읍니다.
 
-    반환: (entries_titles, wiki_titles). `entries`가 `wikiEntries`보다 우선합니다.
+    반환: (entries_titles, namu_titles, wiki_titles).
+    우선순위는 `entries` > `namuEntries` > `wikiEntries`입니다.
     """
     entries_titles: dict[str, str] = {}
+    namu_titles: dict[str, str] = {}
     wiki_titles: dict[str, str] = {}
     if not DB_JSON.exists():
-        return entries_titles, wiki_titles
+        return entries_titles, namu_titles, wiki_titles
     try:
         data = json.loads(DB_JSON.read_text(encoding="utf-8"))
     except Exception:
-        return entries_titles, wiki_titles
-    for section, target in (("entries", entries_titles), ("wikiEntries", wiki_titles)):
+        return entries_titles, namu_titles, wiki_titles
+    for section, target in (
+        ("entries", entries_titles),
+        ("namuEntries", namu_titles),
+        ("wikiEntries", wiki_titles),
+    ):
         for entry in (data.get(section) or {}).values():
             if not isinstance(entry, dict):
                 continue
@@ -141,7 +150,7 @@ def load_db_titles(harvest_by_id: dict[int, dict]) -> tuple[dict[str, str], dict
             if not isinstance(mal_id, int):
                 continue
             target.setdefault(str(mal_id), title)
-    return entries_titles, wiki_titles
+    return entries_titles, namu_titles, wiki_titles
 
 
 def load_platform_records() -> list[dict]:
@@ -172,6 +181,34 @@ def js_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+# 같은 한국어 제목이 여러 작품에 걸쳐 있을 때 대표 작품을 고르는 순서입니다.
+# 시리즈(TV) → ONA → OVA → 극장판 → 특별편 순이며, 같은 형식이면 이른 작품을 씁니다.
+# 예: '진격의 거인'은 TV 본편(16498)이 OVA 외전(25781)보다 먼저 연결되어야 합니다.
+FORMAT_ORDER = {
+    "TV": 0,
+    "TV_SHORT": 0,
+    "ONA": 1,
+    "OVA": 2,
+    "MOVIE": 3,
+    "SPECIAL": 4,
+    "MUSIC": 5,
+}
+
+
+def entry_preference(entry: dict, media_by_mal: dict[int, dict]) -> tuple:
+    media = media_by_mal.get(entry.get("malId")) or {}
+    fmt = str(media.get("format") or "")
+    year = media.get("year")
+    if not isinstance(year, int):
+        year = 9999
+    return (
+        0 if entry.get("english") else 1,
+        FORMAT_ORDER.get(fmt, 6),
+        year,
+        int(entry.get("malId") or 0),
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="한국어 제목 인덱스 생성")
     parser.add_argument("--output", default=str(OUTPUT_JS))
@@ -179,11 +216,12 @@ def main() -> int:
     args = parser.parse_args()
 
     harvest_by_id, harvest_by_mal = load_harvest_index()
-    entries_titles, wiki_titles = load_db_titles(harvest_by_id)
-    # 한국어 위키백과 제목은 가장 낮은 우선순위로 먼저 깔아 둡니다.
+    entries_titles, namu_titles, wiki_titles = load_db_titles(harvest_by_id)
+    # 한국어 위키백과 → 나무위키 순으로 낮은 우선순위를 먼저 깔아 둡니다.
     # 아래에서 국내 통용 표기·검증 DB·카탈로그·플랫폼 제목이 덮어쓰므로,
-    # 위키 전용 제목이 더 강한 출처의 표기를 가로채지 않습니다.
+    # 수확 제목이 더 강한 출처의 표기를 가로채지 않습니다.
     titles = dict(wiki_titles)
+    titles.update(namu_titles)
     titles.update(load_common_titles())
     titles.update(entries_titles)
     catalog = load_catalog_titles()
@@ -242,9 +280,12 @@ def main() -> int:
             "searchTerm": english or romaji,
         }
         entry_by_mal[mal_id] = entry
-        # 같은 한국어 제목이 여러 작품에 매핑되면 영어 제목이 있는 쪽을 유지합니다.
+        # 같은 한국어 제목이 여러 작품에 매핑되면 대표 작품을 일관되게 고릅니다.
+        # (영어 제목 보유 → 시리즈 형식 → 이른 연도 → 작은 MAL ID)
         existing = entries.get(korean)
-        if existing and existing.get("english") and not english:
+        if existing and entry_preference(existing, media_by_mal) <= entry_preference(
+            entry, media_by_mal
+        ):
             continue
         entries[korean] = entry
 
@@ -265,6 +306,17 @@ def main() -> int:
         entry = entry_by_mal.get(int(mal_key))
         if entry:
             entries.setdefault(seed_title, entry)
+
+    # `진격의 거인 1기`처럼 1기 표기가 붙은 제목은 시즌 표기가 없는 대표 제목으로도
+    # 찾을 수 있게 합니다. 이미 있는 제목은 덮어쓰지 않습니다.
+    for korean, entry in list(entries.items()):
+        match = re.match(r"^(.*\S)\s*1기$", korean)
+        if not match:
+            continue
+        base = match.group(1).strip()
+        if len(base) < 2:
+            continue
+        entries.setdefault(base, entry)
 
     print(f"인덱스 항목: {len(entries)}개")
     if args.dry_run:

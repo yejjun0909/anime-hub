@@ -416,7 +416,7 @@ def check_wiring() -> None:
             fail(f"sw.js SHELL에 {asset} 가 없습니다.")
 
     db_module = (ROOT / "data" / "korean-titles-db.js").read_text(encoding="utf-8")
-    for token in ("VERIFIED_KOREAN_SOURCES", "isVerifiedKoreanSource", "filterVerifiedDb"):
+    for token in ("VERIFIED_KOREAN_SOURCES", "isVerifiedKoreanSource", "filterVerifiedDb", "lookupKoreanNamuTitle"):
         if token not in db_module:
             fail(f"data/korean-titles-db.js에 {token} 검증 장치가 없습니다.")
 
@@ -429,8 +429,8 @@ def check_titles_db() -> None:
     """사전 계산 한국어 제목 DB의 출처/형식을 검사합니다.
 
     `entries`는 강한 출처(플랫폼·카탈로그·TMDB·AniList·MAL), `wikiEntries`는
-    한국어 위키백과 수확분입니다. 위키 항목은 반드시 한국어 제목과 위키 URL을
-    갖고, 기계 번역 출처가 섞이면 실패합니다.
+    한국어 위키백과 수확분, `namuEntries`는 나무위키 수확분입니다. 수확 항목은
+    반드시 한국어 제목과 해당 문서 URL을 갖고, 기계 번역 출처가 섞이면 실패합니다.
     """
     path = ROOT / "data" / "korean-titles-db.json"
     if not path.exists():
@@ -444,11 +444,16 @@ def check_titles_db() -> None:
     if not isinstance(data, dict):
         fail("korean-titles-db.json 최상위가 객체가 아닙니다.")
         return
-    verified_sources = {"anilist", "tmdb", "mal", "jikan", "wiki", "catalog", "curated", "manual"}
+    verified_sources = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "catalog", "curated", "manual"}
     entries = data.get("entries") or {}
     wiki_entries = data.get("wikiEntries") or {}
-    if not isinstance(entries, dict) or not isinstance(wiki_entries, dict):
-        fail("korean-titles-db.json의 entries/wikiEntries가 객체가 아닙니다.")
+    namu_entries = data.get("namuEntries") or {}
+    if (
+        not isinstance(entries, dict)
+        or not isinstance(wiki_entries, dict)
+        or not isinstance(namu_entries, dict)
+    ):
+        fail("korean-titles-db.json의 entries/wikiEntries/namuEntries가 객체가 아닙니다.")
         return
 
     for key, entry in entries.items():
@@ -480,14 +485,48 @@ def check_titles_db() -> None:
         if overview and not HANGUL.search(overview):
             fail(f"wikiEntries[{key}]의 소개가 한국어가 아닙니다.")
 
+    for key, entry in namu_entries.items():
+        if not isinstance(entry, dict):
+            fail(f"namuEntries[{key}]가 객체가 아닙니다.")
+            continue
+        title = str(entry.get("title") or "").strip()
+        source = str(entry.get("source") or "").strip()
+        if source != "namu":
+            fail(f"namuEntries[{key}]의 출처는 namu여야 합니다: {source!r}")
+        if not title or not HANGUL.search(title):
+            fail(f"namuEntries[{key}]에 한국어 제목이 없습니다: {title!r}")
+            continue
+        if not (entry.get("anilistId") or entry.get("malId")):
+            fail(f"namuEntries[{key}]에 AniList/MAL ID가 없습니다.")
+        url = str(entry.get("url") or "")
+        if url and "namu.wiki/" not in url:
+            fail(f"namuEntries[{key}]의 URL이 나무위키가 아닙니다: {url}")
+        overview = str(entry.get("overview") or "").strip()
+        if overview and not HANGUL.search(overview):
+            fail(f"namuEntries[{key}]의 소개가 한국어가 아닙니다.")
+        matched_by = str(entry.get("matchedBy") or "")
+        kind = str(entry.get("kind") or "").upper()
+        if matched_by.startswith("base-ko:") and kind in {"OVA", "ONA", "SPECIAL"}:
+            query = matched_by.split(":", 1)[1].replace(" ", "")
+            if title.replace(" ", "") == query:
+                fail(
+                    f"namuEntries[{key}]에 파생 작품의 프랜차이즈 대표 제목이 붙었습니다: "
+                    f"{title!r} ({kind})"
+                )
+
     if data.get("wikiCount") not in (None, len(wiki_entries)):
         warn(
             "wikiCount가 실제 wikiEntries 수와 다릅니다: "
             f"{data.get('wikiCount')} != {len(wiki_entries)}"
         )
+    if data.get("namuCount") not in (None, len(namu_entries)):
+        warn(
+            "namuCount가 실제 namuEntries 수와 다릅니다: "
+            f"{data.get('namuCount')} != {len(namu_entries)}"
+        )
     print(
-        f"제목 DB: entries {len(entries)}건 · wikiEntries {len(wiki_entries)}건 "
-        f"(검증 {data.get('verifiedCount')}건)"
+        f"제목 DB: entries {len(entries)}건 · wikiEntries {len(wiki_entries)}건 · "
+        f"namuEntries {len(namu_entries)}건 (검증 {data.get('verifiedCount')}건)"
     )
 
 

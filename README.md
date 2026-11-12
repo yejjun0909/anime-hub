@@ -51,12 +51,14 @@ npm run serve
 5. TMDB 한국어 번역 (대한민국 `ko-KR` 우선)
 6. AniList 한글 별칭
 7. MyAnimeList/Jikan 한글 대체 제목
-8. 나무위키 문서 (best-effort)
+8. 나무위키 문서 (사전 수확한 `namuEntries` → 실시간 조회 순, 애니메이션 문서로 확인된 경우)
 9. 한국어 위키백과 문서 (사전 수확한 `wikiEntries` → 실시간 조회 순, 애니메이션 문서로 확인된 경우)
 10. 국내 통용 표기 시드 (`data/korean-common-titles.js`, 플랫폼 미확인으로 표시)
 11. 원제 또는 원문 소개
 
 한국어 위키백과 수확분은 `data/korean-titles-db.json`의 `wikiEntries`에 **별도로** 저장합니다. 기존 `entries`(플랫폼·카탈로그·TMDB·AniList·MAL)의 우선순위를 덮지 않도록 `lookupKoreanWikiTitle()`로만 조회하고, 수확 시 일본어 원제·영어 제목을 AniList 카탈로그와 대조해 작품을 연결합니다. 만화 원작 문서처럼 애니메이션 문서가 아님이 분명하면 제목만 사용하고 소개는 쓰지 않습니다.
+
+나무위키 수확분도 `data/korean-titles-db.json`의 `namuEntries`에 별도로 저장합니다. `entries`는 덮지 않고, 위키백과보다 먼저 조회합니다(`lookupKoreanNamuTitle()` → `lookupKoreanWikiTitle()`). 수확기는 문서 URL의 제목·검색 스니펫·인포박스의 원제와 연도를 대조하고, 인물·캐릭터·방송 시간대·원작 만화 문서로 보이면 제외합니다. 확실하지 않으면 제목/소개를 채택하지 않습니다.
 
 플랫폼 카탈로그는 **AniList ID → workId → MAL ID** 순으로만 연결합니다. 제목이 비슷하다는 이유만으로 연결하지 않으며, 정규화한 제목이 같고 (연도를 알 수 있으면) 연도 차이가 1년 이내일 때만 수확합니다. 수확된 소개는 플랫폼이 등록한 문장을 그대로 사용하고 화면에 `소개(플랫폼 등록)`·`라프텔 출처`로 표시합니다.
 
@@ -117,6 +119,7 @@ anime-hub/
 │   ├── harvest_laftel.py       # 라프텔 검색/상세 수확 (제목·연도 검증)
 │   ├── harvest_anilist_catalog.py # AniList 연도별 전체 카탈로그 수확 (1940년 이전은 시작일 범위, 원본은 배포 제외)
 │   ├── harvest_ko_wikipedia.py # 한국어 위키백과 제목/소개 수확 → wikiEntries
+│   ├── harvest_namu.py         # 나무위키 제목/소개 수확·검증 → namuEntries
 │   ├── build_korean_titles_db.py
 │   ├── build_title_index.py    # 한국어 제목 인덱스 생성
 │   ├── merge_common_titles.py  # 수확 JSON → 공통 제목 병합
@@ -172,6 +175,11 @@ py tools/harvest_anilist_catalog.py --year-from 1990 --year-to 2026 --no-merge
 # 한국어 위키백과 애니메이션 문서 수확 → data/korean-titles-db.json 의 wikiEntries
 py tools/harvest_ko_wikipedia.py --max-pages 90 --no-merge   # 표본 검증
 py tools/harvest_ko_wikipedia.py --resume                    # 전체 이어서 + 병합
+
+# 나무위키 애니메이션 문서 수확 → data/korean-titles-db.json 의 namuEntries
+py tools/harvest_namu.py --ids 199,853,13759 --include-known --no-merge   # 표본 검증
+py tools/harvest_namu.py --resume                                        # 이어서 + 병합
+py tools/harvest_namu.py --merge-only --output tmp_namu.json             # 수확 결과만 병합
 
 # 사전 DB에서 빈 항목 정리
 py tools/prune_korean_titles_db.py

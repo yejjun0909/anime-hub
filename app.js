@@ -5,7 +5,7 @@ import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
 import { getUserKorean, setUserKorean, deleteUserKorean, allUserKorean, mergeUserKorean } from './data/user-korean.js';
-import { lookupKoreanTitle, lookupKoreanWikiTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
+import { lookupKoreanTitle, lookupKoreanNamuTitle, lookupKoreanWikiTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { lookupCommonKoreanTitle } from './data/korean-common-titles.js';
 import { getGeminiKey, setGeminiKey, geminiTranslate } from './data/gemini-translate.js';
 import { isMachineTranslationEnabled, setMachineTranslationEnabled, isMachineTranslationAutoShowEnabled, setMachineTranslationAutoShowEnabled } from './data/machine-translate.js';
@@ -19,7 +19,7 @@ import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.j
 import { fuzzyFilter, searchVariants, normalizeForSearch, fuzzyMatch, similarity } from './data/fuzzy-search.js';
 import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.9.0';
+const APP_VERSION = '4.10.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -545,6 +545,7 @@ function koreanTitleInfo(media){
   const ani=koreanAniListSynonym(media);if(ani)return {title:ani,source:'AniList 한글 별칭',url:media?.siteUrl||'https://anilist.co',kind:'anilist'};
   const jikan=cachedKoreanAlias(media);if(jikan?.titles?.length)return {title:jikan.titles[0],source:'MyAnimeList 대체 제목',url:jikan.url,kind:'jikan'};
   if(cached?.title&&directKind)return {title:cached.title,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
+  const namu=lookupKoreanNamuTitle(media);if(namu?.title)return namu;
   const wiki=lookupKoreanWikiTitle(media);if(wiki?.title)return wiki;
   const common=lookupCommonKoreanTitle(media);if(common?.title)return common;
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
@@ -559,6 +560,7 @@ function koreanDescriptionInfo(media){
   if(cached?.overview&&!directKind&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source&&!/^TMDB/i.test(cached.source)?cached.source:tmdbKoreanSourceLabel(cached.overviewCountry||cached.translationCountry),url:cached.url,kind:'tmdb'};
   const jikan=cachedKoreanAlias(media);if(jikan?.overview&&isMostlyKorean(jikan.overview))return {overview:jikan.overview,source:'MyAnimeList 한국어 소개',url:jikan.url,kind:'jikan'};
   if(cached?.overview&&directKind&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
+  const namu=lookupKoreanNamuTitle(media);if(namu?.overview)return {overview:namu.overview,source:namu.source,url:namu.url,kind:namu.kind};
   const wiki=lookupKoreanWikiTitle(media);if(wiki?.overview)return {overview:wiki.overview,source:wiki.source,url:wiki.url,kind:wiki.kind};
   return null;
 }

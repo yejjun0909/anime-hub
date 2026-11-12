@@ -65,12 +65,23 @@ export function filterVerifiedDb(db) {
     if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
     wikiEntries[key] = entry;
   }
+  // `namuEntries`는 나무위키에서 확인한 제목/소개만 담습니다.
+  // 위키백과보다 우선하지만 `entries`는 덮지 않습니다.
+  const namuEntries = {};
+  const rawNamu = db.namuEntries && typeof db.namuEntries === 'object' ? db.namuEntries : {};
+  for (const [key, entry] of Object.entries(rawNamu)) {
+    if (!hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    namuEntries[key] = entry;
+  }
   return {
     ...db,
     entries,
     count: Object.keys(entries).length,
     wikiEntries,
-    wikiCount: Object.keys(wikiEntries).length
+    wikiCount: Object.keys(wikiEntries).length,
+    namuEntries,
+    namuCount: Object.keys(namuEntries).length
   };
 }
 
@@ -92,6 +103,7 @@ export function getKoreanTitlesDbStats() {
     loaded: _dbLoaded,
     count: _db?.entries ? Object.keys(_db.entries).length : 0,
     wikiCount: _db?.wikiEntries ? Object.keys(_db.wikiEntries).length : 0,
+    namuCount: _db?.namuEntries ? Object.keys(_db.namuEntries).length : 0,
     sources: _db?.entries
       ? Object.values(_db.entries).reduce((acc, entry) => {
           const source = String(entry?.source || 'none');
@@ -117,6 +129,31 @@ export function lookupKoreanTitle(media) {
     url: String(entry.url || '').trim(),
     kind: meta?.kind || 'db'
   };
+}
+
+// 나무위키에서 수확한 제목/소개를 조회합니다.
+// `entries`보다 우선순위가 낮지만 한국어 위키백과보다는 높습니다.
+export function lookupKoreanNamuTitle(media) {
+  const namu = _db?.namuEntries;
+  if (!namu) return null;
+  const keys = [
+    media?.id != null ? String(media.id) : null,
+    media?.idMal ? `mal:${media.idMal}` : null,
+    media?.mal_id ? `mal:${media.mal_id}` : null
+  ].filter(Boolean);
+  for (const key of keys) {
+    const entry = namu[key];
+    if (!entry || !hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    return {
+      title: String(entry.title || '').trim(),
+      overview: String(entry.overview || '').trim(),
+      source: sourceMeta(entry.source || 'namu')?.label || '나무위키',
+      url: String(entry.url || '').trim(),
+      kind: 'namu'
+    };
+  }
+  return null;
 }
 
 // 한국어 위키백과에서 수확한 제목/소개를 조회합니다.
