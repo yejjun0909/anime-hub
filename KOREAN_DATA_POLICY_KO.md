@@ -132,7 +132,7 @@ TV 번역 API: https://developer.themoviedb.org/reference/tv-series-translations
 
 여기에 더해 `tools/harvest_ko_wikipedia.py`가 애니메이션 관련 분류의 문서를 미리 수확해 `data/korean-titles-db.json`의 `wikiEntries`에 저장합니다. 이 사전 수확분은 ① 위키데이터의 AniList/MAL ID, ② 문서 도입부의 일본어 원제·영어 제목과 AniList 카탈로그의 정밀 대조 순으로 작품을 연결하고, 연도·포맷·인기도로 점수를 매겨 근접 동점은 제외합니다. 만화 원작 문서처럼 애니메이션 문서가 아님이 분명하면 제목만 사용하고 소개는 쓰지 않습니다. `wikiEntries`는 기존 `entries`보다 우선순위가 낮아 플랫폼·카탈로그·TMDB·AniList·MAL 표기를 덮지 않으며, 앱에서는 `lookupKoreanWikiTitle()`로만 조회합니다.
 
-나무위키도 `tools/harvest_namu.py`로 인기 작품의 문서를 미리 수확해 `namuEntries`에 별도 저장합니다. 검색 결과의 문서 경로·스니펫에 원제가 있는지, 문서 첫 문단이나 인포박스에 원제·연도가 있는지 확인하고, 인물·캐릭터·방송 시간대·원작 만화 문서로 보이면 제외합니다. `namuEntries`는 `entries`를 덮지 않지만 `wikiEntries`보다 먼저 조회하며(`lookupKoreanNamuTitle()` → `lookupKoreanWikiTitle()`), 확실하지 않은 문서는 제목도 소개도 채택하지 않습니다.
+나무위키도 `tools/harvest_namu.py`로 인기 작품의 문서를 미리 수확해 `namuEntries`에 별도 저장합니다. 검색 결과의 문서 경로·스니펫에 원제가 있는지, 문서 첫 문단이나 인포박스에 원제·연도가 있는지 확인하고, 인물·캐릭터·방송 시간대·원작 만화 문서로 보이면 제외합니다. "일본의 여성 성우"처럼 수식어가 붙은 인물 소개도 거부하며, 소개가 비어 있던 항목은 `tools/audit_namu_entries.py`로 문서를 다시 대조해 인물·캐릭터·방송 시간대 문서를 제거하고 작품 문서의 소개를 보강합니다. `namuEntries`는 `entries`를 덮지 않지만 `wikiEntries`보다 먼저 조회하며(`lookupKoreanNamuTitle()` → `lookupKoreanWikiTitle()`), 확실하지 않은 문서는 제목도 소개도 채택하지 않습니다.
 
 두 소스 모두 문서 표기가 국내 판권사의 공식 표기와 다를 수 있습니다. 상세 화면에는 문서 출처 링크를 표시합니다.
 

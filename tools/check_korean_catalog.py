@@ -59,6 +59,12 @@ PLATFORM_HOSTS = {
 PLATFORM_STATUS = {"verified", "alias"}
 HANGUL = re.compile(r"[가-힣]")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# 나무위키 인물(성우·배우·제작진) 문서 소개는 작품 소개가 아니므로 거부합니다.
+PERSON_OVERVIEW = re.compile(
+    r"^(?:일본|대한민국|한국|미국|중국)의?\s*(?:남성|여성)?\s*"
+    r"(?:성우|배우|가수|만화가|작가|감독|애니메이터|일러스트레이터|"
+    r"프로듀서|각본가|작곡가|음악가|방송인|코미디언|아나운서|모델|무용가|성악가)"
+)
 
 errors: list[str] = []
 warnings: list[str] = []
@@ -504,6 +510,11 @@ def check_titles_db() -> None:
         overview = str(entry.get("overview") or "").strip()
         if overview and not HANGUL.search(overview):
             fail(f"namuEntries[{key}]의 소개가 한국어가 아닙니다.")
+        if overview and PERSON_OVERVIEW.match(overview):
+            fail(
+                f"namuEntries[{key}]에 인물 문서 소개가 붙었습니다: "
+                f"{title!r} — {overview[:40]!r}"
+            )
         matched_by = str(entry.get("matchedBy") or "")
         kind = str(entry.get("kind") or "").upper()
         if matched_by.startswith("base-ko:") and kind in {"OVA", "ONA", "SPECIAL"}:

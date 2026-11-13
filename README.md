@@ -120,6 +120,7 @@ anime-hub/
 │   ├── harvest_anilist_catalog.py # AniList 연도별 전체 카탈로그 수확 (1940년 이전은 시작일 범위, 원본은 배포 제외)
 │   ├── harvest_ko_wikipedia.py # 한국어 위키백과 제목/소개 수확 → wikiEntries
 │   ├── harvest_namu.py         # 나무위키 제목/소개 수확·검증 → namuEntries
+│   ├── audit_namu_entries.py   # namuEntries 문서 재대조·인물 문서 정리
 │   ├── build_korean_titles_db.py
 │   ├── build_title_index.py    # 한국어 제목 인덱스 생성
 │   ├── merge_common_titles.py  # 수확 JSON → 공통 제목 병합
@@ -180,6 +181,10 @@ py tools/harvest_ko_wikipedia.py --resume                    # 전체 이어서 
 py tools/harvest_namu.py --ids 199,853,13759 --include-known --no-merge   # 표본 검증
 py tools/harvest_namu.py --resume                                        # 이어서 + 병합
 py tools/harvest_namu.py --merge-only --output tmp_namu.json             # 수확 결과만 병합
+
+# 소개가 빈 namuEntries를 문서로 다시 대조 (인물·캐릭터 문서 제거 + 소개 보강)
+py tools/audit_namu_entries.py --missing-overview --dry-run
+py tools/audit_namu_entries.py --missing-overview --sleep 0.5 --save-every 50
 
 # 사전 DB에서 빈 항목 정리
 py tools/prune_korean_titles_db.py

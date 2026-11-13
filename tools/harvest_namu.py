@@ -225,18 +225,34 @@ def looks_like_person_document(doc: dict) -> bool:
     head = SPACE_RE.sub(" ", str(doc.get("og") or doc.get("section") or "")[:220]).strip()
     if not head:
         return False
-    compact = SPACE_RE.sub("", head)
-    if re.match(
-        r"^(?:일본|대한민국|한국|미국|중국)의?"
-        r"(?:성우|배우|가수|만화가|작가|감독|애니메이터|일러스트레이터|"
-        r"프로듀서|각본가|작곡가|음악가|방송인|코미디언)",
-        compact,
-    ):
+    if looks_like_person_overview(head):
         return True
     if ANIME_TEXT.search(head):
         return False
     if re.search(r"배우|성우|가수|아이돌|방송인|만화가|작가|감독|프로듀서", head) and re.search(
         r"소속|출생|데뷔|본명|예명|신장|혈액형|생년월일", head
+    ):
+        return True
+    return False
+
+
+PERSON_HEAD_RE = re.compile(
+    r"^(?:일본|대한민국|한국|미국|중국)의?\s*(?:남성|여성)?\s*"
+    r"(?:성우|배우|가수|만화가|작가|감독|애니메이터|일러스트레이터|"
+    r"프로듀서|각본가|작곡가|음악가|방송인|코미디언|아나운서|모델|무용가|성악가)"
+)
+
+
+def looks_like_person_overview(text: str) -> bool:
+    """문서 첫 문단이 인물(성우·배우·제작진) 소개인지 확인합니다."""
+    head = SPACE_RE.sub(" ", str(text or "")[:220]).strip()
+    if not head:
+        return False
+    if PERSON_HEAD_RE.match(head):
+        return True
+    # "일본의 여성 성우 겸 배우"처럼 수식이 앞에 붙는 경우.
+    if re.match(r"^(?:일본|대한민국|한국|미국|중국)", head) and re.search(
+        r"(?:남성|여성)\s*(?:성우|배우|가수|아티스트|방송인|아나운서)", head
     ):
         return True
     return False
@@ -1010,6 +1026,11 @@ def merge_into_db(items: dict[str, dict], dry_run: bool = False) -> dict:
         if isinstance(existing, dict) and is_franchise_base_match(existing):
             del namu_entries[key]
             pruned += 1
+        elif isinstance(existing, dict) and looks_like_person_overview(
+            str(existing.get("overview") or "")
+        ):
+            del namu_entries[key]
+            pruned += 1
     for item in items.values():
         if item.get("status") != "ok":
             continue
@@ -1027,6 +1048,9 @@ def merge_into_db(items: dict[str, dict], dry_run: bool = False) -> dict:
         if overview and not has_hangul(overview):
             # 소개는 한국어가 확인된 경우에만 저장합니다.
             overview = ""
+        if looks_like_person_overview(overview):
+            # 성우·배우·제작진 인물 문서는 작품 문서가 아니므로 채택하지 않습니다.
+            continue
         url = str(item.get("url") or "").strip()
         if url and "namu.wiki/" not in url:
             continue

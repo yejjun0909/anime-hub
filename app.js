@@ -19,7 +19,7 @@ import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.j
 import { fuzzyFilter, searchVariants, normalizeForSearch, fuzzyMatch, similarity } from './data/fuzzy-search.js';
 import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.10.0';
+const APP_VERSION = '4.11.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
