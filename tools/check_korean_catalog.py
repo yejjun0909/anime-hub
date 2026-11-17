@@ -422,7 +422,7 @@ def check_wiring() -> None:
             fail(f"sw.js SHELL에 {asset} 가 없습니다.")
 
     db_module = (ROOT / "data" / "korean-titles-db.js").read_text(encoding="utf-8")
-    for token in ("VERIFIED_KOREAN_SOURCES", "isVerifiedKoreanSource", "filterVerifiedDb", "lookupKoreanNamuTitle"):
+    for token in ("VERIFIED_KOREAN_SOURCES", "isVerifiedKoreanSource", "filterVerifiedDb", "lookupKoreanNamuTitle", "lookupKoreanWatchaPediaTitle"):
         if token not in db_module:
             fail(f"data/korean-titles-db.js에 {token} 검증 장치가 없습니다.")
 
@@ -450,16 +450,18 @@ def check_titles_db() -> None:
     if not isinstance(data, dict):
         fail("korean-titles-db.json 최상위가 객체가 아닙니다.")
         return
-    verified_sources = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "catalog", "curated", "manual"}
+    verified_sources = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "watchapedia", "catalog", "curated", "manual"}
     entries = data.get("entries") or {}
     wiki_entries = data.get("wikiEntries") or {}
     namu_entries = data.get("namuEntries") or {}
+    pedia_entries = data.get("pediaEntries") or {}
     if (
         not isinstance(entries, dict)
         or not isinstance(wiki_entries, dict)
         or not isinstance(namu_entries, dict)
+        or not isinstance(pedia_entries, dict)
     ):
-        fail("korean-titles-db.json의 entries/wikiEntries/namuEntries가 객체가 아닙니다.")
+        fail("korean-titles-db.json의 entries/wikiEntries/namuEntries/pediaEntries가 객체가 아닙니다.")
         return
 
     for key, entry in entries.items():
@@ -525,6 +527,31 @@ def check_titles_db() -> None:
                     f"{title!r} ({kind})"
                 )
 
+    for key, entry in pedia_entries.items():
+        if not isinstance(entry, dict):
+            fail(f"pediaEntries[{key}]가 객체가 아닙니다.")
+            continue
+        title = str(entry.get("title") or "").strip()
+        source = str(entry.get("source") or "").strip()
+        if source != "watchapedia":
+            fail(f"pediaEntries[{key}]의 출처는 watchapedia여야 합니다: {source!r}")
+        if not title or not HANGUL.search(title):
+            fail(f"pediaEntries[{key}]에 한국어 제목이 없습니다: {title!r}")
+            continue
+        if not (entry.get("anilistId") or entry.get("malId")):
+            fail(f"pediaEntries[{key}]에 AniList/MAL ID가 없습니다.")
+        url = str(entry.get("url") or "")
+        if url and "pedia.watcha.com/" not in url:
+            fail(f"pediaEntries[{key}]의 URL이 왓챠피디아가 아닙니다: {url}")
+        overview = str(entry.get("overview") or "").strip()
+        if overview and not HANGUL.search(overview):
+            fail(f"pediaEntries[{key}]의 소개가 한국어가 아닙니다.")
+        if overview and PERSON_OVERVIEW.match(overview):
+            fail(
+                f"pediaEntries[{key}]에 인물 문서 소개가 붙었습니다: "
+                f"{title!r} — {overview[:40]!r}"
+            )
+
     if data.get("wikiCount") not in (None, len(wiki_entries)):
         warn(
             "wikiCount가 실제 wikiEntries 수와 다릅니다: "
@@ -535,9 +562,15 @@ def check_titles_db() -> None:
             "namuCount가 실제 namuEntries 수와 다릅니다: "
             f"{data.get('namuCount')} != {len(namu_entries)}"
         )
+    if data.get("pediaCount") not in (None, len(pedia_entries)):
+        warn(
+            "pediaCount가 실제 pediaEntries 수와 다릅니다: "
+            f"{data.get('pediaCount')} != {len(pedia_entries)}"
+        )
     print(
         f"제목 DB: entries {len(entries)}건 · wikiEntries {len(wiki_entries)}건 · "
-        f"namuEntries {len(namu_entries)}건 (검증 {data.get('verifiedCount')}건)"
+        f"namuEntries {len(namu_entries)}건 · pediaEntries {len(pedia_entries)}건 "
+        f"(검증 {data.get('verifiedCount')}건)"
     )
 
 

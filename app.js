@@ -5,7 +5,7 @@ import { mergeAiringRows } from './data/schedule-merge.js';
 import { readAiringCache, writeAiringCache, isFreshAiringCache } from './data/schedule-cache.js';
 import { classifyAiring, writeAiringBaseline, readAiringBaseline } from './data/schedule-status.js';
 import { getUserKorean, setUserKorean, deleteUserKorean, allUserKorean, mergeUserKorean } from './data/user-korean.js';
-import { lookupKoreanTitle, lookupKoreanNamuTitle, lookupKoreanWikiTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
+import { lookupKoreanTitle, lookupKoreanNamuTitle, lookupKoreanWikiTitle, lookupKoreanWatchaPediaTitle, loadKoreanTitlesDb, isDbLoaded } from './data/korean-titles-db.js';
 import { lookupCommonKoreanTitle } from './data/korean-common-titles.js';
 import { getGeminiKey, setGeminiKey, geminiTranslate } from './data/gemini-translate.js';
 import { isMachineTranslationEnabled, setMachineTranslationEnabled, isMachineTranslationAutoShowEnabled, setMachineTranslationAutoShowEnabled } from './data/machine-translate.js';
@@ -19,7 +19,7 @@ import { readQueue, writeQueue, dequeue, markAttempt } from './data/sync-queue.j
 import { fuzzyFilter, searchVariants, normalizeForSearch, fuzzyMatch, similarity } from './data/fuzzy-search.js';
 import { findKoreanTitleEntry, KOREAN_TITLE_INDEX } from './data/korean-title-index.js';
 
-const APP_VERSION = '4.11.0';
+const APP_VERSION = '4.12.0';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const JIKAN_URL = 'https://api.jikan.moe/v4';
 const CONFIG_KEY = 'animehub_supabase_config_v1';
@@ -547,6 +547,7 @@ function koreanTitleInfo(media){
   if(cached?.title&&directKind)return {title:cached.title,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
   const namu=lookupKoreanNamuTitle(media);if(namu?.title)return namu;
   const wiki=lookupKoreanWikiTitle(media);if(wiki?.title)return wiki;
+  const pedia=lookupKoreanWatchaPediaTitle(media);if(pedia?.title)return pedia;
   const common=lookupCommonKoreanTitle(media);if(common?.title)return common;
   return {title:titleOf(media),source:'원제',url:media?.siteUrl||'',kind:'original'};
 }
@@ -562,6 +563,7 @@ function koreanDescriptionInfo(media){
   if(cached?.overview&&directKind&&isMostlyKorean(cached.overview))return {overview:cached.overview,source:cached.source||(directKind==='wiki'?'한국어 위키백과':'나무위키'),url:cached.url||'',kind:directKind};
   const namu=lookupKoreanNamuTitle(media);if(namu?.overview)return {overview:namu.overview,source:namu.source,url:namu.url,kind:namu.kind};
   const wiki=lookupKoreanWikiTitle(media);if(wiki?.overview)return {overview:wiki.overview,source:wiki.source,url:wiki.url,kind:wiki.kind};
+  const pedia=lookupKoreanWatchaPediaTitle(media);if(pedia?.overview)return {overview:pedia.overview,source:pedia.source,url:pedia.url,kind:pedia.kind};
   return null;
 }
 function localizedTitle(media){return koreanTitleInfo(media).title;}
@@ -574,7 +576,7 @@ function koreanMetadataSourceMarkup(media){
   const descLine=descInfo?`${descLabel}: ${link(descInfo)}`:'소개: 한국어 등록 자료 없음 · 원문 표시';
   const platforms=listKoreanPlatformNames(media);
   const platformLine=platforms.length>1?`<br><small>확인된 국내 플랫폼: ${esc(platforms.join(' · '))}</small>`:'';
-  const note=titleInfo.kind==='platform'?`${titleInfo.source||'국내 플랫폼'}에 등록된 한국어 제목과 소개입니다. 플랫폼 표기를 기준으로 하며, 시즌·판본에 따라 표기가 다를 수 있습니다.`:titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='common'?'국내에서 널리 쓰이는 표기를 정리한 것으로 국내 플랫폼에서 직접 확인하지 않았습니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
+  const note=titleInfo.kind==='platform'?`${titleInfo.source||'국내 플랫폼'}에 등록된 한국어 제목과 소개입니다. 플랫폼 표기를 기준으로 하며, 시즌·판본에 따라 표기가 다를 수 있습니다.`:titleInfo.kind==='original'?'한국어 제목을 확인하지 못해 원제를 유지합니다.':titleInfo.kind==='anilist'||titleInfo.kind==='jikan'?'커뮤니티 별칭 데이터이며 국내 유통사의 표기와 다를 수 있습니다.':titleInfo.kind==='tmdb'?'TMDB에 등록된 한국어 번역입니다. 국내 판권사의 최종 표기와 다를 수 있습니다.':titleInfo.kind==='user'?'사용자가 직접 입력한 한국어 자료입니다. 공식 표기와 다를 수 있습니다.':titleInfo.kind==='namu'?'나무위키 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='wiki'?'한국어 위키백과 문서에서 확인한 표기입니다. 문서 표기와 다를 수 있습니다.':titleInfo.kind==='watchapedia'?'왓챠피디아에 등록된 한국어 자료입니다. 국내 유통사 표기와 다를 수 있습니다.':titleInfo.kind==='common'?'국내에서 널리 쓰이는 표기를 정리한 것으로 국내 플랫폼에서 직접 확인하지 않았습니다. 공식 표기와 다를 수 있습니다.':'국내 플랫폼 카탈로그를 확인해 제목을 정리했습니다.';
   return `${titleLine}<br>${descLine}${platformLine}${note?`<br><small>${esc(note)}</small>`:''}${!tmdbToken()?'<br><small>TMDB 연결을 설정하면 추가 한국어 현지화 정보를 확인할 수 있습니다.</small>':''}`;
 }
 function mediaKey(media){return media?.id==null?'':String(media.id);}

@@ -8,6 +8,7 @@ playwright-report/
 # 대용량 수확 원본: 도구로 재생성하며 배포/저장소에서 제외합니다.
 data/anilist-catalog-harvest.json
 data/ko-wikipedia-harvest.json
+data/watchapedia-harvest.json
 
 
 # 로컬 수확 진행/디버그 파일 (tmp_namu_full.json 재개용)

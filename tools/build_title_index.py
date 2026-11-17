@@ -86,7 +86,7 @@ def load_catalog_titles() -> dict[str, str]:
     return result
 
 
-VERIFIED_DB_SOURCES = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "catalog", "curated", "manual"}
+VERIFIED_DB_SOURCES = {"anilist", "tmdb", "mal", "jikan", "namu", "wiki", "watchapedia", "catalog", "curated", "manual"}
 
 
 def load_harvest_index() -> tuple[dict[int, dict], dict[int, dict]]:
@@ -114,25 +114,27 @@ def load_harvest_index() -> tuple[dict[int, dict], dict[int, dict]]:
 
 def load_db_titles(
     harvest_by_id: dict[int, dict],
-) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    """검증 DB(entries)·나무위키(namuEntries)·위키백과(wikiEntries) 제목을 MAL ID로 모읍니다.
+) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, str]]:
+    """검증 DB·나무위키·위키백과·왓챠피디아 제목을 MAL ID로 모읍니다.
 
-    반환: (entries_titles, namu_titles, wiki_titles).
-    우선순위는 `entries` > `namuEntries` > `wikiEntries`입니다.
+    반환: (entries_titles, namu_titles, wiki_titles, pedia_titles).
+    우선순위는 `entries` > `namuEntries` > `wikiEntries` > `pediaEntries`입니다.
     """
     entries_titles: dict[str, str] = {}
     namu_titles: dict[str, str] = {}
     wiki_titles: dict[str, str] = {}
+    pedia_titles: dict[str, str] = {}
     if not DB_JSON.exists():
-        return entries_titles, namu_titles, wiki_titles
+        return entries_titles, namu_titles, wiki_titles, pedia_titles
     try:
         data = json.loads(DB_JSON.read_text(encoding="utf-8"))
     except Exception:
-        return entries_titles, namu_titles, wiki_titles
+        return entries_titles, namu_titles, wiki_titles, pedia_titles
     for section, target in (
         ("entries", entries_titles),
         ("namuEntries", namu_titles),
         ("wikiEntries", wiki_titles),
+        ("pediaEntries", pedia_titles),
     ):
         for entry in (data.get(section) or {}).values():
             if not isinstance(entry, dict):
@@ -150,7 +152,7 @@ def load_db_titles(
             if not isinstance(mal_id, int):
                 continue
             target.setdefault(str(mal_id), title)
-    return entries_titles, namu_titles, wiki_titles
+    return entries_titles, namu_titles, wiki_titles, pedia_titles
 
 
 def load_platform_records() -> list[dict]:
@@ -216,11 +218,12 @@ def main() -> int:
     args = parser.parse_args()
 
     harvest_by_id, harvest_by_mal = load_harvest_index()
-    entries_titles, namu_titles, wiki_titles = load_db_titles(harvest_by_id)
-    # 한국어 위키백과 → 나무위키 순으로 낮은 우선순위를 먼저 깔아 둡니다.
+    entries_titles, namu_titles, wiki_titles, pedia_titles = load_db_titles(harvest_by_id)
+    # 왓챠피디아 → 한국어 위키백과 → 나무위키 순으로 낮은 우선순위를 먼저 깔아 둡니다.
     # 아래에서 국내 통용 표기·검증 DB·카탈로그·플랫폼 제목이 덮어쓰므로,
     # 수확 제목이 더 강한 출처의 표기를 가로채지 않습니다.
-    titles = dict(wiki_titles)
+    titles = dict(pedia_titles)
+    titles.update(wiki_titles)
     titles.update(namu_titles)
     titles.update(load_common_titles())
     titles.update(entries_titles)

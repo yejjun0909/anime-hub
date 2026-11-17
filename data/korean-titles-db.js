@@ -15,6 +15,7 @@ export const VERIFIED_KOREAN_SOURCES = Object.freeze([
   'jikan',
   'namu',
   'wiki',
+  'watchapedia',
   'catalog',
   'curated',
   'manual'
@@ -27,6 +28,7 @@ const SOURCE_META = Object.freeze({
   jikan: { label: 'MyAnimeList 대체 제목', kind: 'jikan' },
   namu: { label: '나무위키', kind: 'namu' },
   wiki: { label: '한국어 위키백과', kind: 'wiki' },
+  watchapedia: { label: '왓챠피디아', kind: 'watchapedia' },
   catalog: { label: '국내 카탈로그 확인 자료', kind: 'curated' },
   curated: { label: '국내 카탈로그 확인 자료', kind: 'curated' },
   manual: { label: '수동 확인 자료', kind: 'curated' }
@@ -74,6 +76,15 @@ export function filterVerifiedDb(db) {
     if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
     namuEntries[key] = entry;
   }
+  // `pediaEntries`는 왓챠피디아에 등록된 제목/소개만 담습니다.
+  // 위키백과보다 낮은 우선순위이며 다른 섹션을 덮지 않습니다.
+  const pediaEntries = {};
+  const rawPedia = db.pediaEntries && typeof db.pediaEntries === 'object' ? db.pediaEntries : {};
+  for (const [key, entry] of Object.entries(rawPedia)) {
+    if (!hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    pediaEntries[key] = entry;
+  }
   return {
     ...db,
     entries,
@@ -81,7 +92,9 @@ export function filterVerifiedDb(db) {
     wikiEntries,
     wikiCount: Object.keys(wikiEntries).length,
     namuEntries,
-    namuCount: Object.keys(namuEntries).length
+    namuCount: Object.keys(namuEntries).length,
+    pediaEntries,
+    pediaCount: Object.keys(pediaEntries).length
   };
 }
 
@@ -104,6 +117,7 @@ export function getKoreanTitlesDbStats() {
     count: _db?.entries ? Object.keys(_db.entries).length : 0,
     wikiCount: _db?.wikiEntries ? Object.keys(_db.wikiEntries).length : 0,
     namuCount: _db?.namuEntries ? Object.keys(_db.namuEntries).length : 0,
+    pediaCount: _db?.pediaEntries ? Object.keys(_db.pediaEntries).length : 0,
     sources: _db?.entries
       ? Object.values(_db.entries).reduce((acc, entry) => {
           const source = String(entry?.source || 'none');
@@ -177,6 +191,31 @@ export function lookupKoreanWikiTitle(media) {
       source: sourceMeta(entry.source || 'wiki')?.label || '한국어 위키백과',
       url: String(entry.url || '').trim(),
       kind: 'wiki'
+    };
+  }
+  return null;
+}
+
+// 왓챠피디아에서 확인한 제목/소개를 조회합니다.
+// `entries`·나무위키·위키백과보다 우선순위가 낮고 국내 통용 표기보다는 높습니다.
+export function lookupKoreanWatchaPediaTitle(media) {
+  const pedia = _db?.pediaEntries;
+  if (!pedia) return null;
+  const keys = [
+    media?.id != null ? String(media.id) : null,
+    media?.idMal ? `mal:${media.idMal}` : null,
+    media?.mal_id ? `mal:${media.mal_id}` : null
+  ].filter(Boolean);
+  for (const key of keys) {
+    const entry = pedia[key];
+    if (!entry || !hasDisplayValue(entry)) continue;
+    if (entry.source && !isVerifiedKoreanSource(entry.source)) continue;
+    return {
+      title: String(entry.title || '').trim(),
+      overview: String(entry.overview || '').trim(),
+      source: sourceMeta(entry.source || 'watchapedia')?.label || '왓챠피디아',
+      url: String(entry.url || '').trim(),
+      kind: 'watchapedia'
     };
   }
   return null;

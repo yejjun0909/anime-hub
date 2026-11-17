@@ -5,6 +5,7 @@ import {
   lookupKoreanTitle,
   lookupKoreanNamuTitle,
   lookupKoreanWikiTitle,
+  lookupKoreanWatchaPediaTitle,
   filterVerifiedDb,
   isVerifiedKoreanSource
 } from '../data/korean-titles-db.js';
@@ -19,6 +20,7 @@ test('verified source: 실제 한국어 출처만 허용', () => {
   assert.equal(isVerifiedKoreanSource('tmdb'), true);
   assert.equal(isVerifiedKoreanSource('namu'), true);
   assert.equal(isVerifiedKoreanSource('wiki'), true);
+  assert.equal(isVerifiedKoreanSource('watchapedia'), true);
   assert.equal(isVerifiedKoreanSource('google'), false);
   assert.equal(isVerifiedKoreanSource('gemini'), false);
   assert.equal(isVerifiedKoreanSource('machine'), false);
@@ -163,6 +165,52 @@ test('filterVerifiedDb: wikiEntries도 검증 출처만 남김', () => {
   });
   assert.deepEqual(Object.keys(filtered.wikiEntries), ['1']);
   assert.equal(filtered.wikiCount, 1);
+  assert.equal(filtered.count, 1);
+});
+
+test('lookupKoreanWatchaPediaTitle: pediaEntries를 AniList ID/MAL ID로 조회', () => {
+  setKoreanTitlesDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    pediaEntries: {
+      '2': {
+        anilistId: 2,
+        title: '주술회전',
+        overview: '저주를 다루는 이야기.',
+        source: 'watchapedia',
+        url: 'https://pedia.watcha.com/ko/contents/tPeWOeD'
+      },
+      'mal:3': { anilistId: null, malId: 3, title: '체인소 맨', source: 'watchapedia' }
+    }
+  });
+  const byId = lookupKoreanWatchaPediaTitle({ id: 2 });
+  assert.equal(byId?.title, '주술회전');
+  assert.equal(byId?.kind, 'watchapedia');
+  assert.equal(byId?.source, '왓챠피디아');
+  assert.equal(byId?.overview, '저주를 다루는 이야기.');
+  assert.equal(byId?.url, 'https://pedia.watcha.com/ko/contents/tPeWOeD');
+  assert.equal(lookupKoreanWatchaPediaTitle({ id: 99, idMal: 3 })?.title, '체인소 맨');
+  assert.equal(lookupKoreanWatchaPediaTitle({ id: 1 }), null);
+});
+
+test('lookupKoreanWatchaPediaTitle: 검증되지 않은 출처는 반환하지 않음', () => {
+  setKoreanTitlesDb({
+    entries: {},
+    pediaEntries: { '5': { title: 'AI 번역 제목', source: 'gemini' } }
+  });
+  assert.equal(lookupKoreanWatchaPediaTitle({ id: 5 }), null);
+});
+
+test('filterVerifiedDb: pediaEntries도 검증 출처만 남김', () => {
+  const filtered = filterVerifiedDb({
+    entries: { '1': { title: '귀멸의 칼날', source: 'anilist' } },
+    pediaEntries: {
+      '1': { title: '왓챠피디아 제목', source: 'watchapedia' },
+      '2': { title: 'AI 제목', source: 'gemini' },
+      '3': { title: '' }
+    }
+  });
+  assert.deepEqual(Object.keys(filtered.pediaEntries), ['1']);
+  assert.equal(filtered.pediaCount, 1);
   assert.equal(filtered.count, 1);
 });
 
