@@ -219,6 +219,10 @@ npm run validate
 # Node 테스트 (Node.js 20+)
 npm test
 
+# Python 도구 문법·수확기 공통 모듈 테스트
+py -m compileall -q tools
+py -m unittest discover -s tests -p 'test_*.py' -v
+
 # 브라우저 스모크 테스트 (최초 1회 npx playwright install chromium, 로컬 서버는 Playwright가 자동 실행)
 npx playwright test
 

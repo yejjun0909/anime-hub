@@ -28,6 +28,9 @@ jobs:
       - name: Python 도구 문법 검사
         run: python -m compileall -q tools
 
+      - name: 수확기 공통 모듈 단위 테스트
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: 카탈로그 데이터 검사
         run: python tools/check_korean_catalog.py
 

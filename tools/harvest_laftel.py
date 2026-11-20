@@ -26,11 +26,20 @@ import json
 import re
 import time
 import unicodedata
-import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import date
 from pathlib import Path
+
+from harvest_common import (
+    HANGUL,
+    atomic_write_json,
+    clean_overview,
+    fetch_with_retry,
+    log,
+    merge_platform_catalog,
+    normalize_plain,
+    read_platform_index,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_JS = ROOT / "data" / "korean-title-index.js"
@@ -66,12 +75,6 @@ PAREN_GROUP_RE = re.compile(r"[\(\[]([^\)\]]*)[\)\]]")
 YEAR_RE = re.compile(r"(\d{4})\s*년")
 SEASON_RE = re.compile(r"시즌\s*\d+|\d+기|part\s*\d+|쿨", re.I)
 SEASON_SUFFIX_RE = re.compile(r"^(?:hd)?(?:시즌)?\d+(?:기|쿨)?$|^(?:hd)?part\d+$|^리마스터$", re.I)
-HANGUL = re.compile(r"[가-힣]")
-
-INDEX_ENTRY_RE = re.compile(
-    r'^\s*("(?:[^"\\]|\\.)*")\s*:\s*\{\s*malId:\s*(\d+),\s*anilistId:\s*"(\d+)"',
-    re.M,
-)
 COMMON_ENTRY_RE = re.compile(r"^\s*(\d+):\s*([\"'])(.*?)\2\s*,?\s*$", re.M)
 
 ANILIST_QUERY = """
@@ -109,53 +112,31 @@ query ($page: Int) {
 """
 
 
-def log(message: str) -> None:
-    print(message, flush=True)
-
-
 def post_json(url: str, payload: dict, retries: int = 3) -> dict:
-    for attempt in range(retries):
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as error:
-            if error.code == 429 and attempt < retries - 1:
-                time.sleep(5 * (attempt + 1))
-                continue
-            raise
-        except urllib.error.URLError:
-            if attempt < retries - 1:
-                time.sleep(2 * (attempt + 1))
-                continue
-            raise
-    raise RuntimeError("AniList 요청 실패")
+    return fetch_with_retry(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
+        retries=retries,
+        retry_status={429},
+        backoff=lambda attempt: 5 * (attempt + 1),
+        parse=json.loads,
+    )
 
 
 def get_json(url: str, retries: int = 2) -> dict:
-    for attempt in range(retries):
-        request = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Origin": "https://laftel.net",
-                "Referer": "https://laftel.net/",
-                "Accept": "application/json",
-            },
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError:
-            if attempt < retries - 1:
-                time.sleep(1.5 * (attempt + 1))
-                continue
-            raise
-    raise RuntimeError("라프텔 요청 실패")
+    return fetch_with_retry(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Origin": "https://laftel.net",
+            "Referer": "https://laftel.net/",
+            "Accept": "application/json",
+        },
+        retries=retries,
+        backoff=lambda attempt: 1.5 * (attempt + 1),
+        parse=json.loads,
+    )
 
 
 def strip_decorators(value: str) -> str:
@@ -169,15 +150,6 @@ def strip_decorators(value: str) -> str:
 
     text = PAREN_GROUP_RE.sub(replace, str(value or ""))
     return re.sub(r"\s+", " ", text).strip()
-
-
-def normalize_plain(value: str) -> str:
-    text = unicodedata.normalize("NFKC", str(value or "")).lower()
-    return "".join(
-        ch
-        for ch in text
-        if not unicodedata.category(ch).startswith(("P", "S", "Z")) and ch not in " \t\n"
-    )
 
 
 def normalize_title(value: str) -> str:
@@ -194,16 +166,10 @@ def load_seeds() -> tuple[dict[int, dict], dict[int, str]]:
     seeds: dict[int, dict] = {}
     mal_titles: dict[int, str] = {}
 
-    if INDEX_JS.exists():
-        source = INDEX_JS.read_text(encoding="utf-8")
-        for raw_key, mal_id, anilist_id in INDEX_ENTRY_RE.findall(source):
-            title = json.loads(raw_key)
-            if not HANGUL.search(title):
-                continue
-            ani = int(anilist_id)
-            seeds.setdefault(ani, {"anilistId": ani, "malId": int(mal_id), "titles": []})
-            seeds[ani]["titles"].append(title)
-            mal_titles[int(mal_id)] = title
+    for title, mal_id, anilist_id in read_platform_index(INDEX_JS):
+        seeds.setdefault(anilist_id, {"anilistId": anilist_id, "malId": mal_id, "titles": []})
+        seeds[anilist_id]["titles"].append(title)
+        mal_titles[mal_id] = title
 
     if DB_JSON.exists():
         db = json.loads(DB_JSON.read_text(encoding="utf-8"))
@@ -376,13 +342,6 @@ def fetch_item(item_id: int, cache: dict[int, dict], sleep: float) -> dict | Non
         return None
     cache[item_id] = data
     return data
-
-
-def clean_overview(value: str) -> str:
-    text = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    return text
 
 
 def slug(value: str, fallback: str) -> str:
@@ -573,62 +532,17 @@ def main() -> int:
 
     # 같은 플랫폼 작품이 여러 AniList 항목에 연결된 경우(예: 미개봉 극장판),
     # 연도와 형식이 확인된 항목만 남깁니다.
-    preserved_records: list[dict] = []
-    preserved_platforms: list[dict] = []
-    if OUTPUT.exists():
-        try:
-            previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            log(f"기존 카탈로그를 읽지 못했습니다(새로 작성): {error}")
-        else:
-            preserved_records = [
-                record
-                for record in previous.get("records", []) or []
-                if isinstance(record, dict) and record.get("platform") != PLATFORM_ID
-            ]
-            preserved_platforms = [
-                platform
-                for platform in previous.get("platforms", []) or []
-                if isinstance(platform, dict) and platform.get("id") != PLATFORM_ID
-            ]
-            if preserved_records or preserved_platforms:
-                log(
-                    f"기존 다른 플랫폼 자료 유지: 레코드 {len(preserved_records)}건, "
-                    f"플랫폼 {len(preserved_platforms)}개"
-                )
-
-    deduped: dict[tuple[str, int], dict] = {}
-    for record in preserved_records + records:
-        key = (record["platform"], record["platformId"])
-        current = deduped.get(key)
-        if current is None:
-            deduped[key] = record
-            continue
-        current_score = (bool(current.get("year")), current.get("kind") == "TV")
-        record_score = (bool(record.get("year")), record.get("kind") == "TV")
-        if record_score > current_score:
-            deduped[key] = record
-    records = list(deduped.values())
-
-    records.sort(key=lambda record: (record["anilistId"], record["platform"]))
-    laftel_platform = {
-        "id": PLATFORM_ID,
-        "name": PLATFORM_NAME,
-        "priority": PLATFORM_PRIORITY,
-        "sourceUrl": "https://laftel.net/",
-        "checkedAt": CHECKED_AT,
-    }
-    platforms = sorted(
-        preserved_platforms + [laftel_platform],
-        key=lambda platform: (platform.get("priority", 99), str(platform.get("id") or "")),
+    payload = merge_platform_catalog(
+        OUTPUT,
+        {
+            "id": PLATFORM_ID,
+            "name": PLATFORM_NAME,
+            "priority": PLATFORM_PRIORITY,
+            "sourceUrl": "https://laftel.net/",
+            "checkedAt": CHECKED_AT,
+        },
+        records,
     )
-    payload = {
-        "schemaVersion": 1,
-        "region": "KR",
-        "checkedAt": CHECKED_AT,
-        "platforms": platforms,
-        "records": records,
-    }
 
     log(
         f"완료: 작품 {stats['works']} / 일치 {stats['matched']} / 불일치 {stats['rejected']} / 결과 없음 {stats['no_result']}"
@@ -637,12 +551,8 @@ def main() -> int:
         log("dry-run: 파일을 쓰지 않았습니다.")
         return 0
 
-    OUTPUT.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    log(f"작성: {OUTPUT.relative_to(ROOT)} ({len(records)}건)")
+    atomic_write_json(OUTPUT, payload)
+    log(f"작성: {OUTPUT.relative_to(ROOT)} ({len(payload['records'])}건)")
     return 0
 
 

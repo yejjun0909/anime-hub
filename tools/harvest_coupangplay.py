@@ -25,26 +25,24 @@ data/korean-platform-catalog.json 에 기록합니다.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import http.client
 import json
 import re
-import sys
 import time
-import unicodedata
-import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import date
 from pathlib import Path
 
-# Windows 콘솔의 기본 코드페이지(cp949)에서는 일부 제목 문자를 출력할 수 없어
-# 수확 중 UnicodeEncodeError로 종료될 수 있습니다. UTF-8로 강제합니다.
-try:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-except (AttributeError, OSError):
-    pass
+from harvest_common import (
+    HANGUL,
+    atomic_write_json,
+    clean_overview,
+    fetch_with_retry,
+    log,
+    merge_platform_catalog,
+    normalize_plain,
+    platform_id,
+    read_platform_index,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_JS = ROOT / "data" / "korean-title-index.js"
@@ -72,12 +70,6 @@ DECORATOR_RE = re.compile(
     re.I,
 )
 YEAR_RE = re.compile(r"^\d{4}$")
-HANGUL = re.compile(r"[가-힣]")
-
-INDEX_ENTRY_RE = re.compile(
-    r'^\s*("(?:[^"\\]|\\.)*")\s*:\s*\{\s*malId:\s*(\d+),\s*anilistId:\s*"(\d+)"',
-    re.M,
-)
 
 ANILIST_KIND = {
     "TV": "TV",
@@ -100,19 +92,6 @@ COUPANG_FORMATS = {
 }
 
 
-def log(message: str) -> None:
-    print(message, flush=True)
-
-
-def normalize_plain(value: str) -> str:
-    text = unicodedata.normalize("NFKC", str(value or "")).lower()
-    return "".join(
-        ch
-        for ch in text
-        if not unicodedata.category(ch).startswith(("P", "S", "Z")) and ch not in " \t\n"
-    )
-
-
 def strip_decorators(value: str) -> str:
     """(자막)/(더빙)/(무삭제판) 같은 플랫폼 표시만 제거합니다."""
     text = DECORATOR_RE.sub(" ", str(value or ""))
@@ -125,8 +104,9 @@ def normalize_title(value: str) -> str:
 
 def get_json(url: str, retries: int = 6) -> dict:
     """간헐적인 403/429/5xx 를 고려해 재시도하는 요청기."""
-    for attempt in range(retries):
-        headers = {
+
+    def headers(attempt: int) -> dict:
+        return {
             "User-Agent": USER_AGENTS[attempt % len(USER_AGENTS)],
             "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
             "Accept": "application/json",
@@ -135,21 +115,15 @@ def get_json(url: str, retries: int = 6) -> dict:
             "x-app-version": "1.76.22",
             "Referer": "https://www.coupangplay.com/search",
         }
-        try:
-            request = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as error:
-            if error.code in {403, 429, 500, 502, 503, 504} and attempt < retries - 1:
-                time.sleep(1.0 + attempt * 1.5)
-                continue
-            raise
-        except (urllib.error.URLError, http.client.HTTPException, OSError, json.JSONDecodeError):
-            if attempt < retries - 1:
-                time.sleep(1.0 + attempt)
-                continue
-            raise
-    raise RuntimeError(f"쿠팡플레이 요청 실패: {url}")
+
+    return fetch_with_retry(
+        url,
+        headers=headers,
+        retries=retries,
+        timeout=30,
+        backoff=lambda attempt: 1.0 + attempt * 1.5,
+        parse=json.loads,
+    )
 
 
 def search_coupang(keyword: str, sleep: float) -> list[dict]:
@@ -174,14 +148,8 @@ def search_coupang(keyword: str, sleep: float) -> list[dict]:
 def load_seeds() -> tuple[dict[int, dict], dict[str, tuple[int, int]], dict[str, dict]]:
     """AniList ID -> 시드, 한국어 제목 -> (MAL, AniList), AniList 메타를 읽습니다."""
     index: dict[str, tuple[int, int]] = {}
-    if INDEX_JS.exists():
-        for raw_key, mal_id, anilist_id in INDEX_ENTRY_RE.findall(INDEX_JS.read_text(encoding="utf-8")):
-            try:
-                title = json.loads(raw_key)
-            except json.JSONDecodeError:
-                continue
-            if HANGUL.search(title):
-                index[title] = (int(mal_id), int(anilist_id))
+    for title, mal_id, anilist_id in read_platform_index(INDEX_JS):
+        index[title] = (mal_id, anilist_id)
 
     media: dict[str, dict] = {}
     if ANILIST_JSON.exists():
@@ -220,20 +188,6 @@ def format_matches(anilist: dict, item: dict) -> bool:
     ani_format = str(anilist.get("format") or "").upper()
     platform_format = str(item.get("sub_type") or item.get("as") or "").upper()
     return platform_format in COUPANG_FORMATS.get(ani_format, set())
-
-
-def clean_overview(value: str) -> str:
-    text = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    return text
-
-
-def platform_id(content_id: str) -> int:
-    """UUID를 JS 안전 정수 범위(2^53 이하)의 안정적인 정수로 변환합니다."""
-    digest = hashlib.sha1(content_id.encode("utf-8")).hexdigest()
-    # 15자리(60bit)는 브라우저에서 정밀도가 깨지므로 13자리(52bit)만 사용합니다.
-    return int(digest[:13], 16)
 
 
 def match_candidate(item: dict, candidates: list[str], anilist: dict) -> tuple[int, str] | None:
@@ -369,63 +323,17 @@ def main() -> int:
             f"(ID {result.get('id')})"
         )
 
-    # 같은 쿠팡플레이 작품이 여러 AniList 항목에 연결된 경우 정확도 높은 쪽을 남깁니다.
-    preserved_records: list[dict] = []
-    preserved_platforms: list[dict] = []
-    if OUTPUT.exists():
-        try:
-            previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            log(f"기존 카탈로그를 읽지 못했습니다(새로 작성): {error}")
-        else:
-            preserved_records = [
-                record
-                for record in previous.get("records", []) or []
-                if isinstance(record, dict) and record.get("platform") != PLATFORM_ID
-            ]
-            preserved_platforms = [
-                platform
-                for platform in previous.get("platforms", []) or []
-                if isinstance(platform, dict) and platform.get("id") != PLATFORM_ID
-            ]
-            if preserved_records or preserved_platforms:
-                log(
-                    f"기존 다른 플랫폼 자료 유지: 레코드 {len(preserved_records)}건, "
-                    f"플랫폼 {len(preserved_platforms)}개"
-                )
-
-    deduped: dict[tuple[str, int], dict] = {}
-    for record in preserved_records + records:
-        key = (record["platform"], record["platformId"])
-        current = deduped.get(key)
-        if current is None:
-            deduped[key] = record
-            continue
-        current_score = (bool(current.get("year")), current.get("kind") == "TV")
-        record_score = (bool(record.get("year")), record.get("kind") == "TV")
-        if record_score > current_score:
-            deduped[key] = record
-    records = list(deduped.values())
-    records.sort(key=lambda record: (record["anilistId"], record["platform"]))
-
-    coupang_platform = {
-        "id": PLATFORM_ID,
-        "name": PLATFORM_NAME,
-        "priority": PLATFORM_PRIORITY,
-        "sourceUrl": "https://www.coupangplay.com/",
-        "checkedAt": CHECKED_AT,
-    }
-    platforms = sorted(
-        preserved_platforms + [coupang_platform],
-        key=lambda platform: (platform.get("priority", 99), str(platform.get("id") or "")),
+    payload = merge_platform_catalog(
+        OUTPUT,
+        {
+            "id": PLATFORM_ID,
+            "name": PLATFORM_NAME,
+            "priority": PLATFORM_PRIORITY,
+            "sourceUrl": "https://www.coupangplay.com/",
+            "checkedAt": CHECKED_AT,
+        },
+        records,
     )
-    payload = {
-        "schemaVersion": 1,
-        "region": "KR",
-        "checkedAt": CHECKED_AT,
-        "platforms": platforms,
-        "records": records,
-    }
 
     log(
         f"완료: 작품 {stats['works']} / 일치 {stats['matched']} / "
@@ -435,12 +343,8 @@ def main() -> int:
         log("dry-run: 파일을 쓰지 않았습니다.")
         return 0
 
-    OUTPUT.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    log(f"작성: {OUTPUT.relative_to(ROOT)} ({len(records)}건)")
+    atomic_write_json(OUTPUT, payload)
+    log(f"작성: {OUTPUT.relative_to(ROOT)} ({len(payload['records'])}건)")
     return 0
 
 

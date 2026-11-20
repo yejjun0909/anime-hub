@@ -27,24 +27,23 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import hashlib
-import http.client
 import json
 import re
-import sys
 import time
-import unicodedata
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import date
 from pathlib import Path
 
-try:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-except (AttributeError, OSError):
-    pass
+from harvest_common import (
+    HANGUL,
+    atomic_write_json,
+    clean_overview,
+    fetch_with_retry,
+    log,
+    merge_platform_catalog,
+    normalize_plain,
+    platform_id,
+    read_platform_index,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_JS = ROOT / "data" / "korean-title-index.js"
@@ -75,11 +74,6 @@ ENTITY_RE = re.compile(
 )
 BROWSE_PAGE_RE = re.compile(r'href="(/ko-kr/browse/page-[0-9a-f-]+)"')
 YEAR_RE = re.compile(r"^(\d{4})")
-HANGUL = re.compile(r"[가-힣]")
-INDEX_ENTRY_RE = re.compile(
-    r'^\s*("(?:[^"\\]|\\.)*")\s*:\s*\{\s*malId:\s*(\d+),\s*anilistId:\s*"(\d+)"',
-    re.M,
-)
 
 ANILIST_KIND = {
     "TV": "TV",
@@ -91,63 +85,34 @@ ANILIST_KIND = {
 }
 
 
-def log(message: str) -> None:
-    print(message, flush=True)
-
-
 def fetch(url: str, retries: int = 7, accept: str = "application/json") -> str | None:
     """간헐적인 403/429/5xx 를 고려해 재시도하는 요청기.
 
     디즈니+는 짧은 시간에 많은 요청이 몰리면 403을 반환하므로, 지수 백오프와
     서로 다른 User-Agent를 번갈아 사용합니다.
     """
-    for attempt in range(retries):
-        headers = {
+
+    def headers(attempt: int) -> dict:
+        return {
             "User-Agent": USER_AGENTS[attempt % len(USER_AGENTS)],
             "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
             "Accept": accept,
         }
-        try:
-            request = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(request, timeout=45) as response:
-                return response.read().decode("utf-8", "replace")
-        except urllib.error.HTTPError as error:
-            if error.code in {403, 429, 500, 502, 503, 504} and attempt < retries - 1:
-                time.sleep(min(1.5 * (2**attempt), 20))
-                continue
-            return None
-        except (urllib.error.URLError, TimeoutError, http.client.HTTPException, OSError):
-            if attempt < retries - 1:
-                time.sleep(min(1.5 * (2**attempt), 20))
-                continue
-            return None
-    return None
 
-
-def normalize_title(value: str) -> str:
-    text = unicodedata.normalize("NFKC", str(value or "")).lower()
-    text = re.sub(r"\s*\|\s*디즈니\+\s*$", "", text)
-    return "".join(
-        ch
-        for ch in text
-        if not unicodedata.category(ch).startswith(("P", "S", "Z")) and ch not in " \t\n"
+    return fetch_with_retry(
+        url,
+        headers=headers,
+        retries=retries,
+        timeout=45,
+        backoff=lambda attempt: min(1.5 * (2**attempt), 20),
+        decode_errors="replace",
+        fail_silent=True,
     )
 
 
-def clean_overview(value: str) -> str:
-    text = str(value or "").replace("<br/>", "\n").replace("<br>", "\n")
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    return text
-
-
-def platform_id(entity_id: str) -> int:
-    """엔티티 ID를 JS 안전 정수 범위(2^53 이하)의 안정적인 정수로 변환합니다."""
-    digest = hashlib.sha1(entity_id.encode("utf-8")).hexdigest()
-    # 15자리(60bit)는 브라우저에서 정밀도가 깨지므로 13자리(52bit)만 사용합니다.
-    return int(digest[:13], 16)
+def normalize_title(value: str) -> str:
+    text = re.sub(r"\s*\|\s*디즈니\+\s*$", "", str(value or ""))
+    return normalize_plain(text)
 
 
 def discover_entities(build_id: str, max_pages: int) -> tuple[list[str], str | None]:
@@ -207,17 +172,10 @@ def load_index() -> tuple[dict[str, dict], dict[str, list[tuple[str, int, int]]]
             media = {str(key): value for key, value in raw.items() if isinstance(value, dict)}
 
     by_title: dict[str, list[tuple[str, int, int]]] = {}
-    if INDEX_JS.exists():
-        for raw_key, mal_id, anilist_id in INDEX_ENTRY_RE.findall(INDEX_JS.read_text(encoding="utf-8")):
-            try:
-                title = json.loads(raw_key)
-            except json.JSONDecodeError:
-                continue
-            if not HANGUL.search(title):
-                continue
-            by_title.setdefault(normalize_title(title), []).append(
-                (title, int(mal_id), int(anilist_id))
-            )
+    for title, mal_id, anilist_id in read_platform_index(INDEX_JS):
+        by_title.setdefault(normalize_title(title), []).append(
+            (title, mal_id, anilist_id)
+        )
     return media, by_title
 
 
@@ -262,7 +220,10 @@ def parse_detail(payload: str) -> dict | None:
     year_match = YEAR_RE.match(str(hero.get("releaseYear") or ""))
     year = int(year_match.group(1)) if year_match else None
 
-    overview = clean_overview(meta.get("summary") or hero.get("synopsisText") or (ld_node or {}).get("description") or "")
+    overview = clean_overview(
+        meta.get("summary") or hero.get("synopsisText") or (ld_node or {}).get("description") or "",
+        strip_html=True,
+    )
 
     episodes = 0
     for item in main:
@@ -350,60 +311,19 @@ def make_record(
     }
 
 
-def merge_records(new_records: list[dict]) -> list[dict]:
+def merge_records(new_records: list[dict]) -> dict:
     """다른 플랫폼 레코드는 유지하고 디즈니+ 레코드만 교체합니다."""
-    preserved: list[dict] = []
-    preserved_platforms: list[dict] = []
-    if OUTPUT.exists():
-        try:
-            previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            log(f"기존 카탈로그를 읽지 못했습니다(새로 작성): {error}")
-        else:
-            preserved = [
-                record
-                for record in previous.get("records", []) or []
-                if isinstance(record, dict) and record.get("platform") != PLATFORM_ID
-            ]
-            preserved_platforms = [
-                platform
-                for platform in previous.get("platforms", []) or []
-                if isinstance(platform, dict) and platform.get("id") != PLATFORM_ID
-            ]
-
-    deduped: dict[tuple[str, int], dict] = {}
-    for record in preserved + new_records:
-        key = (record["platform"], record["platformId"])
-        current = deduped.get(key)
-        if current is None:
-            deduped[key] = record
-            continue
-        current_score = (bool(current.get("year")), current.get("kind") == "TV")
-        record_score = (bool(record.get("year")), record.get("kind") == "TV")
-        if record_score > current_score:
-            deduped[key] = record
-
-    records = list(deduped.values())
-    records.sort(key=lambda record: (record["anilistId"], record["platform"]))
-    disney_platform = {
-        "id": PLATFORM_ID,
-        "name": PLATFORM_NAME,
-        "priority": PLATFORM_PRIORITY,
-        "sourceUrl": f"{BASE}/ko-kr",
-        "checkedAt": CHECKED_AT,
-    }
-    platforms = sorted(
-        preserved_platforms + [disney_platform],
-        key=lambda platform: (platform.get("priority", 99), str(platform.get("id") or "")),
+    return merge_platform_catalog(
+        OUTPUT,
+        {
+            "id": PLATFORM_ID,
+            "name": PLATFORM_NAME,
+            "priority": PLATFORM_PRIORITY,
+            "sourceUrl": f"{BASE}/ko-kr",
+            "checkedAt": CHECKED_AT,
+        },
+        new_records,
     )
-    payload = {
-        "schemaVersion": 1,
-        "region": "KR",
-        "checkedAt": CHECKED_AT,
-        "platforms": platforms,
-        "records": records,
-    }
-    return payload
 
 
 def main() -> int:
@@ -490,11 +410,7 @@ def main() -> int:
         log("dry-run: 파일을 쓰지 않았습니다.")
         return 0
 
-    OUTPUT.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    atomic_write_json(OUTPUT, payload)
     log(f"작성: {OUTPUT.relative_to(ROOT)} ({len(payload['records'])}건)")
     return 0
 
