@@ -223,7 +223,11 @@ npm test
 py -m compileall -q tools
 py -m unittest discover -s tests -p 'test_*.py' -v
 
-# 브라우저 스모크 테스트 (최초 1회 npx playwright install chromium, 로컬 서버는 Playwright가 자동 실행)
+# 브라우저 스모크 테스트 (node_modules 설치 후 최초 1회 chromium 설치)
+# site 프로젝트는 _site/ 배포 산출물을, source 프로젝트는 원본 테스트 하네스를 검사합니다.
+npm install
+npx playwright install chromium
+py tools/build_site.py
 npx playwright test
 
 # Node.js가 없을 때: 로컬 서버에서 브라우저 테스트 페이지 열기

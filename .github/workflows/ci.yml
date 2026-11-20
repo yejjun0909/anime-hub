@@ -70,9 +70,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Playwright 패키지 설치
+      - name: 배포 산출물 생성
+        run: python tools/build_site.py
+
+      - name: Node 의존성 설치 (Playwright 포함)
         timeout-minutes: 5
-        run: npm install --no-save --no-audit --no-fund @playwright/test@1.65.0
+        run: npm install --no-audit --no-fund
 
       - name: Chromium 설치
         timeout-minutes: 8
