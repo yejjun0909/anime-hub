@@ -401,8 +401,8 @@ async function enrichKoreanMetadata(items,concurrency=2){
 }
 // 한국어 소스 폴백 (v4.7+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
 // AI는 오직 나무위키 검색 후보 생성에만 사용하며, 화면 표시 출처로 쓰지 않습니다.
-async function lookupKoreanFallback(nativeTitle){
-  return lookupKoreanSource(nativeTitle);
+async function lookupKoreanFallback(nativeTitle,options={}){
+  return lookupKoreanSource(nativeTitle,options);
 }
 async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
@@ -424,7 +424,8 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
     if(!platform&&!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
       if(nativeTitle&&String(nativeTitle).trim().length>1){
-        const found=await lookupKoreanFallback(nativeTitle);
+        const alternateTitles=[media?.title?.romaji,media?.title?.english].filter(x=>String(x||'').trim().length>1);
+        const found=await lookupKoreanFallback(nativeTitle,{alternateTitles,year:Number(media.year)||undefined});
         if(found?.title)writeKoreanMetadata(media,{title:found.title,overview:found.overview||'',source:found.source,kind:found.kind,titleCountry:'KR',missing:false,url:found.url||''});
       }
     }

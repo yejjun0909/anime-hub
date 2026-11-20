@@ -12,9 +12,30 @@ import { searchNamuWiki, isNamuWikiCoolingDown } from './namu-search.js';
 import { lookupKoreanWikipedia } from './korean-wiki.js';
 import { generateKoreanQueryCandidates } from './korean-query.js';
 import { geminiTranslate } from './gemini-translate.js';
+import { normalizeForSearch, similarity } from './fuzzy-search.js';
 
 export const KOREAN_SOURCE_ORDER = Object.freeze(['namu', 'wiki', 'original']);
 const AI_QUERY_LIMIT = 3;
+const ORIGIN_SIMILARITY = 0.82;
+
+function isPlausibleNamuMatch(result, nativeTitle, options, query) {
+  if (!result || typeof result !== 'object' || !/[가-힣]/.test(String(result.title || ''))) return false;
+  if (Number.isInteger(options.year) && result.year) {
+    const matched = String(result.year).match(/\d{4}/);
+    const year = matched ? Number(matched[0]) : Number(result.year);
+    if (Number.isInteger(year) && Math.abs(year - options.year) > 1) return false;
+  }
+  // 나무위키가 원제를 함께 주면 반드시 조회 대상(원제/영문/AI 후보)과 대조합니다.
+  const origin = normalizeForSearch(result.originTitle || result.originalTitle || '');
+  if (!origin) return true;
+  const candidates = [nativeTitle, query, ...(Array.isArray(options.alternateTitles) ? options.alternateTitles : [])];
+  return candidates.some((value) => {
+    const normalized = normalizeForSearch(value);
+    if (!normalized) return false;
+    return origin === normalized || origin.includes(normalized) || normalized.includes(origin)
+      || similarity(origin, normalized) >= ORIGIN_SIMILARITY;
+  });
+}
 
 async function safeCall(fn, logger) {
   try {
@@ -43,7 +64,8 @@ export async function lookupKoreanSource(nativeTitle, options = {}) {
   const findNamu = async (query) => {
     if (coolingDown()) return null;
     const results = await safeCall(() => searchNamu(query), logger);
-    return Array.isArray(results) && results.length ? results[0] : null;
+    if (!Array.isArray(results)) return null;
+    return results.find((result) => isPlausibleNamuMatch(result, value, options, query)) || null;
   };
 
   // 1) 원제/원어 제목으로 나무위키 검색

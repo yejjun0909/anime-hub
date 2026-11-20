@@ -352,3 +352,65 @@ test('createKoreanSourceResolver: 의존성을 고정해 재사용', async () =>
   assert.equal(found?.title, '고정 결과');
   assert.equal(found?.kind, 'namu');
 });
+
+test('resolver: 원제가 다른 나무위키 문서는 채택하지 않음', async () => {
+  let wikiCalls = 0;
+  const found = await lookupKoreanSource('鬼滅の刃', {
+    searchNamu: async () => [{
+      title: '완전히 다른 작품',
+      originTitle: '전혀 다른 작품',
+      overview: '다른 작품 문서',
+      source: '나무위키'
+    }, {
+      title: '귀멸의 칼날',
+      originTitle: '鬼滅の刃',
+      overview: '일본의 만화',
+      source: '나무위키'
+    }],
+    lookupWiki: async () => { wikiCalls += 1; return null; },
+    isNamuCoolingDown: () => false
+  });
+  assert.equal(found?.title, '귀멸의 칼날');
+  assert.equal(wikiCalls, 0);
+});
+
+test('resolver: 원제 대조는 영문 병칭과 연도도 사용', async () => {
+  const found = await lookupKoreanSource('ぼっち・ざ・ろっく！', {
+    searchNamu: async () => [{
+      title: '봇치 더 록!',
+      originTitle: 'Bocchi the Rock!',
+      overview: '일본의 만화',
+      source: '나무위키',
+      year: 2021
+    }],
+    lookupWiki: async () => null,
+    isNamuCoolingDown: () => false,
+    alternateTitles: ['Bocchi the Rock!'],
+    year: 2021
+  });
+  assert.equal(found?.title, '봇치 더 록!');
+});
+
+test('resolver: 원제·연도가 어긋나면 위키백과로 폴백', async () => {
+  const found = await lookupKoreanSource('진격의 거인', {
+    searchNamu: async () => [{
+      title: '다른 진격의 거인',
+      originTitle: '完全に別の作品',
+      year: 1999,
+      source: '나무위키'
+    }],
+    lookupWiki: async () => ({ title: '진격의 거인', source: '한국어 위키백과' }),
+    isNamuCoolingDown: () => false,
+    year: 2013
+  });
+  assert.equal(found?.kind, 'wiki');
+});
+
+test('resolver: 한국어 표기가 없는 나무위키 결과는 채택하지 않음', async () => {
+  const found = await lookupKoreanSource('Naruto', {
+    searchNamu: async () => [{ title: 'NARUTO', originTitle: 'NARUTO', source: '나무위키' }],
+    lookupWiki: async () => ({ title: '나루토', source: '한국어 위키백과' }),
+    isNamuCoolingDown: () => false
+  });
+  assert.equal(found?.kind, 'wiki');
+});

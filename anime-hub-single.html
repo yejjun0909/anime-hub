@@ -12139,8 +12139,29 @@ const __ns_data_korean_source_js = (function() {
 
 
 
+
 const KOREAN_SOURCE_ORDER = Object.freeze(['namu', 'wiki', 'original']);
 const AI_QUERY_LIMIT = 3;
+const ORIGIN_SIMILARITY = 0.82;
+
+function isPlausibleNamuMatch(result, nativeTitle, options, query) {
+  if (!result || typeof result !== 'object' || !/[가-힣]/.test(String(result.title || ''))) return false;
+  if (Number.isInteger(options.year) && result.year) {
+    const matched = String(result.year).match(/\d{4}/);
+    const year = matched ? Number(matched[0]) : Number(result.year);
+    if (Number.isInteger(year) && Math.abs(year - options.year) > 1) return false;
+  }
+  // 나무위키가 원제를 함께 주면 반드시 조회 대상(원제/영문/AI 후보)과 대조합니다.
+  const origin = normalizeForSearch(result.originTitle || result.originalTitle || '');
+  if (!origin) return true;
+  const candidates = [nativeTitle, query, ...(Array.isArray(options.alternateTitles) ? options.alternateTitles : [])];
+  return candidates.some((value) => {
+    const normalized = normalizeForSearch(value);
+    if (!normalized) return false;
+    return origin === normalized || origin.includes(normalized) || normalized.includes(origin)
+      || similarity(origin, normalized) >= ORIGIN_SIMILARITY;
+  });
+}
 
 async function safeCall(fn, logger) {
   try {
@@ -12169,7 +12190,8 @@ async function lookupKoreanSource(nativeTitle, options = {}) {
   const findNamu = async (query) => {
     if (coolingDown()) return null;
     const results = await safeCall(() => searchNamu(query), logger);
-    return Array.isArray(results) && results.length ? results[0] : null;
+    if (!Array.isArray(results)) return null;
+    return results.find((result) => isPlausibleNamuMatch(result, value, options, query)) || null;
   };
 
   // 1) 원제/원어 제목으로 나무위키 검색
@@ -86587,8 +86609,8 @@ async function enrichKoreanMetadata(items,concurrency=2){
 }
 // 한국어 소스 폴백 (v4.7+): 나무위키(best-effort) → AI 후보로 나무위키 재검색 → 한국어 위키백과
 // AI는 오직 나무위키 검색 후보 생성에만 사용하며, 화면 표시 출처로 쓰지 않습니다.
-async function lookupKoreanFallback(nativeTitle){
-  return lookupKoreanSource(nativeTitle);
+async function lookupKoreanFallback(nativeTitle,options={}){
+  return lookupKoreanSource(nativeTitle,options);
 }
 async function loadKoreanMetadataIntoDetail(media,options={}){
   const root=$('#modal-root');const modal=state.currentModal;if(!media||!root||modal?.media?.id!==media.id)return;
@@ -86610,7 +86632,8 @@ async function loadKoreanMetadataIntoDetail(media,options={}){
     if(!platform&&!curatedKoreanOverride(media)&&!getUserKorean(media)&&!cachedKoreanMetadata(media)?.title){
       const nativeTitle=media?.title?.native||media?.title?.romaji||media?.title?.english;
       if(nativeTitle&&String(nativeTitle).trim().length>1){
-        const found=await lookupKoreanFallback(nativeTitle);
+        const alternateTitles=[media?.title?.romaji,media?.title?.english].filter(x=>String(x||'').trim().length>1);
+        const found=await lookupKoreanFallback(nativeTitle,{alternateTitles,year:Number(media.year)||undefined});
         if(found?.title)writeKoreanMetadata(media,{title:found.title,overview:found.overview||'',source:found.source,kind:found.kind,titleCountry:'KR',missing:false,url:found.url||''});
       }
     }
