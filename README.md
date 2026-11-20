@@ -44,7 +44,7 @@ npm run serve
 
 국내 애니 정보 사이트를 먼저 참고하고, 없을 때만 다음 소스로 내려갑니다.
 
-1. **국내 플랫폼 카탈로그** (`data/korean-platform-catalog.json`): 라프텔 → 애니플러스 → 왓챠 → 티빙 → 웨이브 → 넷플릭스 KR → 쿠팡플레이 → 디즈니+ KR 순으로 확인된 제목·소개. 현재 자동 수확은 라프텔만 지원합니다.
+1. **국내 플랫폼 카탈로그** (`data/korean-platform-catalog.json`): 라프텔 → 애니플러스 → 왓챠 → 티빙 → 웨이브 → 넷플릭스 KR → 쿠팡플레이 → 디즈니+ KR 순으로 확인된 제목·소개. 현재 자동 수확은 라프텔·쿠팡플레이·디즈니+ KR을 지원합니다.
 2. **수동 카탈로그** (`data/korean-catalog.json`): Apple TV KR 등 사람이 직접 확인해 정리한 13건. 플랫폼 카탈로그에 없는 작품의 다음 순위입니다.
 3. 사용자가 직접 입력한 한국어 자료
 4. 확인된 한국어 사전 DB (`data/korean-titles-db.json`)
@@ -63,7 +63,7 @@ npm run serve
 
 왓챠피디아 수확분은 `data/korean-titles-db.json`의 `pediaEntries`에 별도로 저장합니다. `entries`/`namuEntries`/`wikiEntries`를 덮지 않고, 위키백과 다음에 조회합니다(`lookupKoreanWikiTitle()` → `lookupKoreanWatchaPediaTitle()`). 수확기는 상세 페이지의 JSON-LD와 헤더에서 제목·한국어 소개·연도·장르·원제를 읽어, 제목 일치와 연도 ±1년, 애니메이션 장르, 원제 대조를 모두 통과한 경우에만 채택합니다. 도서·실사 영화·다른 시즌/작품은 걸러내며, 소개는 한국어 40자 이상일 때만 저장합니다.
 
-플랫폼 카탈로그는 **AniList ID → workId → MAL ID** 순으로만 연결합니다. 제목이 비슷하다는 이유만으로 연결하지 않으며, 정규화한 제목이 같고 (연도를 알 수 있으면) 연도 차이가 1년 이내일 때만 수확합니다. 수확된 소개는 플랫폼이 등록한 문장을 그대로 사용하고 화면에 `소개(플랫폼 등록)`·`라프텔 출처`로 표시합니다.
+플랫폼 카탈로그는 **AniList ID → workId → MAL ID** 순으로만 연결합니다. 제목이 비슷하다는 이유만으로 연결하지 않으며, 정규화한 제목이 같고 (연도를 알 수 있으면) 연도 차이가 1년 이내일 때만 수확합니다. 쿠팡플레이는 애니메이션 태그와 AniList 형식까지 대조하고, 디즈니+는 공개 검색이 없어 브라우즈 페이지의 엔티티를 순회해 상세 JSON의 애니메이션 장르·연도·형식(Series/Movie)을 확인합니다. 수확된 소개는 플랫폼이 등록한 문장을 그대로 사용하고 화면에 `소개(플랫폼 등록)`·`플랫폼 출처`로 표시합니다.
 
 ### 기계 번역과 AI의 역할
 
@@ -82,7 +82,7 @@ npm run serve
 - AniList GraphQL: 작품·방영·장르·제작사·인물·관계 데이터와 일부 한글 별칭
 - Jikan / MyAnimeList: 보조 평점·순위·일부 작품 정보·한글 대체 제목. Jikan은 MyAnimeList의 비공식 API입니다.
 - TMDB: 선택 연결 시 한국어 제목·줄거리·작품별 번역 정보
-- 국내 서비스 카탈로그: 라프텔 등 국내 플랫폼에서 직접 확인한 제목·줄거리(자동 수확), Apple TV KR 등 수동 확인 자료
+- 국내 서비스 카탈로그: 라프텔·쿠팡플레이·디즈니+ KR 등 국내 플랫폼에서 직접 확인한 제목·줄거리(자동 수확), Apple TV KR 등 수동 확인 자료
 - 나무위키 / 한국어 위키백과: 확인된 문서의 제목·소개 (best-effort)
 
 API 응답과 데이터 범위는 각 제공처의 갱신 시점, 요청 제한, 서비스 상태에 영향을 받습니다.
@@ -102,7 +102,7 @@ anime-hub/
 │   ├── korean-catalog.json     # 수동 확인 한국어 카탈로그 원본
 │   ├── korean-catalog.js       # 위 JSON에서 생성
 │   ├── korean-match.js         # ID 기반 카탈로그 매칭
-│   ├── korean-platform-catalog.json # 국내 플랫폼(라프텔) 수확 원본
+│   ├── korean-platform-catalog.json # 국내 플랫폼(라프텔·쿠팡플레이·디즈니+) 수확 원본
 │   ├── korean-platform-catalog.js   # 위 JSON에서 생성
 │   ├── korean-platform-match.js     # 플랫폼 우선순위·ID 기반 매칭
 │   ├── korean-titles-db.json   # 사전 계산 한국어 제목 DB
@@ -120,6 +120,8 @@ anime-hub/
 │   ├── build_korean_catalog.py
 │   ├── build_korean_platform_catalog.py # 플랫폼 카탈로그 JSON → JS 생성
 │   ├── harvest_laftel.py       # 라프텔 검색/상세 수확 (제목·연도 검증)
+│   ├── harvest_coupangplay.py  # 쿠팡플레이 검색 API 수확 (제목·연도·형식·애니메이션 태그 검증)
+│   ├── harvest_disneyplus.py   # 디즈니+ 브라우즈/상세 JSON 수확 (제목·연도·형식 검증)
 │   ├── harvest_anilist_catalog.py # AniList 연도별 전체 카탈로그 수확 (1940년 이전은 시작일 범위, 원본은 배포 제외)
 │   ├── harvest_ko_wikipedia.py # 한국어 위키백과 제목/소개 수확 → wikiEntries
 │   ├── harvest_namu.py         # 나무위키 제목/소개 수확·검증 → namuEntries

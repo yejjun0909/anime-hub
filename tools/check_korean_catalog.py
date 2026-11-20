@@ -313,7 +313,9 @@ def check_platform_catalog(data: dict) -> list[dict]:
             fail(f"{where}: sourceUrl은 https여야 합니다: {url!r}")
         else:
             host = urlparse(url).hostname or ""
-            if host != PLATFORM_HOSTS[platform]:
+            expected_host = PLATFORM_HOSTS[platform]
+            # 쿠팡플레이·디즈니+는 실제 공식 페이지가 www. 호스트로 제공됩니다.
+            if host not in {expected_host, f"www.{expected_host}"}:
                 fail(f"{where}: {platform} 출처 호스트가 다릅니다: {host}")
 
     return records

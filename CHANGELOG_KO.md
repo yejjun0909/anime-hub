@@ -1,5 +1,28 @@
 # 변경 내역
 
+## v4.13.0 — 쿠팡플레이·디즈니+ KR 수확 추가 (2026-11-20)
+
+### 쿠팡플레이 수확
+- `tools/harvest_coupangplay.py`를 추가했습니다. 인앱 브라우저가 차단되므로 전체 Chrome UA로 공개 검색 API(`/api-discover/v3/search`)를 조회합니다.
+- 한국어 제목 인덱스 4,008개를 시드로 3,873작품을 수확해 **166건**을 채택했습니다(연도 ±1, 애니메이션 태그, AniList 형식 대조 통과).
+- 제목이 비슷하다는 이유만으로 연결하지 않고, 꾸밈말 제거 후 제목 정규화 완전 일치 + 연도 ±1 + 형식 대조 + 한국어 소개 40자 이상을 모두 요구합니다. 간헐적인 403/429/5xx는 UA 교체와 백오프로 재시도합니다.
+- `sourceUrl`은 리다이렉트 결과인 `https://www.coupangplay.com/content/{id}`를 기록하고, UUID는 SHA1 앞 15자리를 양의 정수 `platformId`로 변환합니다.
+
+### 디즈니+ KR 수확
+- `tools/harvest_disneyplus.py`를 추가했습니다. KR 웹의 공개 검색이 비활성화(`enableSearch=false`)되어 있어, 브라우즈 페이지를 순회해 엔티티 ID를 찾고 Next.js 상세 JSON에서 공식 한국어 제목·소개를 읽습니다.
+- 애니메이션 장르 + 제목 정규화 완전 일치 + 연도 ±1 + 형식(TVSeries/Movie) 대조 + 한국어 소개 40자 이상을 통과한 작품만 채택합니다. 브라우즈에서 수집한 1,703개 엔티티 중 애니메이션 516개를 확인하고 **13건**을 채택했습니다.
+- 상세 JSON 요청이 몰리면 403/429와 불완전 응답이 반복되므로, 공개 페이지에서 확인한 상세 데이터를 `data/disneyplus-harvest-cache.json`에 캐시하고 `--detail-cache`로 재사용합니다. 캐시 파일은 배포 산출물에서 제외됩니다.
+
+### 데이터 반영
+- 두 플랫폼의 수확분은 기존 라프텔 레코드를 덮지 않고 `data/korean-platform-catalog.json`에 별도 레코드로 병합합니다. 최종 **285건**(라프텔 106 + 쿠팡플레이 166 + 디즈니+ 13)이며, 화면에는 `쿠팡플레이`, `디즈니+` 출처로 표시됩니다. 플랫폼 우선순위(라프텔 → … → 쿠팡플레이 → 디즈니+)는 그대로 유지합니다.
+- `data/korean-platform-catalog.js` 285건, `data/korean-title-index.js` 4,010건을 재생성하고 단일 HTML·`_site/`·배포 ZIP을 다시 만들었습니다.
+
+### 검사
+- `npm run verify` **165건** 통과, Playwright E2E **2건** 통과.
+- `tools/check_korean_catalog.py` 통과(실패 0). 같은 AniList 작품에 여러 플랫폼 항목이 있는 13건은 의도된 다중 플랫폼 기록으로 경고만 표시합니다. `www.` 접두사 공식 호스트(쿠팡플레이·디즈니+)를 검사기에서 허용했습니다.
+- `tools/build_single.py --check`: `OK: anime-hub-single.html 최신 (5,224,131 bytes)`.
+- 버전을 **v4.13.0**으로 올리고 PWA 캐시를 `anime-hub-shell-v4-13-0`으로 갱신했습니다.
+
 ## v4.12.0 — 왓챠피디아 수확 추가 (2026-11-17)
 
 ### 왓챠피디아 수확
