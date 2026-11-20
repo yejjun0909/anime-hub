@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -58,7 +59,30 @@ PLATFORM_HOSTS = {
 }
 # 실제 공식 페이지가 www. 호스트로 제공되는 플랫폼만 예외적으로 허용합니다.
 WWW_HOST_PLATFORMS = {"coupangplay", "disneyplus"}
+# SHA1 앞 13자리(52bit)는 JS 안전 정수 범위(2^53-1) 안에 들어옵니다.
+JS_SAFE_INTEGER = 2**53 - 1
+PLATFORM_ID_HEX_DIGITS = 13
 PLATFORM_STATUS = {"verified", "alias"}
+
+
+def expected_platform_id(platform: str, source_url: str) -> int | None:
+    """수확기가 만드는 platformId를 출처 URL에서 다시 계산합니다(라프텔은 원본 정수 ID)."""
+    if platform == "coupangplay":
+        marker = "/content/"
+        if marker not in source_url:
+            return None
+        entity = source_url.split(marker, 1)[1].split("/", 1)[0]
+    elif platform == "disneyplus":
+        marker = "entity-"
+        if marker not in source_url:
+            return None
+        entity = source_url.split(marker, 1)[1].split("/", 1)[0]
+    else:
+        return None
+    if not entity:
+        return None
+    digest = hashlib.sha1(entity.encode("utf-8")).hexdigest()
+    return int(digest[:PLATFORM_ID_HEX_DIGITS], 16)
 HANGUL = re.compile(r"[가-힣]")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # 나무위키 인물(성우·배우·제작진) 문서 소개는 작품 소개가 아니므로 거부합니다.
@@ -268,6 +292,11 @@ def check_platform_catalog(data: dict) -> list[dict]:
         if not isinstance(platform_id, int) or platform_id <= 0:
             fail(f"{where}: platformId는 양의 정수여야 합니다: {platform_id!r}")
         else:
+            if platform_id > JS_SAFE_INTEGER:
+                fail(f"{where}: platformId가 JS 안전 정수 범위를 넘습니다: {platform_id}")
+            expected = expected_platform_id(platform, str(record.get("sourceUrl") or ""))
+            if expected is not None and platform_id != expected:
+                fail(f"{where}: platformId가 출처 URL과 일치하지 않습니다: {platform_id} != {expected}")
             pair = (platform, platform_id)
             if pair in seen_pairs:
                 fail(f"{where}: 플랫폼 작품 중복 {pair!r}")

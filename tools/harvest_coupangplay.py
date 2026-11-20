@@ -230,9 +230,10 @@ def clean_overview(value: str) -> str:
 
 
 def platform_id(content_id: str) -> int:
-    """UUID를 안정적인 양의 정수로 변환합니다(스키마가 int만 허용)."""
+    """UUID를 JS 안전 정수 범위(2^53 이하)의 안정적인 정수로 변환합니다."""
     digest = hashlib.sha1(content_id.encode("utf-8")).hexdigest()
-    return int(digest[:15], 16)
+    # 15자리(60bit)는 브라우저에서 정밀도가 깨지므로 13자리(52bit)만 사용합니다.
+    return int(digest[:13], 16)
 
 
 def match_candidate(item: dict, candidates: list[str], anilist: dict) -> tuple[int, str] | None:

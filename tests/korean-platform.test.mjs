@@ -35,7 +35,7 @@ test('플랫폼 카탈로그: 메타데이터와 검증 상태', () => {
     assert.ok(record.sourceUrl.startsWith('https://'));
     assert.ok(record.sourceUrl.includes(hosts[record.platform]), `${record.title}: ${record.sourceUrl}`);
     assert.ok(Number.isInteger(record.anilistId) && record.anilistId > 0);
-    assert.ok(Number.isInteger(record.platformId) && record.platformId > 0);
+    assert.ok(Number.isSafeInteger(record.platformId) && record.platformId > 0, `${record.title}: 안전 정수 범위를 넘는 platformId`);
   }
 });
 

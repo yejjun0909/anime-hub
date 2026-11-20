@@ -144,8 +144,10 @@ def clean_overview(value: str) -> str:
 
 
 def platform_id(entity_id: str) -> int:
+    """엔티티 ID를 JS 안전 정수 범위(2^53 이하)의 안정적인 정수로 변환합니다."""
     digest = hashlib.sha1(entity_id.encode("utf-8")).hexdigest()
-    return int(digest[:15], 16)
+    # 15자리(60bit)는 브라우저에서 정밀도가 깨지므로 13자리(52bit)만 사용합니다.
+    return int(digest[:13], 16)
 
 
 def discover_entities(build_id: str, max_pages: int) -> tuple[list[str], str | None]:
