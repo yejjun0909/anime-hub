@@ -239,6 +239,8 @@ npx playwright test
 
 - `sw.js`는 HTML·JS·CSS·JSON을 **네트워크 우선**으로 가져옵니다. 앱 코드를 수정하면 새로고침만으로 반영됩니다.
 - 이미지·아이콘은 캐시 우선입니다.
+- 서비스 워커는 `updateViaCache: 'none'`으로 등록해 브라우저의 HTTP 캐시를 건너뛰고 항상 최신 `sw.js`를 확인합니다.
+- GitHub Pages는 `_headers`를 적용하지 않습니다. 대신 `build_deploy_dir.py`가 앱 코드·데이터의 내용 해시를 계산해 배포용 `index.html`의 `styles.css`·`app.js`·`manifest.webmanifest`에 `?v=<해시>`를 붙입니다. 코드가 바뀌면 해시가 달라져 CDN 캐시를 우회합니다. 현재 해시는 `_site/assets-version.txt`에서 확인할 수 있습니다.
 - 버전을 올릴 때는 `app.js`의 `APP_VERSION`, `VERSION.txt`, `sw.js`의 `CACHE_NAME`, `package.json`의 `version`을 함께 맞춥니다. `py tools/check_korean_catalog.py`가 불일치를 검사합니다.
 
 ## 데이터 저장과 계정

@@ -92,7 +92,9 @@ async function networkFirst(request, fallbackUrl) {
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch (error) {
-    const cached = await cache.match(request);
+    // 배포 시 붙는 ?v= 해시 때문에 정확한 URL이 없어도 원본 파일로 폴백합니다.
+    const cached = await cache.match(request)
+      || await cache.match(request, { ignoreSearch: true });
     if (cached) return cached;
     if (fallbackUrl) {
       const fallback = await cache.match(fallbackUrl);
