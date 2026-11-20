@@ -11,7 +11,7 @@
     "check": "node --check app.js && node --check sw.js && node --check data/korean-match.js && node --check data/korean-platform-match.js && node --check data/korean-query.js && node --check data/korean-source.js && node --check data/korean-titles-db.js",
     "test": "node tools/run-tests.mjs",
     "verify": "npm run check && npm test",
-    "validate": "python tools/check_korean_catalog.py && python tools/build_single.py --check"
+    "validate": "python tools/build_korean_platform_catalog.py --check && python tools/check_korean_catalog.py && python tools/build_single.py --check"
   },
   "engines": {
     "node": ">=20"

@@ -58,16 +58,36 @@
       ok('카탈로그 region', 'KR', KOREAN_PLATFORM_META.region);
       ok('카탈로그 20건 이상', true, KOREAN_PLATFORM_CATALOG.length >= 20);
 
+      const hosts = {
+        laftel: 'laftel.net',
+        aniplus: 'aniplus.co.kr',
+        watcha: 'watcha.com',
+        tving: 'tving.com',
+        wavve: 'wavve.com',
+        netflix: 'netflix.com',
+        coupangplay: 'coupangplay.com',
+        disneyplus: 'disneyplus.com',
+        apple: 'tv.apple.com'
+      };
       const invalid = KOREAN_PLATFORM_CATALOG.filter((record) =>
         record.region !== 'KR' ||
         !['verified', 'alias'].includes(record.status) ||
         !/[가-힣]/.test(record.title) ||
         !/[가-힣]/.test(record.overview) ||
-        !String(record.sourceUrl).startsWith('https://laftel.net/item/') ||
+        !String(record.sourceUrl).startsWith('https://') ||
+        !String(record.sourceUrl).includes(hosts[record.platform]) ||
         !Number.isInteger(record.anilistId) ||
         !Number.isInteger(record.platformId)
       );
       ok('모든 레코드 스키마·출처', 0, invalid.length);
+
+      const counts = KOREAN_PLATFORM_CATALOG.reduce((map, record) => {
+        map[record.platform] = (map[record.platform] || 0) + 1;
+        return map;
+      }, {});
+      for (const platform of ['laftel', 'coupangplay', 'disneyplus']) {
+        ok(`${platform} 레코드 10건 이상`, true, (counts[platform] || 0) >= 10);
+      }
 
       const order = ['laftel', 'aniplus', 'watcha', 'tving', 'wavve', 'netflix', 'coupangplay', 'disneyplus', 'apple'];
       const ordered = order.every((key, i) => i === 0 || KOREAN_PLATFORM_PRIORITY[order[i - 1]] < KOREAN_PLATFORM_PRIORITY[key]);

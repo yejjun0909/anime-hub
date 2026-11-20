@@ -1,4 +1,4 @@
-# 애니허브 v4.8.0
+# 애니허브 v4.13.0
 
 PC와 모바일 브라우저에서 사용하는 애니메이션 정보·시청 관리 웹앱입니다. 작품 검색, 한국어 메타데이터, 개인 취향 추천, 보관함과 컬렉션을 한 곳에서 관리합니다.
 
@@ -213,8 +213,14 @@ py tools/build_single.py --check
 # 전체 정적 검증 (카탈로그 + 배선 + 단일 파일 최신 여부)
 py tools/check_korean_catalog.py
 
+# 생성 파일 동기화까지 포함한 전체 정적 검증
+npm run validate
+
 # Node 테스트 (Node.js 20+)
 npm test
+
+# 브라우저 스모크 테스트 (최초 1회 npx playwright install chromium, 로컬 서버는 Playwright가 자동 실행)
+npx playwright test
 
 # Node.js가 없을 때: 로컬 서버에서 브라우저 테스트 페이지 열기
 # http://127.0.0.1:8123/tests/korean-platform.test.html

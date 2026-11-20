@@ -28,7 +28,9 @@ jobs:
         run: python tools/build_site.py
 
       - name: 카탈로그·단일 HTML 검사
-        run: python tools/check_korean_catalog.py
+        run: |
+          python tools/check_korean_catalog.py
+          python tools/build_single.py --check
 
       - uses: actions/configure-pages@v5
         with:

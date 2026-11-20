@@ -56,6 +56,8 @@ PLATFORM_HOSTS = {
     "disneyplus": "disneyplus.com",
     "apple": "tv.apple.com",
 }
+# 실제 공식 페이지가 www. 호스트로 제공되는 플랫폼만 예외적으로 허용합니다.
+WWW_HOST_PLATFORMS = {"coupangplay", "disneyplus"}
 PLATFORM_STATUS = {"verified", "alias"}
 HANGUL = re.compile(r"[가-힣]")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -216,6 +218,16 @@ def check_platform_catalog(data: dict) -> list[dict]:
     if len(records) < 20:
         fail(f"플랫폼 카탈로그가 20건 미만입니다: {len(records)}건")
 
+    platform_counts: dict[str, int] = {}
+    for record in records:
+        if isinstance(record, dict):
+            platform = record.get("platform")
+            platform_counts[platform] = platform_counts.get(platform, 0) + 1
+    for platform, minimum in (("laftel", 10), ("coupangplay", 10), ("disneyplus", 10)):
+        count = platform_counts.get(platform, 0)
+        if count < minimum:
+            fail(f"플랫폼 {platform} 레코드가 {minimum}건 미만입니다: {count}건")
+
     required = (
         "workId",
         "anilistId",
@@ -314,8 +326,10 @@ def check_platform_catalog(data: dict) -> list[dict]:
         else:
             host = urlparse(url).hostname or ""
             expected_host = PLATFORM_HOSTS[platform]
-            # 쿠팡플레이·디즈니+는 실제 공식 페이지가 www. 호스트로 제공됩니다.
-            if host not in {expected_host, f"www.{expected_host}"}:
+            allowed_hosts = {expected_host}
+            if platform in WWW_HOST_PLATFORMS:
+                allowed_hosts.add(f"www.{expected_host}")
+            if host not in allowed_hosts:
                 fail(f"{where}: {platform} 출처 호스트가 다릅니다: {host}")
 
     return records

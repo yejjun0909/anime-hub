@@ -39,6 +39,16 @@ test('플랫폼 카탈로그: 메타데이터와 검증 상태', () => {
   }
 });
 
+test('주요 플랫폼 레코드가 유지된다', () => {
+  const counts = new Map();
+  for (const record of KOREAN_PLATFORM_CATALOG) {
+    counts.set(record.platform, (counts.get(record.platform) || 0) + 1);
+  }
+  for (const platform of ['laftel', 'coupangplay', 'disneyplus']) {
+    assert.ok((counts.get(platform) || 0) >= 10, `${platform} 레코드가 10건 미만입니다.`);
+  }
+});
+
 test('플랫폼 우선순위: 국내 플랫폼 순서', () => {
   const order = ['laftel', 'aniplus', 'watcha', 'tving', 'wavve', 'netflix', 'coupangplay', 'disneyplus', 'apple'];
   for (let index = 1; index < order.length; index += 1) {
