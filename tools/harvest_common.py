@@ -167,6 +167,17 @@ def atomic_write_json(path: Path, payload: dict) -> None:
         raise
 
 
+def record_quality(record: dict) -> tuple:
+    """중복 레코드 중 어느 쪽을 남길지 판단하는 매칭 품질 점수입니다."""
+    match = str(record.get("match") or "")
+    return (
+        bool(record.get("year")),
+        "exact-title" in match,
+        "+year" in match and "±" not in match,
+        record.get("kind") == "TV",
+    )
+
+
 def merge_platform_catalog(
     output: Path,
     platform: dict,
@@ -210,9 +221,7 @@ def merge_platform_catalog(
         if current is None:
             deduped[key] = record
             continue
-        current_score = (bool(current.get("year")), current.get("kind") == "TV")
-        record_score = (bool(record.get("year")), record.get("kind") == "TV")
-        if record_score > current_score:
+        if record_quality(record) > record_quality(current):
             deduped[key] = record
 
     records = list(deduped.values())

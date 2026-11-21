@@ -63,6 +63,39 @@ class HarvestCommonTest(unittest.TestCase):
             self.assertEqual(json.loads(target.read_text(encoding="utf-8"))["name"], "한글")
             self.assertFalse(list(target.parent.glob(".*.tmp")))
 
+    def test_merge_prefers_exact_title_over_season_title(self):
+        platform = {
+            "id": "coupangplay",
+            "name": "쿠팡플레이",
+            "priority": 7,
+            "sourceUrl": "https://www.coupangplay.com/",
+            "checkedAt": "2026-11-20",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "catalog.json"
+            payload = merge_platform_catalog(output, platform, [
+                {
+                    "platform": "coupangplay",
+                    "platformId": 7,
+                    "anilistId": 1,
+                    "title": "시즌 제목",
+                    "year": 2024,
+                    "kind": "TV",
+                    "match": "season-title+year",
+                },
+                {
+                    "platform": "coupangplay",
+                    "platformId": 7,
+                    "anilistId": 2,
+                    "title": "정확한 제목",
+                    "year": 2024,
+                    "kind": "MOVIE",
+                    "match": "exact-title+year+format",
+                },
+            ], logger=lambda message: None)
+            self.assertEqual(len(payload["records"]), 1)
+            self.assertEqual(payload["records"][0]["title"], "정확한 제목")
+
     def test_merge_platform_catalog_keeps_other_platforms_and_prefers_better(self):
         platform = {
             "id": "coupangplay",

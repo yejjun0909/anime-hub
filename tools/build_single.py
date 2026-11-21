@@ -122,9 +122,13 @@ def build() -> str:
     app = (ROOT / "app.js").read_text(encoding="utf-8")
     app = re.sub(r"^import\s+.*?from\s+['\"].*?['\"];?\s*$", "", app, flags=re.MULTILINE)
     app = re.sub(r"\bexport\s+(function|const|let|var|class|async\s+function)\b", r"\1", app)
-    app = app.replace(
-        "if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker registration failed',err)));}",
+    # 단일 파일은 file:// 에서 열리므로 서비스 워커 등록을 제거합니다.
+    # app.js의 등록 구문이 바뀌어도 놓치지 않도록 한 줄 단위로 찾습니다.
+    app = re.sub(
+        r"^[ \t]*if\('serviceWorker' in navigator\).*serviceWorker\.register\(.*$\n?",
         "",
+        app,
+        flags=re.MULTILINE,
     )
     js_parts.append("// ===== app.js =====")
     js_parts.append(app)

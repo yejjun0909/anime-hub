@@ -50,7 +50,10 @@ A_TAG_RE = re.compile(r"<a\s+([^>]+)>(.*?)</a>", re.S | re.I)
 LD_RE = re.compile(r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', re.S | re.I)
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.S | re.I)
 # 상세 헤더: 한국어 제목 · 원제 · 연도 · 제작사 · 장르 · 국가 · 관람등급
-INFO_RE = re.compile(r'<div class="_infoOnWallpaper_1txt4_53">(.*?)</div></div></div>', re.S)
+# CSS 모듈 해시(예: _1txt4_53)는 배포마다 바뀌므로 접두어만 고정합니다.
+INFO_RE = re.compile(
+    r'<div class="[^"]*_infoOnWallpaper_[^"]*">(.*?)</div>\s*</div>\s*</div>', re.S
+)
 HANGUL_RE = re.compile(r"[가-힣]")
 ORIGINAL_RE = re.compile(r"[ぁ-んァ-ヶー一-龯A-Za-z]")
 PERSON_OVERVIEW = re.compile(

@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -100,10 +101,14 @@ def render(data: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description="국내 플랫폼 카탈로그 JS 생성기")
+    parser.add_argument("--check", action="store_true", help="생성 파일이 최신인지 검사")
+    args = parser.parse_args(argv)
+
     data = load_catalog()
     rendered = render(data)
 
-    if "--check" in argv:
+    if args.check:
         if not TARGET.exists():
             print(f"실패: {TARGET.relative_to(ROOT)} 파일이 없습니다.", file=sys.stderr)
             return 1

@@ -88216,7 +88216,6 @@ async function replayQueuedMutations(){
 }
 
 setInterval(()=>{if(document.visibilityState==='visible')checkNewReleaseAlerts(false);},30*60*1000);
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(err=>console.warn('Service worker registration failed',err)));}
 await loadSupabase();updateAccountButton();loadKoreanTitlesDb().catch(()=>{});const initialHash=location.hash.slice(1)||'home';if(initialHash.startsWith('collection:')||initialHash.startsWith('c/')){const id=initialHash.startsWith('c/')?initialHash.slice(2):initialHash.slice('collection:'.length);renderCollectionDetail(id);}else{state.route=initialHash;renderRoute();}updateContinueBar();if(state.notificationsEnabled&&'Notification' in window&&Notification.permission==='granted')checkNewReleaseAlerts(false);
 
 </script>
